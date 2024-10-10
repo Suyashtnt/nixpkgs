@@ -313,8 +313,8 @@ let
         mktplcRef = {
           name = "vscode-apollo";
           publisher = "apollographql";
-          version = "2.3.2";
-          hash = "sha256-5PAmyy4RX2hLgviWxgnxGZjgeFWZaJKNiYGNdCTL0IE=";
+          version = "2.3.3";
+          hash = "sha256-pxj3BM+LJPS9KxxniEtBLT3x1FERGr4yPndxOSVLgR8=";
         };
         meta = {
           changelog = "https://marketplace.visualstudio.com/items/apollographql.vscode-apollo/changelog";
@@ -406,8 +406,8 @@ let
         mktplcRef = {
           name = "vscode-neovim";
           publisher = "asvetliakov";
-          version = "1.18.11";
-          hash = "sha256-j1igEItS4TT1WxSxK3tFG29McTTo8ojEs6TJShGZiGI=";
+          version = "1.18.12";
+          hash = "sha256-3Nmk0MFIMFYQHrRyZ7ioFk9KfHSk0CSF7FwNaEJbsyg=";
         };
         meta = {
           changelog = "https://marketplace.visualstudio.com/items/asvetliakov.vscode-neovim/changelog";
@@ -904,6 +904,8 @@ let
           maintainers = [ lib.maintainers.rhoriguchi ];
         };
       };
+
+      chrischinchilla.vscode-pandoc = callPackage ./chrischinchilla.vscode-pandoc { };
 
       christian-kohler.npm-intellisense = buildVscodeMarketplaceExtension {
         mktplcRef = {
@@ -1642,8 +1644,8 @@ let
         mktplcRef = {
           name = "elixir-ls";
           publisher = "JakeBecker";
-          version = "0.23.1";
-          hash = "sha256-rwpaixQbuxVkH4wlKPG4Qk69IylwjfCtyfUcqCuN/e8=";
+          version = "0.24.0";
+          hash = "sha256-zNiKtOeZEO9zVpyF4AE/3FjiEy4jtCSCjB9T8e8PjRE=";
         };
         meta = {
           changelog = "https://marketplace.visualstudio.com/items/JakeBecker.elixir-ls/changelog";
@@ -2037,8 +2039,8 @@ let
         mktplcRef = {
           publisher = "github";
           name = "copilot";
-          version = "1.219.1028"; # compatible with vscode ^1.92.0
-          hash = "sha256-5f1P/CV6+Rp2kS9oSz5Ko5jMUt/Q6pWa9a+3nPyin6k=";
+          version = "1.236.0"; # compatible with vscode ^1.94
+          hash = "sha256-ozJwByuSjROWSxfrapcyxDkI7xgcjqf/IKtUfEC+MGk=";
         };
 
         meta = {
@@ -2054,8 +2056,8 @@ let
         mktplcRef = {
           publisher = "github";
           name = "copilot-chat";
-          version = "0.19.2024073102"; # compatible with vscode ^1.92.0
-          hash = "sha256-ekRBmJiAav1gITWlqBOuWtZMt1YZeseF+3fw326db/s=";
+          version = "0.22.2024100702"; # latest compatible with vscode ^1.94
+          hash = "sha256-n/ecEnxz3LiTx9MuHO8AMIWBJPNNxQb6vghlG/hPMUY=";
         };
         meta = {
           description = "GitHub Copilot Chat is a companion extension to GitHub Copilot that houses experimental chat features";
@@ -2119,8 +2121,8 @@ let
         mktplcRef = {
           name = "gitlab-workflow";
           publisher = "gitlab";
-          version = "5.6.0";
-          hash = "sha256-K4oCMQBH5jrt61f/C3DDZC61RuDvOApnPEF3AsOrE20=";
+          version = "5.13.0";
+          hash = "sha256-A9QFW6Vk+g0pJfpXmZdUWJ/+WJBFXG79NXpCBuTjjok=";
         };
         meta = {
           description = "GitLab extension for Visual Studio Code";
@@ -3903,6 +3905,8 @@ let
         };
       };
 
+      pylyzer.pylyzer = callPackage ./pylyzer.pylyzer { };
+
       pythagoratechnologies.gpt-pilot-vs-code = buildVscodeMarketplaceExtension {
         mktplcRef = {
           name = "gpt-pilot-vs-code";
@@ -4163,6 +4167,23 @@ let
           homepage = "https://github.com/sana-ajani/taskrunner-code";
           license = lib.licenses.mit;
           maintainers = [ lib.maintainers.pbsds ];
+        };
+      };
+
+      sas.sas-lsp = buildVscodeMarketplaceExtension {
+        mktplcRef = {
+          name = "sas-lsp";
+          publisher = "SAS";
+          version = "1.10.2";
+          hash = "sha256-mf0q80UX4FxqHAHJBQlhkF/nqvTnfgTR8GuYBoWSswU=";
+        };
+        meta = {
+          changelog = "https://marketplace.visualstudio.com/items/SAS.sas-lsp/changelog";
+          description = "Official SAS Language Extension";
+          downloadPage = "https://marketplace.visualstudio.com/items?itemName=SAS.sas-lsp";
+          homepage = "https://github.com/sassoftware/vscode-sas-extension";
+          license = lib.licenses.asl20;
+          maintainers = [ lib.maintainers.scraptux ];
         };
       };
 
@@ -5373,6 +5394,8 @@ let
           maintainers = [ lib.maintainers.uncenter ];
         };
       };
+
+      yzane.markdown-pdf = callPackage ./yzane.markdown-pdf { };
 
       yzhang.dictionary-completion = buildVscodeMarketplaceExtension {
         mktplcRef = {
