@@ -1,10 +1,11 @@
 {
   lib,
   stdenv,
-  substituteAll,
+  replaceVars,
   buildPythonPackage,
   fetchPypi,
-  pythonOlder,
+  fetchpatch,
+  fetchpatch2,
   asn1crypto,
   cffi,
   cryptography,
@@ -23,41 +24,30 @@ let
 in
 buildPythonPackage rec {
   pname = "tpm2-pytss";
-  version = "2.2.1";
+  version = "3.0.0";
   format = "setuptools";
 
-  disabled = pythonOlder "3.7";
-
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-uPFUc0IvN39ZxyF9zRR5FlzOYt+jOTTsl2oni68unv4=";
+    inherit version;
+    pname = "tpm2_pytss";
+    hash = "sha256-wZPPGQi0gvk8SqRkEykg/jo31LnYAuJnl0/y3+N9RDM=";
   };
 
-  patches =
-    [
-      # Fix hardcoded `fapi-config.json` configuration path
-      ./fapi-config.patch
-      # Backport for https://github.com/tpm2-software/tpm2-pytss/pull/576
-      # This is likely to be dropped with the next major release (>= 2.3)
-      ./pr576-backport.patch
-    ]
-    ++ lib.optionals isCross [
-      # pytss will regenerate files from headers of tpm2-tss.
-      # Those headers are fed through a compiler via pycparser. pycparser expects `cpp`
-      # to be in the path.
-      # This is put in the path via stdenv when not cross-compiling, but this is absent
-      # when cross-compiling is turned on.
-      # This patch changes the call to pycparser.preprocess_file to provide the name
-      # of the cross-compiling cpp
-      (substituteAll {
-        src = ./cross.patch;
-        crossPrefix = stdenv.hostPlatform.config;
-      })
-    ];
-
-  postPatch = ''
-    sed -i "s#@TPM2_TSS@#${tpm2-tss.out}#" src/tpm2_pytss/FAPI.py
-  '';
+  patches = [
+  ]
+  ++ lib.optionals isCross [
+    # pytss will regenerate files from headers of tpm2-tss.
+    # Those headers are fed through a compiler via pycparser. pycparser expects `cpp`
+    # to be in the path.
+    # This is put in the path via stdenv when not cross-compiling, but this is absent
+    # when cross-compiling is turned on.
+    # This patch changes the call to pycparser.preprocess_file to provide the name
+    # of the cross-compiling cpp
+    # NOTE: This patch could be dropped after next release. 3.0.0-rc0 already have proper `$CC -E` invocation
+    (replaceVars ./cross.patch {
+      crossPrefix = stdenv.hostPlatform.config;
+    })
+  ];
 
   # Hardening has to be disabled
   # due to pycparsing handling it poorly.
@@ -81,21 +71,26 @@ buildPythonPackage rec {
     pyyaml
   ];
 
-  doCheck = true;
-
   nativeCheckInputs = [
     pytestCheckHook
     tpm2-tools
     swtpm
   ];
 
+  preCheck = ''
+    export TSS2_FAPICONF=${tpm2-tss.out}/etc/tpm2-tss/fapi-config-test.json
+  '';
+
   pythonImportsCheck = [ "tpm2_pytss" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/tpm2-software/tpm2-pytss";
     changelog = "https://github.com/tpm2-software/tpm2-pytss/blob/${version}/CHANGELOG.md";
     description = "TPM2 TSS Python bindings for Enhanced System API (ESYS)";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ baloo ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [
+      baloo
+      scottstephens
+    ];
   };
 }

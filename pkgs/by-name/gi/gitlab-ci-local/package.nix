@@ -1,38 +1,144 @@
-{ buildNpmPackage
-, fetchFromGitHub
-, lib
-, nix-update-script
-, gitlab-ci-local
-, testers
+{
+  stdenv,
+  bun,
+  nodejs-slim,
+  fetchFromGitHub,
+  lib,
+  nix-update-script,
+  makeWrapper,
+  installShellFiles,
+  writableTmpDirAsHomeHook,
+  versionCheckHook,
+  rsync,
+  gitMinimal,
 }:
 
-buildNpmPackage rec {
+let
   pname = "gitlab-ci-local";
-  version = "4.53.0";
+  version = "4.75.1";
 
   src = fetchFromGitHub {
     owner = "firecow";
     repo = "gitlab-ci-local";
     rev = version;
-    hash = "sha256-VLBVfA4x4gaj7e37W7EqehJpYhmEgTatIL2IrO4i+Z8=";
+    hash = "sha256-2zCfLLOtFTsiW1TGujOa9JGOetlVTzY477pUa2wt2qw=";
   };
 
-  npmDepsHash = "sha256-HAat2D45XeIjDW207Fn5M7O1sqjHOV2gxm2Urzxw+PU=";
+  node_modules = stdenv.mkDerivation {
+    pname = "${pname}-node_modules";
+    inherit version src;
+
+    nativeBuildInputs = [
+      bun
+      writableTmpDirAsHomeHook
+    ];
+
+    strictDeps = true;
+    __structuredAttrs = true;
+
+    dontConfigure = true;
+    dontFixup = true;
+
+    buildPhase = ''
+      runHook preBuild
+
+      export BUN_INSTALL_CACHE_DIR=$(mktemp -d)
+      bun install --frozen-lockfile --ignore-scripts --no-progress --cpu="*" --os="*"
+
+      runHook postBuild
+    '';
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out/node_modules
+      cp -R ./node_modules $out
+
+      runHook postInstall
+    '';
+
+    outputHash = "sha256-AqO7FeCtd5INzASBjMgSXYI1WPjqtk3Uipd5TjocYX4=";
+
+    outputHashAlgo = "sha256";
+    outputHashMode = "recursive";
+  };
+in
+stdenv.mkDerivation {
+  inherit pname version src;
+
+  nativeBuildInputs = [
+    bun
+    makeWrapper
+    installShellFiles
+  ];
+
+  strictDeps = true;
+  __structuredAttrs = true;
 
   postPatch = ''
-    # remove cleanup which runs git commands
+    # set version during build
     substituteInPlace package.json \
-      --replace-fail "npm run cleanup" "true"
+      --replace-fail "0.0.0" "${version}"
+
+    # set a script name to avoid yargs using the script path as $0
+    substituteInPlace src/index.ts \
+      --replace-fail 'yargs(process.argv.slice(2))' 'yargs(process.argv.slice(2)).scriptName("gitlab-ci-local")'
   '';
 
+  configurePhase = ''
+    runHook preConfigure
+
+    cp -R ${node_modules}/node_modules .
+    patchShebangs node_modules
+
+    runHook postConfigure
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+
+    bun run build:node
+
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    install -D dist/index.js $out/lib/gitlab-ci-local/index.js
+
+    makeWrapper ${lib.getExe nodejs-slim} $out/bin/gitlab-ci-local \
+      --add-flags "$out/lib/gitlab-ci-local/index.js" \
+      --prefix PATH : "${
+        lib.makeBinPath [
+          rsync
+          gitMinimal
+        ]
+      }"
+  ''
+  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd gitlab-ci-local \
+      --bash <(SHELL=bash $out/bin/gitlab-ci-local --completion) \
+      --zsh <(SHELL=zsh $out/bin/gitlab-ci-local --completion)
+  ''
+  + ''
+    runHook postInstall
+  '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
   passthru = {
-    updateScript = nix-update-script { };
-    tests.version = testers.testVersion {
-      package = gitlab-ci-local;
+    inherit node_modules;
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--custom-dep"
+        "node_modules"
+      ];
     };
   };
 
-  meta = with lib;{
+  meta = {
     description = "Run gitlab pipelines locally as shell executor or docker executor";
     mainProgram = "gitlab-ci-local";
     longDescription = ''
@@ -41,8 +147,8 @@ buildNpmPackage rec {
       Get rid of all those dev specific shell scripts and make files.
     '';
     homepage = "https://github.com/firecow/gitlab-ci-local";
-    license = licenses.mit;
-    maintainers = with maintainers; [ pineapplehunter ];
-    platforms = platforms.all;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ pineapplehunter ];
+    platforms = lib.platforms.all;
   };
 }

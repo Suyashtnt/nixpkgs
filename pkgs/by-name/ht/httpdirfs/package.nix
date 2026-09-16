@@ -2,11 +2,13 @@
   curl,
   expat,
   fetchFromGitHub,
-  fuse,
+  fuse3,
   gumbo,
   help2man,
   lib,
   libuuid,
+  meson,
+  ninja,
   nix-update-script,
   pkg-config,
   stdenv,
@@ -15,46 +17,40 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "httpdirfs";
-  version = "1.2.5";
+  version = "1.2.10";
 
   src = fetchFromGitHub {
     owner = "fangfufu";
     repo = "httpdirfs";
-    rev = "refs/tags/${finalAttrs.version}";
-    hash = "sha256-PUYsT0VDEzerPqwrLJrET4kSsWsQhtnfmLepeaqtA+I=";
+    tag = finalAttrs.version;
+    hash = "sha256-dfMavLEBXry1cW4o2yQjuvBbYIvct1GXzACj+9Hh4wE=";
   };
-
-  postPatch = lib.optional stdenv.hostPlatform.isDarwin ''
-    substituteInPlace Makefile --replace-fail '-fanalyzer' '-Xanalyzer'
-  '';
 
   nativeBuildInputs = [
     help2man
+    meson
+    ninja
     pkg-config
   ];
 
   buildInputs = [
     curl
     expat
-    fuse
+    fuse3
     gumbo
     libuuid
   ];
 
-  makeFlags = [ "prefix=${placeholder "out"}" ];
-
-  postBuild = ''
-    make man
-  '';
+  env.NIX_CFLAGS_COMPILE = toString [
+    "-Wno-error=attribute-warning"
+    "-Wno-error=pedantic"
+  ];
 
   passthru = {
-    # Disabled for Darwin because requires macFUSE installed outside NixOS
-    tests.version = lib.optionalAttrs stdenv.hostPlatform.isLinux (
-      testers.testVersion {
-        command = "${lib.getExe finalAttrs.finalPackage} --version";
-        package = finalAttrs.finalPackage;
-      }
-    );
+    tests.version = testers.testVersion {
+      command = "${lib.getExe finalAttrs.finalPackage} --version";
+      package = finalAttrs.finalPackage;
+    };
     updateScript = nix-update-script { };
   };
 
@@ -64,7 +60,10 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://github.com/fangfufu/httpdirfs";
     license = lib.licenses.gpl3Only;
     mainProgram = "httpdirfs";
-    maintainers = with lib.maintainers; [ sbruder schnusch anthonyroussel ];
-    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [
+      schnusch
+      anthonyroussel
+    ];
+    platforms = lib.platforms.linux;
   };
 })

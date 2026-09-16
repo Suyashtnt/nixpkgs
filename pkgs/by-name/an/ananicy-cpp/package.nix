@@ -18,24 +18,23 @@
 
 clangStdenv.mkDerivation (finalAttrs: {
   pname = "ananicy-cpp";
-  version = "1.1.1";
+  version = "1.2.0";
 
   src = fetchFromGitLab {
     owner = "ananicy-cpp";
     repo = "ananicy-cpp";
-    rev = "v${finalAttrs.version}";
+    tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
-    hash = "sha256-oPinSc00+Z6SxjfTh7DttcXSjsLv1X0NI+O37C8M8GY=";
+    hash = "sha256-Nl7Ugj5VPHwW85GJ44luUc2e95kFCanQhDRopGH9nTU=";
   };
 
   patches = [
-    # FIXME: remove this when updating to next stable release
-    (fetchpatch {
-      name = "allow-regex-pattern-matching.patch";
-      url = "https://gitlab.com/ananicy-cpp/ananicy-cpp/-/commit/6ea2dccceec39b6c4913f617dad81d859aa20f24.patch";
-      hash = "sha256-C+7x/VpVwewXEPwibi7GxGfjuhDkhcjTyGbZHlYL2Bs=";
-    })
     ./match-wrappers.patch
+    (fetchpatch {
+      name = "fix-cstring-include.patch";
+      url = "https://gitlab.com/ananicy-cpp/ananicy-cpp/-/merge_requests/43.diff";
+      hash = "sha256-drBUVh+N3KedJttzQIIA1s+38ngK9BgZFOdpxqBWV0E=";
+    })
   ];
 
   strictDeps = true;
@@ -43,7 +42,8 @@ clangStdenv.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     cmake
     pkg-config
-  ] ++ lib.optionals withBpf [
+  ]
+  ++ lib.optionals withBpf [
     bpftools
   ];
 
@@ -53,7 +53,8 @@ clangStdenv.mkDerivation (finalAttrs: {
     nlohmann_json
     systemd
     zlib
-  ] ++ lib.optionals withBpf [
+  ]
+  ++ lib.optionals withBpf [
     libbpf
     elfutils
   ];
@@ -90,7 +91,6 @@ clangStdenv.mkDerivation (finalAttrs: {
     maintainers = with lib.maintainers; [
       artturin
       johnrtitor
-      diniamo
     ];
     mainProgram = "ananicy-cpp";
   };

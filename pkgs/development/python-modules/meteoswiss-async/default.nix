@@ -8,7 +8,6 @@
   pytest-cov-stub,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
@@ -17,14 +16,17 @@ buildPythonPackage rec {
   version = "0.1.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.11";
-
   src = fetchFromGitHub {
     owner = "albertomontesg";
     repo = "meteoswiss-async";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-xFvfyLZvBfnbzShKN+94piNUVjV1cfi4jWpc/Xw6XG4=";
   };
+
+  pythonRelaxDeps = [
+    "aiohttp"
+    "asyncstdlib"
+  ];
 
   build-system = [ setuptools ];
 

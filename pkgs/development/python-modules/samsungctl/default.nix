@@ -17,7 +17,7 @@ buildPythonPackage rec {
     sha256 = "0ipz3fd65rqkxlb02sql0awc3vnslrwb2pfrsnpfnf8bfgxpbh9g";
   };
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     websocket = [ websocket-client ];
     # interactive_ui requires curses package
   };
@@ -27,11 +27,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "samsungctl" ];
 
-  meta = with lib; {
+  meta = {
     description = "Remote control Samsung televisions via a TCP/IP connection";
     mainProgram = "samsungctl";
     homepage = "https://github.com/Ape/samsungctl";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
 }

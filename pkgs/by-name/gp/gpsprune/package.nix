@@ -1,17 +1,29 @@
-{ fetchurl, lib, stdenv, makeDesktopItem, makeWrapper, unzip, jre, copyDesktopItems }:
+{
+  fetchurl,
+  lib,
+  stdenv,
+  makeDesktopItem,
+  makeWrapper,
+  unzip,
+  jre,
+  copyDesktopItems,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gpsprune";
-  version = "24.2";
+  version = "25";
 
   src = fetchurl {
-    url = "https://activityworkshop.net/software/gpsprune/gpsprune_${version}.jar";
-    hash = "sha256-wGg7WPj61yx7zMBIdH9ls18BnD1R713U5Vgc/kL9qYs=";
+    url = "https://activityworkshop.net/software/gpsprune/gpsprune_${finalAttrs.version}.jar";
+    hash = "sha256-8FGOigjHIvj+CZwq0Lht7UZjtmrE5l2Aqx92gZjau44=";
   };
 
   dontUnpack = true;
 
-  nativeBuildInputs = [ makeWrapper copyDesktopItems ];
+  nativeBuildInputs = [
+    makeWrapper
+    copyDesktopItems
+  ];
   buildInputs = [ jre ];
 
   desktopItems = [
@@ -21,8 +33,11 @@ stdenv.mkDerivation rec {
       icon = "gpsprune";
       desktopName = "GpsPrune";
       genericName = "GPS Data Editor";
-      comment = meta.description;
-      categories = [ "Education" "Geoscience" ];
+      comment = finalAttrs.meta.description;
+      categories = [
+        "Education"
+        "Geoscience"
+      ];
       mimeTypes = [
         "application/gpx+xml"
         "application/vnd.google-earth.kml+xml"
@@ -34,23 +49,23 @@ stdenv.mkDerivation rec {
   installPhase = ''
     runHook preInstall
 
-    install -Dm644 ${src} $out/share/java/gpsprune.jar
+    install -Dm644 ${finalAttrs.src} $out/share/java/gpsprune.jar
     makeWrapper ${jre}/bin/java $out/bin/gpsprune \
       --add-flags "-jar $out/share/java/gpsprune.jar"
-    mkdir -p $out/share/pixmaps
-    ${unzip}/bin/unzip -p $src tim/prune/gui/images/window_icon_64.png > $out/share/pixmaps/gpsprune.png
+    mkdir -p $out/share/icons/hicolor/64x64/apps
+    ${unzip}/bin/unzip -p $src tim/prune/gui/images/window_icon_64.png > $out/share/icons/hicolor/64x64/apps/gpsprune.png
 
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Application for viewing, editing and converting GPS coordinate data";
     homepage = "https://activityworkshop.net/software/gpsprune/";
     changelog = "https://activityworkshop.net/software/gpsprune/whats_new.html";
-    sourceProvenance = with sourceTypes; [ binaryBytecode ];
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ rycee ];
-    platforms = platforms.all;
+    sourceProvenance = with lib.sourceTypes; [ binaryBytecode ];
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ rycee ];
+    platforms = lib.platforms.all;
     mainProgram = "gpsprune";
   };
-}
+})

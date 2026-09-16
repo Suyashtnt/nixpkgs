@@ -2,7 +2,10 @@
   lib,
   buildNpmPackage,
   fetchFromGitHub,
+  fetchpatch2,
   jre_headless,
+  protobuf_30,
+  xmlstarlet,
   cyclonedx-cli,
   makeWrapper,
   maven,
@@ -10,7 +13,7 @@
   nixosTests,
 }:
 let
-  version = "4.11.7";
+  version = "4.14.2";
 
   frontend = buildNpmPackage {
     pname = "dependency-track-frontend";
@@ -19,11 +22,23 @@ let
     src = fetchFromGitHub {
       owner = "DependencyTrack";
       repo = "frontend";
-      rev = version;
-      hash = "sha256-hgBDzzG90gunnlZeektzdBIdatNjbkDVmNLbxjyxAXE=";
+      tag = version;
+      hash = "sha256-/MH1YjEJdRjYjenkzOcp7oytudsJcinPbc9OAGFnI/Q=";
     };
 
-    npmDepsHash = "sha256-veyt7fn4g/eh/+2CapQxlEssZP8cQXONpI6sSW299tk=";
+    installPhase = ''
+      mkdir $out
+      cp -R ./dist $out/
+    '';
+
+    patches = [
+      (fetchpatch2 {
+        url = "https://github.com/DependencyTrack/frontend/pull/1575.patch?full_index=1";
+        hash = "sha256-Wo+6yXa/8jB/pph0DTNsFz6lK3sedvro+7yvLSKes9c=";
+      })
+    ];
+
+    npmDepsHash = "sha256-md+PGEC1/Kl2MQhhYldSErcsDSefbPvwVDsw0Yklq1E=";
     forceGitDeps = true;
     makeCacheWritable = true;
 
@@ -39,18 +54,52 @@ maven.buildMavenPackage rec {
   src = fetchFromGitHub {
     owner = "DependencyTrack";
     repo = "dependency-track";
-    rev = version;
-    hash = "sha256-BMkn9WnUGs4RxH5I1QQ2UDrlo32JcbfjfFcOG5YogLI=";
+    tag = version;
+    hash = "sha256-9EPjIm2VOmt1FEiPoJtwNHoKZcewO0kJgBSc9fnUXeI=";
   };
 
-  patches = [
-    ./0000-remove-frontend-download.patch
-    ./0001-add-junixsocket.patch
-  ];
+  postPatch = ''
+    # update to version 5.1.3 to fix NullPointer and specify protoc path
+    xmlstarlet ed --inplace -N x=http://maven.apache.org/POM/4.0.0 \
+    --update '//x:plugin[x:artifactId="protobuf-maven-plugin"]/x:version' -v "5.1.3" \
+    --delete '//x:plugin[x:artifactId="protobuf-maven-plugin"]/x:configuration/x:protoc' \
+    --subnode '//x:plugin[x:artifactId="protobuf-maven-plugin"]/x:configuration' -t elem -n protoc -v "" \
+    --var protoc '$prev' \
+    --insert '$protoc' -t attr -n kind -v "path" \
+    --subnode '$protoc' -t elem -n name -v "protoc" \
+    pom.xml
+
+    # remove frontend related tasks
+    xmlstarlet ed --inplace -N x=http://maven.apache.org/POM/4.0.0 \
+    --delete '//x:execution[x:id="frontend-download"]' \
+    --delete '//x:execution[x:id="frontend-extract"]' \
+    --delete '//x:execution[x:id="frontend-resource-deploy"]' \
+    pom.xml
+
+    # add junixsocket to enable unixsocket connection to postgres
+    xmlstarlet ed --inplace -N x=http://maven.apache.org/POM/4.0.0 \
+    --subnode '/x:project/x:dependencies' -t elem -n dependency -v "" \
+    --var dependency '$prev' \
+    --subnode '$dependency' -t elem -n groupId -v "com.kohlschutter.junixsocket" \
+    --subnode '$dependency' -t elem -n artifactId -v "junixsocket-core" \
+    --subnode '$dependency' -t elem -n version -v "2.10.0" \
+    --subnode '$dependency' -t elem -n type -v "pom" \
+    pom.xml
+  '';
 
   mvnJdk = jre_headless;
-  mvnHash = "sha256-c/JwBiKsXuWbCm1dTCrVc+V/1G7Eii1mUW8xDyewyLs=";
-  manualMvnArtifacts = [ "com.coderplus.maven.plugins:copy-rename-maven-plugin:1.0.1" ];
+  mvnHash = "sha256-pshUDIPPGGGzxg5WJXC3mjnqGXn8HVowFCb2l5f6zjA=";
+  manualMvnArtifacts = [
+    "com.coderplus.maven.plugins:copy-rename-maven-plugin:1.0.1"
+    # added to saticfy protobuf compiler plugin dependency resolving
+    "jakarta.el:jakarta.el-api:5.0.1"
+    "com.fasterxml.jackson.module:jackson-module-jakarta-xmlbind-annotations:2.19.1"
+    "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.21.0"
+    "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.3"
+    "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.2"
+    "io.micrometer:micrometer-core:1.16.0"
+    "io.micrometer:micrometer-observation:1.16.0"
+  ];
   buildOffline = true;
 
   mvnDepsParameters = lib.escapeShellArgs [
@@ -63,16 +112,10 @@ maven.buildMavenPackage rec {
     "-Dmaven.test.skip=true"
     "-P enhance"
     "-P embedded-jetty"
-    "-P bundle-ui"
     "-Dservices.bom.merge.skip=false"
     "-Dlogback.configuration.file=${src}/src/main/docker/logback.xml"
     "-Dcyclonedx-cli.path=${lib.getExe cyclonedx-cli}"
   ];
-
-  preBuild = ''
-    mkdir -p frontend
-    cp -r ${frontend}/lib/node_modules/@dependencytrack/frontend/dist frontend/
-  '';
 
   afterDepsSetup = ''
     mvn cyclonedx:makeBom -Dmaven.repo.local=$mvnDeps/.m2 \
@@ -81,7 +124,11 @@ maven.buildMavenPackage rec {
 
   doCheck = false;
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [
+    makeWrapper
+    xmlstarlet
+    protobuf_30
+  ];
 
   installPhase = ''
     runHook preInstall
@@ -94,19 +141,26 @@ maven.buildMavenPackage rec {
   '';
 
   passthru = {
-    # passthru for nix-update
-    inherit (frontend) npmDeps;
+    inherit frontend;
     tests = {
       inherit (nixosTests) dependency-track;
     };
-    updateScript = nix-update-script { };
+    updateScript = nix-update-script {
+      extraArgs = [
+        "-s"
+        "frontend"
+      ];
+    };
   };
 
   meta = {
     description = "Intelligent Component Analysis platform that allows organizations to identify and reduce risk in the software supply chain";
     homepage = "https://github.com/DependencyTrack/dependency-track";
     license = lib.licenses.asl20;
-    maintainers = lib.teams.cyberus.members;
+    maintainers = with lib.maintainers; [
+      e1mo
+      xanderio
+    ];
     mainProgram = "dependency-track";
     inherit (jre_headless.meta) platforms;
   };

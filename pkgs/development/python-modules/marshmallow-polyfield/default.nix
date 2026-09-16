@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   marshmallow,
-  pythonOlder,
   pytestCheckHook,
   pytest-cov-stub,
   setuptools,
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "5.11";
   pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
   src = fetchFromGitHub {
     owner = "Bachmann1234";
     repo = "marshmallow-polyfield";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-jbpeyih2Ccw1Rk+QcXRO9AfN5B/DhZmxa/M6FzXHqqs=";
   };
 
@@ -34,10 +31,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "marshmallow" ];
 
-  meta = with lib; {
+  meta = {
+    # https://github.com/Bachmann1234/marshmallow-polyfield/issues/45
+    broken = true;
     description = "Extension to Marshmallow to allow for polymorphic fields";
     homepage = "https://github.com/Bachmann1234/marshmallow-polyfield";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ drewrisinger ];
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

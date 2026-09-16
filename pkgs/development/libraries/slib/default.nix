@@ -1,12 +1,19 @@
-{ lib, stdenv, fetchurl, scheme, texinfo, unzip }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  scheme,
+  texinfo,
+  unzip,
+}:
 
 stdenv.mkDerivation rec {
   pname = "slib";
-  version = "3c1";
+  version = "3c2";
 
   src = fetchurl {
     url = "https://groups.csail.mit.edu/mac/ftpdir/scm/${pname}-${version}.zip";
-    hash = "sha256-wvjrmOYFMN9TIRmF1LQDtul6epaYM8Gm0b+DVh2gx4E=";
+    hash = "sha256-eQbY4gHcGOl5RaYaxiznkuyTm2fQvMIwc+ABGsJWGgQ=";
   };
 
   patches = [
@@ -19,7 +26,11 @@ stdenv.mkDerivation rec {
       --replace " clrnamdb.scm" ""
   '';
 
-  nativeBuildInputs = [ scheme texinfo unzip ];
+  nativeBuildInputs = [
+    scheme
+    texinfo
+    unzip
+  ];
   buildInputs = [ scheme ];
 
   postInstall = ''
@@ -57,7 +68,7 @@ stdenv.mkDerivation rec {
     # Public domain + permissive (non-copyleft) licensing of some files.
     license = lib.licenses.publicDomain;
 
-    homepage = "http://people.csail.mit.edu/jaffer/SLIB";
+    homepage = "https://people.csail.mit.edu/jaffer/SLIB";
 
     maintainers = [ ];
     platforms = lib.platforms.unix;

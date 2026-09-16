@@ -1,47 +1,101 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, python3
-, unstableGitUpdater
-, makeWrapper
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  python3,
+  python3Packages,
+  extraPythonPackages ? ps: [ ],
+  unstableGitUpdater,
+  makeWrapper,
+  writeShellScript,
 }:
-
+let
+  isCross = (stdenv.hostPlatform != stdenv.buildPlatform);
+in
 stdenv.mkDerivation rec {
   pname = "klipper";
-  version = "0.12.0-unstable-2024-09-22";
+  version = "0.13.0-unstable-2026-08-18";
 
   src = fetchFromGitHub {
-    owner = "KevinOConnor";
+    owner = "Klipper3d";
     repo = "klipper";
-    rev = "9426485bb6c3855b117e05b1927e0b7c1937e0a9";
-    sha256 = "sha256-ACSK2G6byCx6TTHjGM0wf/tBzKI70DCywtEQbLe9e4w=";
+    rev = "60fc7aa67a8da9abb43a2bad825d4992294ebf3f";
+    sha256 = "sha256-qs60qBwlD7A0xneNzeNcKfWc8II5rG2oj+tvuhn/aWw=";
   };
 
   sourceRoot = "${src.name}/klippy";
 
   # NB: This is needed for the postBuild step
   nativeBuildInputs = [
-    (python3.withPackages ( p: with p; [ cffi ] ))
+    python3Packages.cffi
     makeWrapper
   ];
 
-  buildInputs = [ (python3.withPackages (p: with p; [ python-can cffi pyserial greenlet jinja2 markupsafe numpy ])) ];
+  buildInputs = [
+    (python3.withPackages (
+      p:
+      with p;
+      [
+        python-can
+        cffi
+        pyserial
+        greenlet
+        jinja2
+        markupsafe
+        numpy
+      ]
+      ++ extraPythonPackages p
+    ))
+  ];
 
-  # we need to run this to prebuild the chelper.
-  postBuild = ''
-    python ./chelper/__init__.py
+  # we need to run this to prebuild the chelper .so. However when cross
+  # compiling, a patch is temporarily required during the build process to
+  # prevent the build process from using dlopen() on this .so which has been
+  # built for a foreign architecture. We then place the unpatched __init__.py
+  # back, as this dlopen() call is required at runtime
+  postBuild =
+    if isCross then
+      ''
+        python ./chelper/__init__.py
+        mv ./chelper/__init__unpatched.py ./chelper/__init__.py
+      ''
+    else
+      ''
+        python ./chelper/__init__.py
+      '';
+
+  prePatch = lib.optionalString isCross ''
+    cp ./chelper/__init__.py ./chelper/__init__unpatched.py
   '';
+
+  patches = lib.optionals isCross [
+    # https://github.com/Klipper3d/klipper/pull/7254
+    ./cross-ffi.patch
+  ];
 
   # Python 3 is already supported but shebangs aren't updated yet
   postPatch = ''
     for file in klippy.py console.py parsedump.py; do
       substituteInPlace $file \
-        --replace '/usr/bin/env python2' '/usr/bin/env python'
+        --replace-warn '/usr/bin/env python2' '/usr/bin/env python'
     done
 
     # needed for cross compilation
-    substituteInPlace ./chelper/__init__.py \
-      --replace 'GCC_CMD = "gcc"' 'GCC_CMD = "${stdenv.cc.targetPrefix}cc"'
+    substituteInPlace ./chelper/__init__*.py \
+      --replace-warn 'GCC_CMD = "gcc"' 'GCC_CMD = "${stdenv.cc.targetPrefix}cc"'
+  '';
+
+  pythonInterpreter =
+    (python3.withPackages (
+      p: with p; [
+        numpy
+        matplotlib
+        python-can
+      ]
+    )).interpreter;
+
+  pythonScriptWrapper = writeShellScript pname ''
+    ${pythonInterpreter} "@out@/lib/scripts/@script@" "$@"
   '';
 
   # NB: We don't move the main entry point into `/bin`, or even symlink it,
@@ -56,6 +110,10 @@ stdenv.mkDerivation rec {
     # under `klipper_path`
     cp -r $src/docs $out/lib/docs
     cp -r $src/config $out/lib/config
+    cp -r $src/klippy $out/lib/klippy
+    mkdir -p $out/lib/scripts
+    cp -r $src/scripts/* $out/lib/scripts
+    cp $src/lib/katapult/flashtool.py $out/lib/scripts/flash_can.py
 
     # Add version information. For the normal procedure see https://www.klipper3d.org/Packaging.html#versioning
     # This is done like this because scripts/make_version.py is not available when sourceRoot is set to "${src.name}/klippy"
@@ -64,6 +122,17 @@ stdenv.mkDerivation rec {
     mkdir -p $out/bin
     chmod 755 $out/lib/klipper/klippy.py
     makeWrapper $out/lib/klipper/klippy.py $out/bin/klippy --chdir $out/lib/klipper
+
+    substitute "$pythonScriptWrapper" "$out/bin/klipper-calibrate-shaper" \
+      --subst-var "out" \
+      --subst-var-by "script" "calibrate_shaper.py"
+    chmod 755 "$out/bin/klipper-calibrate-shaper"
+
+    substitute "$pythonScriptWrapper" "$out/bin/klipper-canbus-query" \
+      --subst-var "out" \
+      --subst-var-by "script" "canbus_query.py"
+    chmod 755 "$out/bin/klipper-canbus-query"
+
     runHook postInstall
   '';
 
@@ -72,12 +141,16 @@ stdenv.mkDerivation rec {
     tagPrefix = "v";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Klipper 3D printer firmware";
     mainProgram = "klippy";
-    homepage = "https://github.com/KevinOConnor/klipper";
-    maintainers = with maintainers; [ lovesegfault zhaofengli cab404 ];
-    platforms = platforms.linux;
-    license = licenses.gpl3Only;
+    homepage = "https://github.com/Klipper3d/klipper";
+    maintainers = with lib.maintainers; [
+      lovesegfault
+      zhaofengli
+      cab404
+    ];
+    platforms = lib.platforms.linux;
+    license = lib.licenses.gpl3Only;
   };
 }

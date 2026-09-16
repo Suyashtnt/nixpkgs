@@ -1,83 +1,59 @@
 {
   lib,
   stdenv,
-  attrs,
   buildPythonPackage,
-  colorama,
-  fetchPypi,
+  fetchFromGitHub,
   glibcLocales,
-  importlib-metadata,
+  gnureadline,
   pyperclip,
+  pytest-cov-stub,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
+  rich-argparse,
   setuptools-scm,
-  typing-extensions,
-  wcwidth,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cmd2";
-  version = "2.4.3";
-  format = "setuptools";
+  version = "3.5.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-cYc8Efcr0Z4rHbV4IUcW8NT3yPolAJPGASZamnF97lI=";
+  src = fetchFromGitHub {
+    owner = "python-cmd2";
+    repo = "cmd2";
+    tag = finalAttrs.version;
+    hash = "sha256-dntUbxlMVlss6TN8IhEaWcANqiqWgqxT35bGY7cWjcE=";
   };
 
-  LC_ALL = "en_US.UTF-8";
+  build-system = [ setuptools-scm ];
 
-  buildInputs = [ setuptools-scm ];
+  dependencies = [
+    pyperclip
+    rich-argparse
+  ]
+  ++ lib.optional stdenv.hostPlatform.isDarwin gnureadline;
 
-  propagatedBuildInputs =
-    [
-      attrs
-      colorama
-      pyperclip
-      wcwidth
-    ]
-    ++ lib.optionals (pythonOlder "3.8") [
-      typing-extensions
-      importlib-metadata
-    ];
+  doCheck = true;
 
   nativeCheckInputs = [
-    pytestCheckHook
     glibcLocales
+    pytestCheckHook
+    pytest-cov-stub
     pytest-mock
   ];
 
   disabledTests = [
     # Don't require vim for tests, it causes lots of rebuilds
     "test_find_editor_not_specified"
-    "test_transcript"
   ];
-
-  postPatch =
-    ''
-      sed -i "/--cov/d" setup.cfg
-    ''
-    + lib.optionalString stdenv.hostPlatform.isDarwin ''
-      # Fake the impure dependencies pbpaste and pbcopy
-      mkdir bin
-      echo '#!${stdenv.shell}' > bin/pbpaste
-      echo '#!${stdenv.shell}' > bin/pbcopy
-      chmod +x bin/{pbcopy,pbpaste}
-      export PATH=$(realpath bin):$PATH
-    '';
-
-  doCheck = !stdenv.hostPlatform.isDarwin;
 
   pythonImportsCheck = [ "cmd2" ];
 
-  meta = with lib; {
+  meta = {
     description = "Enhancements for standard library's cmd module";
     homepage = "https://github.com/python-cmd2/cmd2";
-    changelog = "https://github.com/python-cmd2/cmd2/releases/tag/${version}";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ teto ];
+    changelog = "https://github.com/python-cmd2/cmd2/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ teto ];
   };
-}
+})

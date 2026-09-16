@@ -2,7 +2,6 @@
   lib,
   mkDerivation,
   stdenv,
-  patchesRoot,
 }:
 
 mkDerivation {
@@ -24,4 +23,6 @@ mkDerivation {
     # the problem is fixed properly in glibc.
     ./rpcgen-glibc-hack.patch
   ];
+
+  meta.platforms = lib.platforms.unix;
 }

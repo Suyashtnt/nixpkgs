@@ -10,7 +10,6 @@
   poetry-core,
   pytest-aiohttp,
   pytestCheckHook,
-  pythonOlder,
   yarl,
 }:
 
@@ -19,12 +18,10 @@ buildPythonPackage rec {
   version = "2024.01.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.10";
-
   src = fetchFromGitHub {
     owner = "bachya";
     repo = "aiopinboard";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-/N9r17e0ZvPmcqW/XtRyAENKCGRzWqeOSKPpWHHYomg=";
   };
 
@@ -46,11 +43,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "aiopinboard" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library to interact with the Pinboard API";
     homepage = "https://github.com/bachya/aiopinboard";
     changelog = "https://github.com/bachya/aiopinboard/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

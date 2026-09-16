@@ -1,17 +1,28 @@
-{ lib, python3, fetchFromGitHub, gtk3, gobject-introspection, gtk-layer-shell, wrapGAppsHook3 }:
-python3.pkgs.buildPythonApplication rec {
+{
+  lib,
+  python3,
+  fetchFromGitHub,
+  gtk3,
+  gobject-introspection,
+  gtk-layer-shell,
+  wrapGAppsHook3,
+}:
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "discover-overlay";
-  version = "0.7.8";
+  version = "0.7.9";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "trigg";
     repo = "Discover";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-0b0uZDa9Q3pQ6X65C+E31dMpdTPt4vvHDEqFEtRoedg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Z554/zRikZztdD4NZiDDjMWgIlnQDGkemlA3ONRhqR8=";
   };
 
-  buildInputs = [ gtk3 gtk-layer-shell ];
+  buildInputs = [
+    gtk3
+    gtk-layer-shell
+  ];
 
   nativeBuildInputs = [
     gobject-introspection
@@ -20,7 +31,10 @@ python3.pkgs.buildPythonApplication rec {
 
   dontWrapGApps = true;
 
-  makeWrapperArgs = [ "\${gappsWrapperArgs[@]}" "--set DISPLAY ':0.0'" ];
+  makeWrapperArgs = [
+    "\${gappsWrapperArgs[@]}"
+    "--set DISPLAY ':0.0'"
+  ];
 
   propagatedBuildInputs = with python3.pkgs; [
     pulsectl-asyncio
@@ -31,7 +45,7 @@ python3.pkgs.buildPythonApplication rec {
     requests
     pillow
     setuptools
-    xlib
+    python-xlib
   ];
   postPatch = ''
     substituteInPlace discover_overlay/image_getter.py \
@@ -47,4 +61,4 @@ python3.pkgs.buildPythonApplication rec {
     mainProgram = "discover-overlay";
     platforms = lib.platforms.linux;
   };
-}
+})

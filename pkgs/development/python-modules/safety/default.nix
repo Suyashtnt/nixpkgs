@@ -1,113 +1,95 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
-  setuptools,
+  hatchling,
   click,
-  urllib3,
-  requests,
   packaging,
   dparse,
   ruamel-yaml,
   jinja2,
   marshmallow,
+  nltk,
   authlib,
-  rich,
   typer,
   pydantic,
   safety-schemas,
   typing-extensions,
   filelock,
-  psutil,
+  httpx,
+  tenacity,
+  tomlkit,
+  truststore,
   git,
   pytestCheckHook,
+  tomli,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "safety";
-  version = "3.2.7";
-
-  disabled = pythonOlder "3.7";
-
+  version = "3.8.1";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pyupio";
     repo = "safety";
-    rev = "refs/tags/${version}";
-    hash = "sha256-JWbiw9qgfDo0UMAcqIhk1Y5tW0aSaZtbVdpdaY2z+3w=";
+    tag = finalAttrs.version;
+    hash = "sha256-xKZ8uhwuM6eu1NTppPFTBkxSjrguTw9GuIvPhPaTIAI=";
   };
 
-  postPatch = ''
-    substituteInPlace safety/safety.py \
-      --replace-fail "telemetry: bool = True" "telemetry: bool = False"
-    substituteInPlace safety/util.py \
-      --replace-fail "telemetry: bool = True" "telemetry: bool = False"
-    substituteInPlace safety/cli.py \
-      --replace-fail "disable-optional-telemetry', default=False" \
-                     "disable-optional-telemetry', default=True"
-    substituteInPlace safety/scan/finder/handlers.py \
-      --replace-fail "telemetry=True" "telemetry=False"
-  '';
+  patches = [
+    ./disable-telemetry.patch
+  ];
 
-  build-system = [ setuptools ];
+  build-system = [ hatchling ];
 
   pythonRelaxDeps = [
-    "dparse"
-    "filelock"
+    "safety-schemas"
   ];
 
   dependencies = [
-    setuptools
     click
-    urllib3
-    requests
     packaging
     dparse
     ruamel-yaml
     jinja2
     marshmallow
+    nltk
     authlib
-    rich
     typer
     pydantic
     safety-schemas
     typing-extensions
     filelock
-    psutil
+    httpx
+    tenacity
+    tomlkit
+    truststore
   ];
 
   nativeCheckInputs = [
     git
     pytestCheckHook
+    tomli
+    writableTmpDirAsHomeHook
   ];
 
-  # Disable tests depending on online services
-  disabledTests = [
-    "test_announcements_if_is_not_tty"
-    "test_check_live"
-    "test_debug_flag"
-    "test_get_packages_licenses_without_api_key"
-    "test_validate_with_basic_policy_file"
+  disabledTestPaths = [
+    # Failed to initialize SafetyPlatformClient: [Errno -3] Temporary failure in name resolution
+    "tests/firewall/test_command.py"
+    "tests/test_cli.py"
   ];
 
-  # ImportError: cannot import name 'get_command_for' from partially initialized module 'safety.cli_util' (most likely due to a circular import)
-  disabledTestPaths = [ "tests/alerts/test_utils.py" ];
-
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "Checks installed dependencies for known vulnerabilities";
     mainProgram = "safety";
     homepage = "https://github.com/pyupio/safety";
-    changelog = "https://github.com/pyupio/safety/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [
+    changelog = "https://github.com/pyupio/safety/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
       thomasdesr
       dotlambda
     ];
   };
-}
+})

@@ -2,37 +2,43 @@
   lib,
   buildNpmPackage,
   fetchFromGitHub,
-  stdenv,
+  nodejs_24,
+  npm-lockfile-fix,
   testers,
   snyk,
 }:
 
-let
-  version = "1.1293.1";
-in
-buildNpmPackage {
+buildNpmPackage (finalAttrs: {
   pname = "snyk";
-  inherit version;
+  version = "1.1307.1";
 
   src = fetchFromGitHub {
     owner = "snyk";
     repo = "cli";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-Vgt9h0LLIC5I9NZZKKWD9b1xnNOSkxApLxSGf2C0ODk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-VhbtP1aHIkYaPbptkJMT/cMAhqFeAwTwSZioIAUbO8k=";
+
+    # TODO: Remove once https://github.com/snyk/cli/pull/6924 is released.
+    postFetch = ''
+      ${lib.getExe npm-lockfile-fix} $out/package-lock.json
+    '';
   };
 
-  npmDepsHash = "sha256-1YtyQg14vj85KtOXP93vLkqIMmT+8DAJdG/ql+1ooyU=";
+  npmDepsFetcherVersion = 2;
+
+  npmDepsHash = "sha256-mTP5Tyi41BhSaDjCallH6r+PAFd/UCqNLxUkk2DzcLE=";
+
+  nodejs = nodejs_24;
 
   postPatch = ''
     substituteInPlace package.json \
-      --replace-fail '"version": "1.0.0-monorepo"' '"version": "${version}"'
+      --replace-fail '"version": "1.0.0-monorepo"' '"version": "${finalAttrs.version}"'
   '';
 
-  env.NIX_CFLAGS_COMPILE =
-    # Fix error: no member named 'aligned_alloc' in the global namespace
-    lib.optionalString (
-      stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64
-    ) "-D_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION=1";
+  postInstall = ''
+    # Remove dangling symlinks created during installation (remove -delete to just see the files, or -print '%l\n' to see the target
+    find -L $out -type l -print -delete
+  '';
 
   npmBuildScript = "build:prod";
 
@@ -43,9 +49,9 @@ buildNpmPackage {
   meta = {
     description = "Scans and monitors projects for security vulnerabilities";
     homepage = "https://snyk.io";
-    changelog = "https://github.com/snyk/cli/releases/tag/v${version}";
+    changelog = "https://github.com/snyk/cli/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ momeemt ];
+    maintainers = with lib.maintainers; [ iamanaws ];
     mainProgram = "snyk";
   };
-}
+})

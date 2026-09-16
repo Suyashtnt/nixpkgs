@@ -1,61 +1,82 @@
 {
   lib,
   buildPythonPackage,
-  dataclasses-json,
   fetchFromGitHub,
+
+  # build system
+  hatchling,
+
+  # dependencies
   langchain-core,
-  langgraph-sdk,
-  poetry-core,
+  msgpack,
+  ormsgpack,
+
+  # testing
+  dataclasses-json,
+  numpy,
+  pandas,
+  pycryptodome,
   pytest-asyncio,
+  pytest-mock,
   pytestCheckHook,
-  pythonOlder,
+  redis,
+
+  # passthru
+  gitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "langgraph-checkpoint";
-  version = "1.0.9";
+  version = "4.2.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "langchain-ai";
     repo = "langgraph";
-    rev = "refs/tags/checkpoint==${version}";
-    hash = "sha256-3gm+L67pPAKpY1kqnX1lPnca40KoBVZdRZ1Cy6D0dzU=";
+    tag = "checkpoint==${finalAttrs.version}";
+    hash = "sha256-Odn44pOTMyEvEDv3s/hfV+CKG7FS8sjTjA+bUDNLS2M=";
   };
 
-  sourceRoot = "${src.name}/libs/checkpoint";
+  sourceRoot = "${finalAttrs.src.name}/libs/checkpoint";
 
-  build-system = [ poetry-core ];
+  build-system = [ hatchling ];
 
-  dependencies = [ langchain-core ];
+  dependencies = [
+    langchain-core
+    ormsgpack
+  ];
+
+  propagatedBuildInputs = [ msgpack ];
 
   pythonImportsCheck = [ "langgraph.checkpoint" ];
 
   nativeCheckInputs = [
     dataclasses-json
+    numpy
+    pandas
+    pycryptodome
     pytest-asyncio
+    pytest-mock
     pytestCheckHook
-  ];
-
-  disabledTests = [
-    # AssertionError
-    "test_serde_jsonplus"
+    redis
   ];
 
   passthru = {
-    updateScript = langgraph-sdk.updateScript;
+    # python updater script sets the wrong tag
+    skipBulkUpdate = true;
+    updateScript = gitUpdater {
+      rev-prefix = "checkpoint==";
+      ignoredVersions = "a|b|dev|rc";
+    };
   };
 
   meta = {
-    changelog = "https://github.com/langchain-ai/langgraph/releases/tag/checkpoint==${version}";
+    changelog = "https://github.com/langchain-ai/langgraph/releases/tag/${finalAttrs.src.tag}";
     description = "Library with base interfaces for LangGraph checkpoint savers";
     homepage = "https://github.com/langchain-ai/langgraph/tree/main/libs/checkpoint";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [
-      drupol
       sarahec
     ];
   };
-}
+})

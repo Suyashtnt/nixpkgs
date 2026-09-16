@@ -1,30 +1,36 @@
-{ lib
-, stdenv
-, fetchurl
-, fig2dev
-, gettext
-, ghostscript
-, guile
-, guile-lib
-, guile-reader
-, imagemagick
-, makeWrapper
-, pkg-config
-, enableEmacs ? false, emacs
-, enableLout ? stdenv.hostPlatform.isLinux, lout
-, enablePloticus ? stdenv.hostPlatform.isLinux, ploticus
-, enableTex ? true, texliveSmall
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fig2dev,
+  gettext,
+  ghostscript,
+  guile,
+  guile-lib,
+  guile-reader,
+  imagemagick,
+  makeWrapper,
+  pkg-config,
+  enableEmacs ? false,
+  emacs,
+  enableLout ? stdenv.hostPlatform.isLinux,
+  lout,
+  enablePloticus ? stdenv.hostPlatform.isLinux,
+  ploticus,
+  enableTex ? true,
+  texliveSmall,
 }:
 
 let
   inherit (lib) optional;
-in stdenv.mkDerivation (finalAttrs: {
+in
+stdenv.mkDerivation (finalAttrs: {
   pname = "skribilo";
-  version = "0.10.0";
+  version = "0.11.1";
 
   src = fetchurl {
-    url = "http://download.savannah.nongnu.org/releases/skribilo/skribilo-${finalAttrs.version}.tar.gz";
-    hash = "sha256-jP9I7hds7f1QMmSaNJpGlSvqUOwGcg+CnBzMopIS9Q4=";
+    url = "mirror://savannah/skribilo/skribilo-${finalAttrs.version}.tar.gz";
+    hash = "sha256-ZlwkHEKSC/Np8SMdS5xxzhi6Y63QuajyQYIf0Roo1ZI=";
   };
 
   nativeBuildInputs = [
@@ -68,7 +74,7 @@ in stdenv.mkDerivation (finalAttrs: {
       conventions used in emails, Usenet and text.
     '';
     license = lib.licenses.gpl3Plus;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
   };
 })

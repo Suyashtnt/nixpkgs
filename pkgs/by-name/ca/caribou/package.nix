@@ -6,13 +6,13 @@
   gnome,
   glib,
   gtk3,
+  gobject-introspection,
   clutter,
   dbus,
   python3,
   libxml2,
   libxklavier,
-  libXtst,
-  gtk2,
+  libxtst,
   intltool,
   libxslt,
   at-spi2-core,
@@ -23,15 +23,14 @@
 }:
 
 let
-  pname = "caribou";
-  version = "0.4.21";
   pythonEnv = python3.withPackages (ps: with ps; [ pygobject3 ]);
 in
-stdenv.mkDerivation rec {
-  name = "caribou-${version}";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "caribou";
+  version = "0.4.21";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/caribou/${lib.versions.majorMinor version}/${name}.tar.xz";
+    url = "mirror://gnome/sources/caribou/${lib.versions.majorMinor finalAttrs.version}/caribou-${finalAttrs.version}.tar.xz";
     hash = "sha256-nEPZ9L0w9P6n94DU6LFPdYkQfFLpy2vSAr0NHCBk3lU=";
   };
 
@@ -57,13 +56,17 @@ stdenv.mkDerivation rec {
       url = "https://gitlab.gnome.org/GNOME/caribou/-/commit/d41c8e44b12222a290eaca16703406b113a630c6.patch";
       hash = "sha256-yIsEqSflpAdQPAB6eNr6fctxzyACu7N1HVfMIdCQou0=";
     })
+    # Fix build with gettext 0.25
+    ./gettext-0.25.patch
   ];
 
   nativeBuildInputs = [
     pkg-config
+    gobject-introspection
     intltool
     libxslt
     libxml2
+    pythonEnv
     autoreconfHook
     wrapGAppsHook3
     vala
@@ -77,8 +80,7 @@ stdenv.mkDerivation rec {
     dbus
     pythonEnv
     python3.pkgs.pygobject3
-    libXtst
-    gtk2
+    libxtst
   ];
 
   propagatedBuildInputs = [
@@ -86,21 +88,33 @@ stdenv.mkDerivation rec {
     libxklavier
   ];
 
+  configureFlags = [ "--enable-gtk2-module=no" ];
+
   postPatch = ''
     patchShebangs .
     substituteInPlace libcaribou/Makefile.am --replace "--shared-library=libcaribou.so.0" "--shared-library=$out/lib/libcaribou.so.0"
   '';
 
+  env = lib.optionalAttrs stdenv.cc.isGNU {
+    # This really should be done by latest Vala, but we are using
+    # release tarball here, which dists generated C code.
+    # https://gitlab.gnome.org/GNOME/vala/-/merge_requests/369
+    NIX_CFLAGS_COMPILE = "-Wno-error=incompatible-pointer-types";
+  };
+
   passthru = {
     updateScript = gnome.updateScript { packageName = "caribou"; };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Input assistive technology intended for switch and pointer users";
     mainProgram = "caribou-preferences";
     homepage = "https://gitlab.gnome.org/Archive/caribou";
-    license = licenses.lgpl21;
+    license = lib.licenses.lgpl21;
     maintainers = [ ];
-    platforms = platforms.linux;
+    platforms = lib.platforms.linux;
+    # checking for a Python interpreter with version >= 2.4... none
+    # configure: error: no suitable Python interpreter found
+    broken = stdenv.buildPlatform != stdenv.hostPlatform;
   };
-}
+})

@@ -2,27 +2,44 @@
   lib,
   buildPythonPackage,
   fetchPypi,
+  pytestCheckHook,
   requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "betamax";
   version = "0.9.0";
-  format = "setuptools";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
+    inherit (finalAttrs) pname version;
     hash = "sha256-gjFuFnm8aHnjyDMY0Ba1S3ySJf8IxEYt5IE+IgONX5Q=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ setuptools ];
 
-  doCheck = false;
+  dependencies = [ requests ];
 
-  meta = with lib; {
-    homepage = "https://betamax.readthedocs.org/en/latest/";
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "betamax" ];
+
+  disabledTestPaths = [
+    # Tests require network access
+    "tests/integration/test_hooks.py"
+    "tests/integration/test_placeholders.py"
+    "tests/integration/test_record_modes.py"
+    "tests/integration/test_unicode.py"
+    "tests/regression/test_gzip_compression.py"
+    "tests/regression/test_requests_2_11_body_matcher.py"
+  ];
+
+  meta = {
     description = "VCR imitation for requests";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ pSub ];
+    homepage = "https://betamax.readthedocs.org/";
+    changelog = "https://github.com/betamaxpy/betamax/blob/${finalAttrs.version}/HISTORY.rst";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ pSub ];
   };
-}
+})

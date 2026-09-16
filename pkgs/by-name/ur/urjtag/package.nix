@@ -1,26 +1,27 @@
-{ lib
-, stdenv
-, fetchurl
-, autoreconfHook
-, gettext
-, libftdi1
-, libtool
-, libusb-compat-0_1
-, pkg-config
-, readline
-, which
-, bsdlSupport ? true
-, jedecSupport ? true
-, staplSupport ? true
-, svfSupport ? true
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoreconfHook,
+  gettext,
+  libftdi1,
+  libtool,
+  libusb-compat-0_1,
+  pkg-config,
+  readline,
+  which,
+  bsdlSupport ? true,
+  jedecSupport ? true,
+  staplSupport ? true,
+  svfSupport ? true,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "urjtag";
   version = "2021.03";
 
   src = fetchurl {
-    url = "mirror://sourceforge/project/urjtag/urjtag/${version}/urjtag-${version}.tar.xz";
+    url = "mirror://sourceforge/project/urjtag/urjtag/${finalAttrs.version}/urjtag-${finalAttrs.version}.tar.xz";
     hash = "sha256-sKLqokVROvCW3E13AQmDIzXGlMbBKqXpL++uhoVBbxw=";
   };
 
@@ -38,17 +39,20 @@ stdenv.mkDerivation rec {
   ];
 
   configureFlags = [
-    (lib.enableFeature bsdlSupport  "bsdl")
+    (lib.enableFeature bsdlSupport "bsdl")
     (lib.enableFeature jedecSupport "jedec-exp")
     (lib.enableFeature staplSupport "stapl")
-    (lib.enableFeature svfSupport   "svf")
+    (lib.enableFeature svfSupport "svf")
   ];
 
-  meta = with lib; {
+  meta = {
     homepage = "http://urjtag.org/";
     description = "Universal JTAG library, server and tools";
-    license = with licenses; [ gpl2Plus lgpl21Plus ];
-    maintainers = with maintainers; [ AndersonTorres ];
-    platforms = platforms.linux;
+    license = with lib.licenses; [
+      gpl2Plus
+      lgpl21Plus
+    ];
+    maintainers = [ ];
+    platforms = lib.platforms.linux;
   };
-}
+})

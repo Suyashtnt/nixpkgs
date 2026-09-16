@@ -1,42 +1,49 @@
-{ lib
-, fetchFromGitHub
-, python3Packages
-, xvfb-run
-, firefox-esr
-, geckodriver
-, makeWrapper
+{
+  lib,
+  fetchFromGitHub,
+  python3Packages,
+  xvfb-run,
+  firefox-esr,
+  geckodriver,
+  makeWrapper,
 }:
 
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "eye-witness";
   version = "20230525.1";
-  format = "other";
+  pyproject = false;
 
   src = fetchFromGitHub {
     owner = "redsiege";
     repo = "EyeWitness";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-nSPpPbwqagc5EadQ4AHgLhjQ0kDjmbdcwE/PL5FDL4I=";
   };
 
-  build-system = with python3Packages; [
-    setuptools
-  ] ++ [
-    makeWrapper
-  ];
+  build-system =
+    with python3Packages;
+    [
+      setuptools
+    ]
+    ++ [
+      makeWrapper
+    ];
 
-  dependencies = with python3Packages; [
-    selenium
-    fuzzywuzzy
-    pyvirtualdisplay
-    pylev
-    netaddr
-    pydevtool
-  ] ++ [
-    firefox-esr
-    xvfb-run
-    geckodriver
-  ];
+  dependencies =
+    with python3Packages;
+    [
+      selenium
+      fuzzywuzzy
+      pyvirtualdisplay
+      pylev
+      netaddr
+      pydevtool
+    ]
+    ++ [
+      firefox-esr
+      xvfb-run
+      geckodriver
+    ];
 
   installPhase = ''
     runHook preInstall
@@ -57,13 +64,13 @@ python3Packages.buildPythonApplication rec {
     runHook postFixup
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Take screenshots of websites, and identify admin interfaces";
     homepage = "https://github.com/redsiege/EyeWitness";
-    changelog = "https://github.com/redsiege/EyeWitness/blob/${src.rev}/CHANGELOG";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ tochiaha ];
+    changelog = "https://github.com/redsiege/EyeWitness/blob/${finalAttrs.src.rev}/CHANGELOG";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ tochiaha ];
     mainProgram = "eye-witness";
-    platforms = platforms.all;
+    platforms = lib.platforms.all;
   };
-}
+})

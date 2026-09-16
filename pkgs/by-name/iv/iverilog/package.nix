@@ -1,52 +1,59 @@
-{ lib, stdenv
-, fetchFromGitHub
-, fetchpatch
-, autoconf
-, bison
-, bzip2
-, flex
-, gperf
-, ncurses
-, perl
-, python3
-, readline
-, zlib
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  autoconf,
+  bison,
+  bzip2,
+  flex,
+  gperf,
+  ncurses,
+  perl,
+  python3,
+  readline,
+  zlib,
+  buildPackages,
+  addBinToPathHook,
 }:
 
-stdenv.mkDerivation rec {
-  pname   = "iverilog";
-  version = "12.0";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "iverilog";
+  version = "13.0";
 
   src = fetchFromGitHub {
-    owner  = "steveicarus";
-    repo   = pname;
-    rev    = "v${lib.replaceStrings ["."] ["_"] version}";
-    hash   = "sha256-J9hedSmC6mFVcoDnXBtaTXigxrSCFa2AhhFd77ueo7I=";
+    owner = "steveicarus";
+    repo = "iverilog";
+    tag = "v${lib.replaceStrings [ "." ] [ "_" ] finalAttrs.version}";
+    hash = "sha256-SfODx7K3UrDHMoKCbMFpxo4t9j9vG1oWF0RFS3dSUm4=";
   };
 
-  nativeBuildInputs = [ autoconf bison flex gperf ];
-
-  CC_FOR_BUILD="${stdenv.cc}/bin/cc";
-  CXX_FOR_BUILD="${stdenv.cc}/bin/c++";
-
-  patches = [
-    # NOTE(jleightcap): `-Werror=format-security` warning patched shortly after release, backport the upstream fix
-    (fetchpatch {
-      name = "format-security";
-      url = "https://github.com/steveicarus/iverilog/commit/23e51ef7a8e8e4ba42208936e0a6a25901f58c65.patch";
-      hash = "sha256-fMWfBsCl2fuXe+6AR10ytb8QpC84bXlP5RSdrqsWzEk=";
-    })
+  nativeBuildInputs = [
+    autoconf
+    bison
+    flex
+    gperf
   ];
 
-  buildInputs = [ bzip2 ncurses readline zlib ];
+  env = {
+    CC_FOR_BUILD = "${lib.getExe' buildPackages.stdenv.cc "cc"}";
+    CXX_FOR_BUILD = "${lib.getExe' buildPackages.stdenv.cc "cc++"}";
+  }
+  // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+    NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
+  };
+
+  buildInputs = [
+    bzip2
+    ncurses
+    readline
+    zlib
+  ];
 
   preConfigure = "sh autoconf.sh";
 
-  enableParallelBuilding = true;
+  configureFlags = [ "CFLAGS=-std=gnu17" ];
 
-  env = lib.optionalAttrs stdenv.hostPlatform.isDarwin {
-    NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
-  };
+  enableParallelBuilding = true;
 
   # NOTE(jleightcap): the `make check` target only runs a "Hello, World"-esque sanity check.
   # the tests in the doInstallCheck phase run a full regression test suite.
@@ -58,23 +65,33 @@ stdenv.mkDerivation rec {
 
   nativeInstallCheckInputs = [
     perl
-    (python3.withPackages (pp: with pp; [
-      docopt
-    ]))
+    (python3.withPackages (
+      pp: with pp; [
+        docopt
+      ]
+    ))
+    addBinToPathHook
   ];
 
   installCheckPhase = ''
     runHook preInstallCheck
-    export PATH="$PATH:$out/bin"
-    sh .github/test.sh
+
+    # PLI1 is not enabled in the build (ENABLE_PLI1=no), so skip PLI1 VPI tests
+    # which would fail at runtime with "Failed - running vvp".
+    sh .github/test.sh no-pli1
+
     runHook postInstallCheck
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Icarus Verilog compiler";
-    homepage    = "http://iverilog.icarus.com/";  # https does not work
-    license     = with licenses; [ gpl2Plus lgpl21Plus ];
-    maintainers = with maintainers; [ thoughtpolice ];
-    platforms   = platforms.all;
+    homepage = "https://steveicarus.github.io/iverilog";
+    downloadPage = "https://github.com/steveicarus/iverilog";
+    license = with lib.licenses; [
+      gpl2Plus
+      lgpl21Plus
+    ];
+    maintainers = with lib.maintainers; [ thoughtpolice ];
+    platforms = lib.platforms.all;
   };
-}
+})

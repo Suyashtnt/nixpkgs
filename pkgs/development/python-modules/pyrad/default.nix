@@ -2,52 +2,52 @@
   buildPythonPackage,
   fetchFromGitHub,
   lib,
-  poetry-core,
+  nix-update-script,
+  setuptools,
   netaddr,
-  six,
-  unittestCheckHook,
-  fetchPypi,
+  pytestCheckHook,
+  sphinxHook,
+  sphinx-rtd-theme,
 }:
-let
-  netaddr_0_8_0 = netaddr.overridePythonAttrs (oldAttrs: rec {
-    version = "0.8.0";
 
-    src = fetchPypi {
-      pname = "netaddr";
-      inherit version;
-      hash = "sha256-1sxXx6B7HZ0ukXqos2rozmHDW6P80bg8oxxaDuK1okM=";
-    };
-  });
-in
-
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyrad";
-  version = "2.4-unstable-2023-06-13";
-  format = "pyproject";
+  version = "2.5.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pyradius";
-    repo = pname;
-    rev = "dd34c5a29b46d83b0bea841e85fd72b79f315b87";
-    hash = "sha256-U4VVGkDDyN4J/tRDaDGSr2TSA4JmqIoQj5qn9qBAvQU=";
+    repo = "pyrad";
+    tag = finalAttrs.version;
+    hash = "sha256-94BjJRzCSJu/bVuYYKFlJkBcOVcQjmbDJ8QG+JwVpxY=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
-    netaddr_0_8_0
-    six
-  ];
+  dependencies = [ netaddr ];
 
-  preCheck = ''
-    substituteInPlace tests/testServer.py \
-      --replace-warn "def testBind(self):" "def dontTestBind(self):" \
-      --replace-warn "def testBindv6(self):" "def dontTestBindv6(self):" \
+  # Upstream doesn't exclude docs, example, and pyrad.tests from package
+  # discovery, causing them to be installed into site-packages.
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'exclude = ["tests*"]' 'exclude = ["docs*", "example*", "pyrad.tests*"]'
   '';
 
-  nativeCheckInputs = [ unittestCheckHook ];
+  outputs = [
+    "out"
+    "doc"
+  ];
+
+  nativeBuildInputs = [
+    sphinxHook
+    sphinx-rtd-theme
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "pyrad" ];
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Python RADIUS Implementation";
@@ -55,4 +55,4 @@ buildPythonPackage rec {
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ drawbu ];
   };
-}
+})

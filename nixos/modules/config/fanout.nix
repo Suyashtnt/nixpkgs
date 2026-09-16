@@ -1,9 +1,16 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.fanout;
-  mknodCmds = n: lib.lists.imap0 (i: s:
-    "mknod /dev/fanout${builtins.toString i} c $MAJOR ${builtins.toString i}"
-  ) (lib.lists.replicate n "");
+  mknodCmds =
+    n:
+    lib.lists.imap0 (i: s: "mknod /dev/fanout${toString i} c $MAJOR ${toString i}") (
+      lib.lists.replicate n ""
+    );
 in
 {
   options.services.fanout = {
@@ -26,7 +33,7 @@ in
     boot.kernelModules = [ "fanout" ];
 
     boot.extraModprobeConfig = ''
-      options fanout buffersize=${builtins.toString cfg.bufferSize}
+      options fanout buffersize=${toString cfg.bufferSize}
     '';
 
     systemd.services.fanout = {

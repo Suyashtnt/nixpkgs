@@ -40,7 +40,7 @@ buildPythonPackage rec {
     pyscaffold
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     testing = [
       configupdater
       pre-commit
@@ -55,10 +55,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pyscaffoldext.custom_extension" ];
 
-  meta = with lib; {
+  meta = {
     description = "PyScaffold extension to create a custom PyScaffold extension";
     homepage = "https://pypi.org/project/pyscaffoldext-custom-extension/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ matthewcroughan ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ matthewcroughan ];
   };
 }

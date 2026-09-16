@@ -1,14 +1,15 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, meson
-, ninja
-, pkg-config
-, gobject-introspection
-, vala
-, gtk3
-, wayland-scanner
-, wayland
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  meson,
+  ninja,
+  pkg-config,
+  gobject-introspection,
+  vala,
+  gtk3,
+  wayland-scanner,
+  wayland,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -22,7 +23,10 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-SHKAYmdev08oRB/V6UpfSFqYwplF59IaNSOoWcACPig=";
   };
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   nativeBuildInputs = [
     meson
@@ -49,7 +53,7 @@ stdenv.mkDerivation (finalAttrs: {
     # The author stated "GTK Session Lock is licensed under the GNU General
     # Public License version 3.0 or any later version approved by me (Cu3PO42)."
     # Since we don't know if the author will approve later versions, we mark gpl3Only
-    license = with lib.licenses; [ gpl3Only ];
+    license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [ aleksana ];
     platforms = lib.platforms.unix;
     badPlatforms = lib.platforms.darwin;

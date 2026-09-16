@@ -16,7 +16,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     hash = "sha256-/WtacZPr45lurS0hv+W8UGzsXY3RujkU5oGGGqjqG0Q=";
   };
 
-  outputs = [ "out" "doc" ];
+  outputs = [
+    "out"
+    "doc"
+  ];
 
   dontConfigure = true;
   dontBuild = true;
@@ -41,8 +44,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
       Think of it as a bootloader for Emacs.
     '';
-    license = with lib.licenses; [ gpl3Plus ];
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
     platforms = lib.platforms.all;
   };
 })

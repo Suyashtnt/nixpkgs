@@ -1,24 +1,28 @@
-{ lib
-, fetchFromGitHub
-, pkg-config
-, ffmpeg_7
-, rustPlatform
-, glib
-, installShellFiles
-, asciidoc
+{
+  lib,
+  fetchFromGitHub,
+  pkg-config,
+  ffmpeg,
+  rustPlatform,
+  glib,
+  installShellFiles,
+  asciidoc,
+  versionCheckHook,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "metadata";
-  version = "0.1.9";
+  version = "0.1.13";
 
   src = fetchFromGitHub {
     owner = "zmwangx";
     repo = "metadata";
-    rev = "v${version}";
-    hash = "sha256-OFWdCV9Msy/mNaSubqoJi4tBiFqL7RuWWQluSnKe4fU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-E9UL10RYHibbaLIHbgMxuOAz7RLKGcZgyfvS1HDFZjE=";
   };
 
-  cargoHash = "sha256-F5jXS/W600nbQtu1FD4+DawrFsO+5lJjvAvTiFKT840=";
+  cargoHash = "sha256-oVP9DXnVU1uZrGkJuELRtExpQnYqrzhjxGpIDWDbbbA=";
+
+  env.FFMPEG_DIR = ffmpeg.dev;
 
   nativeBuildInputs = [
     pkg-config
@@ -27,25 +31,29 @@ rustPlatform.buildRustPackage rec {
     rustPlatform.bindgenHook
   ];
 
+  buildInputs = [
+    ffmpeg
+    glib
+  ];
+
   postBuild = ''
     a2x --doctype manpage --format manpage man/metadata.1.adoc
   '';
+
   postInstall = ''
     installManPage man/metadata.1
   '';
 
-  buildInputs = [
-    ffmpeg_7
-    glib
-  ];
-
-  env.FFMPEG_DIR = ffmpeg_7.dev;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
 
   meta = {
     description = "Media metadata parser and formatter designed for human consumption, powered by FFmpeg";
-    maintainers = with lib.maintainers; [ clevor ];
     license = lib.licenses.mit;
     homepage = "https://github.com/zmwangx/metadata";
     mainProgram = "metadata";
+    maintainers = with lib.maintainers; [
+      debtquity
+    ];
   };
-}
+})

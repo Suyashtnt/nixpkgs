@@ -10,8 +10,8 @@ vscode-utils.buildVscodeMarketplaceExtension {
   mktplcRef = {
     name = "magic-racket";
     publisher = "evzen-wybitul";
-    version = "0.6.4";
-    hash = "sha256-Hxa4VPm3QvJICzpDyfk94fGHu1hr+YN9szVBwDB8X4U=";
+    version = "0.8.0";
+    hash = "sha256-yWmJFLXktsJDEDwHO8ZCXQBTw8j5bOv6TXEOO/V8mZs=";
   };
   nativeBuildInputs = [
     jq

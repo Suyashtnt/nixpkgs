@@ -1,54 +1,87 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
   cryptography,
   dnspython,
   expiringdict,
   fetchFromGitHub,
   hatchling,
+  httpx,
+  iana-etc,
+  importlib-resources,
+  libredirect,
+  pem,
   publicsuffixlist,
   pyleri,
+  pyopenssl,
   pytestCheckHook,
-  pythonOlder,
   requests,
   timeout-decorator,
+  xmltodict,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "checkdmarc";
-  version = "5.5.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "6.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "domainaware";
     repo = "checkdmarc";
-    rev = "refs/tags/${version}";
-    hash = "sha256-skQqLWBEmfyiW2DsRRbj3Lfj52QZca0zKenFC7LltjM=";
+    tag = finalAttrs.version;
+    hash = "sha256-yyyaA0gLnRpyf1MueHWd67kzXDMOJYd5CHzAG/mBIA0=";
   };
 
-  nativeBuildInputs = [ hatchling ];
+  pythonRelaxDeps = [
+    "cryptography"
+    "pyopenssl"
+    "xmltodict"
+  ];
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     cryptography
     dnspython
     expiringdict
+    httpx
+    importlib-resources
+    pem
     publicsuffixlist
     pyleri
+    pyopenssl
     requests
     timeout-decorator
-  ];
+    xmltodict
+  ]
+  ++ dnspython.optional-dependencies.doh;
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    httpx
+    pytestCheckHook
+  ]
+  ++ httpx.optional-dependencies.http2;
 
   pythonImportsCheck = [ "checkdmarc" ];
 
-  pytestFlagsArray = [ "tests.py" ];
+  preCheck = lib.optionalString stdenv.hostPlatform.isLinux ''
+    echo "nameserver 127.0.0.1" > resolv.conf
+    export NIX_REDIRECTS=/etc/protocols=${iana-etc}/etc/protocols:/etc/resolv.conf=$(realpath resolv.conf) \
+      LD_PRELOAD=${libredirect}/lib/libredirect.so
+  '';
 
   disabledTests = [
     # Tests require network access
+    "testBIMI"
+    "testCheckSoaDelegatedChildZoneLive"
+    "testCheckSoaFallsBackToBaseDomainLive"
     "testDMARCPctLessThan100Warning"
+    "testDNSSEC"
+    "testDnssecFalseWhenNoKey"
+    "testGetDnskeyCache"
+    "testIncludeMissingSPF"
+    "testKnownGood"
     "testSPFMissingARecord"
     "testSPFMissingMXRecord"
     "testSplitSPFRecord"
@@ -56,12 +89,12 @@ buildPythonPackage rec {
     "testTooManySPFVoidDNSLookups"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Parser for SPF and DMARC DNS records";
-    mainProgram = "checkdmarc";
     homepage = "https://github.com/domainaware/checkdmarc";
-    changelog = "https://github.com/domainaware/checkdmarc/blob/${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/domainaware/checkdmarc/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "checkdmarc";
   };
-}
+})

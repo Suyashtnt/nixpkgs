@@ -1,86 +1,104 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
-  deprecation,
-  poetry-core,
+  setuptools,
 
   # dependencies
-  async-timeout,
-  asgi-logger,
+  aiohttp,
   cloudevents,
+  cryptography,
   fastapi,
+  grpc-interceptor,
   grpcio,
+  grpcio-tools,
+  h11,
   httpx,
-  azure-identity,
   kubernetes,
   numpy,
   orjson,
   pandas,
   prometheus-client,
   protobuf,
-  requests,
   psutil,
-  azure-storage-blob,
-  azure-storage-file-share,
-  boto3,
-  google-cloud-storage,
+  pyasn1,
   pydantic,
   python-dateutil,
+  python-multipart,
   pyyaml,
-  ray,
   six,
+  starlette,
   tabulate,
   timing-asgi,
+  urllib3,
   uvicorn,
 
-  # checks
+  # optional-dependencies
+  # storage
+  kserve-storage,
+  # logging
+  asgi-logger,
+  # ray
+  ray,
+  # llm
+  vllm,
+
+  # tests
   avro,
   grpcio-testing,
+  jinja2,
   pytest-asyncio,
+  pytest-cov-stub,
+  pytest-httpx,
+  pytest-xdist,
   pytestCheckHook,
   tomlkit,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "kserve";
-  version = "0.13.1";
+  version = "0.20.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "kserve";
     repo = "kserve";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-wGS001PK+k21oCOaQCiAtytTDjfe0aiTVJ9spyOucYA=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-XSEdhYrsSdrKjHnFCoMPoS0nAZ+Fa8JGj+izVw3wl0o=";
   };
 
-  sourceRoot = "${src.name}/python/kserve";
-
-  pythonRelaxDeps = [
-    "fastapi"
-    "httpx"
-    "prometheus-client"
-    "protobuf"
-    "ray"
-    "uvicorn"
-    "psutil"
-  ];
+  sourceRoot = "${finalAttrs.src.name}/python/kserve";
 
   build-system = [
-    deprecation
-    poetry-core
+    setuptools
   ];
 
+  pythonRelaxDeps = [
+    "cryptography"
+    "fastapi"
+    "httpx"
+    "numpy"
+    "pandas"
+    "prometheus-client"
+    "protobuf"
+    "psutil"
+    "python-multipart"
+    "starlette"
+    "uvicorn"
+  ];
   dependencies = [
-    async-timeout
+    aiohttp
     cloudevents
+    cryptography
     fastapi
+    grpc-interceptor
     grpcio
+    grpcio-tools
+    h11
     httpx
     kubernetes
     numpy
@@ -89,58 +107,121 @@ buildPythonPackage rec {
     prometheus-client
     protobuf
     psutil
+    pyasn1
     pydantic
     python-dateutil
+    python-multipart
     pyyaml
-    ray
     six
+    starlette
     tabulate
     timing-asgi
+    urllib3
     uvicorn
-  ] ++ ray.optional-dependencies.serve-deps;
+  ]
+  ++ uvicorn.optional-dependencies.standard;
 
   optional-dependencies = {
     storage = [
-      azure-identity
-      azure-storage-blob
-      azure-storage-file-share
-      boto3
-      google-cloud-storage
-      requests
+      kserve-storage
     ];
-    logging = [ asgi-logger ];
-    ray = [ ray ];
+    logging = [
+      asgi-logger
+    ];
+    ray = [
+      ray
+    ]
+    ++ ray.optional-dependencies.serve;
+    llm = [
+      vllm
+    ];
   };
 
   nativeCheckInputs = [
     avro
     grpcio-testing
+    jinja2
     pytest-asyncio
+    pytest-cov-stub
+    pytest-httpx
+    pytest-xdist
     pytestCheckHook
     tomlkit
-  ] ++ lib.flatten (builtins.attrValues optional-dependencies);
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
   pythonImportsCheck = [ "kserve" ];
 
   disabledTestPaths = [
     # Looks for a config file at the root of the repository
     "test/test_inference_service_client.py"
+
+    # AssertionError
+    "test/test_server.py::TestTFHttpServerLoadAndUnLoad::test_unload"
+
+    # Race condition when called concurrently between two instances of the same model (i.e. in nixpkgs-review)
+    "test/test_dataplane.py::TestDataPlane::test_model_metadata[TEST_RAY_SERVE_MODEL]"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # RuntimeError: Failed to start GCS
+    "test/test_dataplane.py::TestDataPlane::test_explain"
+    "test/test_dataplane.py::TestDataPlane::test_infer"
+    "test/test_dataplane.py::TestDataPlane::test_model_metadata"
+    "test/test_dataplane.py::TestDataPlane::test_server_readiness"
+    "test/test_server.py::TestRayServer::test_explain"
+    "test/test_server.py::TestRayServer::test_health_handler"
+    "test/test_server.py::TestRayServer::test_infer"
+    "test/test_server.py::TestRayServer::test_list_handler"
+    "test/test_server.py::TestRayServer::test_liveness_handler"
+    "test/test_server.py::TestRayServer::test_predict"
+    # Permission Error
+    "test/test_server.py::TestMutiProcessServer::test_rest_server_multiprocess"
   ];
 
   disabledTests = [
-    # Require network access
+    # TypeError: Cannot interpret '<StringDtype(na_value=nan)>' as a data type
+    "test_fp16_input_as_binary_data"
+
+    # AttributeError: 'google._upb._message.FieldDescriptor' object has no attribute 'label'
     "test_health_handler"
+    "test_list_handler"
+    "test_liveness_handler"
+    "test_server_readiness"
+
+    # Started failing since vllm was updated to 0.13.0
+    # pydantic_core._pydantic_core.ValidationError: 1 validation error for RerankResponse
+    # usage.prompt_tokens
+    #   Field required [type=missing, input_value={'total_tokens': 100}, input_type=dict]
+    #     For further information visit https://errors.pydantic.dev/2.11/v/missing
+    "test_create_rerank"
+    "test_create_embedding"
+
+    # AssertionError: assert CompletionReq...lm_xargs=None) == CompletionReq...lm_xargs=None)
+    "test_convert_params"
+
+    # Flaky: ray.exceptions.ActorDiedError: The actor died unexpectedly before finishing this task.
+    "test_explain"
     "test_infer"
-    "test_infer_v2"
-    # Assertion error due to HTTP response code
-    "test_unload"
+    "test_predict"
+
+    # Require network access
+    "test_infer_graph_endpoint"
+    "test_infer_path_based_routing"
+
+    # Tries to access `/tmp` (hardcoded)
+    "test_local_path_with_out_dir_exist"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    "test_local_path_with_out_dir_not_exist"
   ];
+
+  __darwinAllowLocalNetworking = true;
 
   meta = {
     description = "Standardized Serverless ML Inference Platform on Kubernetes";
     homepage = "https://github.com/kserve/kserve/tree/master/python/kserve";
-    changelog = "https://github.com/kserve/kserve/releases/tag/v${version}";
+    changelog = "https://github.com/kserve/kserve/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

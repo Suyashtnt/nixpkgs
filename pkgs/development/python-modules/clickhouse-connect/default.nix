@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   pytestCheckHook,
   # build_requires
   cython,
@@ -24,17 +23,15 @@
 }:
 buildPythonPackage rec {
   pname = "clickhouse-connect";
-  version = "0.7.12";
+  version = "0.10.0";
 
   format = "setuptools";
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     repo = "clickhouse-connect";
     owner = "ClickHouse";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-UJSg/ADxVsO4xuym8NGjbgQafWmu7J3Is2hKvObYhU8=";
+    tag = "v${version}";
+    hash = "sha256-D2D0sOFb0gcbLfMigYn0/GrT8zJav2Q6T39dONLxui4=";
   };
 
   nativeBuildInputs = [ cython ];
@@ -53,12 +50,15 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     pytestCheckHook
     pytest-dotenv
-  ] ++ passthru.optional-dependencies.sqlalchemy ++ passthru.optional-dependencies.numpy;
+  ]
+  ++ optional-dependencies.sqlalchemy
+  ++ optional-dependencies.numpy
+  ++ optional-dependencies.pandas;
 
-  # these tests require a running clickhouse instance
+  # These tests require a running ClickHouse instance or a reachable HTTP endpoint.
   disabledTestPaths = [
     "tests/integration_tests"
-    "tests/tls"
+    "tests/unit_tests/test_driver/test_httpclient.py"
   ];
 
   pythonImportsCheck = [
@@ -68,20 +68,18 @@ buildPythonPackage rec {
     "clickhouse_connect.driverc.npconv"
   ];
 
-  passthru = {
-    optional-dependencies = {
-      sqlalchemy = [ sqlalchemy ];
-      numpy = [ numpy ];
-      pandas = [ pandas ];
-      arrow = [ pyarrow ];
-      orjson = [ orjson ];
-    };
+  optional-dependencies = {
+    sqlalchemy = [ sqlalchemy ];
+    numpy = [ numpy ];
+    pandas = [ pandas ];
+    arrow = [ pyarrow ];
+    orjson = [ orjson ];
   };
 
-  meta = with lib; {
+  meta = {
     description = "ClickHouse Database Core Driver for Python, Pandas, and Superset";
     homepage = "https://github.com/ClickHouse/clickhouse-connect";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ cpcloud ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ cpcloud ];
   };
 }

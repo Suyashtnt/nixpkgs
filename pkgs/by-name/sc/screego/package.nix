@@ -10,13 +10,13 @@
 }:
 let
 
-  version = "1.10.5";
+  version = "1.12.0";
 
   src = fetchFromGitHub {
     owner = "screego";
     repo = "server";
     rev = "v${version}";
-    hash = "sha256-4WF9PfG6W1BLBqgWkKhTFEzed0+jDpRFMTsHw/1lPnQ=";
+    hash = "sha256-xWy7aqpUznIYeBPqdpYdRMJxxfiPNa4JmjS3o5i3xxY=";
   };
 
   ui = stdenv.mkDerivation {
@@ -27,7 +27,7 @@ let
 
     offlineCache = fetchYarnDeps {
       yarnLock = "${src}/ui/yarn.lock";
-      hash = "sha256-ye8UDkal10k/5uCd0VrZsG2FJGB727q+luExFTUmB/M=";
+      hash = "sha256-JPSbBUny5unUHVkaVGlHyA90IpT9ahcSmt9R1hxERRk=";
     };
 
     nativeBuildInputs = [
@@ -35,6 +35,10 @@ let
       yarnBuildHook
       nodejs
     ];
+
+    preConfigure = ''
+      export HOME=$(mktemp -d)
+    '';
 
     installPhase = ''
       cp -r build $out
@@ -49,7 +53,7 @@ buildGoModule rec {
 
   pname = "screego-server";
 
-  vendorHash = "sha256-ry8LO+KmNU9MKL8/buk9qriDe/zq+2uIsws6wVZmoo4=";
+  vendorHash = "sha256-vx7CpHUPQlLEQGxdswQJI1SrfSUwPlpNcb7Cq81ZOBQ=";
 
   ldflags = [
     "-s"
@@ -68,11 +72,13 @@ buildGoModule rec {
     mv $out/bin/server $out/bin/screego
   '';
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Screen sharing for developers";
     homepage = "https://screego.net";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ pinpox ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ pinpox ];
     mainProgram = "screego";
   };
 }

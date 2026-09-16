@@ -2,13 +2,15 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
+  python,
 
   # build
   meson,
   meson-python,
   ninja,
+  nukeReferences,
   pybind11,
+  pkg-config,
 
   # propagates
   numpy,
@@ -21,32 +23,44 @@
   # tests
   matplotlib,
   pillow,
+  pytest-xdist,
   pytestCheckHook,
+  wurlitzer,
 }:
 
 let
   contourpy = buildPythonPackage rec {
     pname = "contourpy";
-    version = "1.2.1";
-    format = "pyproject";
-
-    disabled = pythonOlder "3.8";
+    version = "1.3.3";
+    pyproject = true;
 
     src = fetchFromGitHub {
       owner = "contourpy";
       repo = "contourpy";
-      rev = "refs/tags/v${version}";
-      hash = "sha256-Qd6FC7SgFyC/BvOPWVkr2ZfKVMVAknLlidNRq3zcWU0=";
+      tag = "v${version}";
+      hash = "sha256-/tE+F1wH7YkqfgenXwtcfkjxUR5FwfgoS4NYC6n+/2M=";
     };
+
+    # prevent unnecessary references to the build python when cross compiling
+    postPatch = ''
+      substituteInPlace lib/contourpy/util/_build_config.py.in \
+        --replace-fail '@python_path@' "${python.interpreter}"
+    '';
 
     nativeBuildInputs = [
       meson
-      meson-python
       ninja
+      nukeReferences
+      pkg-config
+    ];
+
+    buildInputs = [
       pybind11
     ];
 
-    propagatedBuildInputs = [ numpy ];
+    build-system = [ meson-python ];
+
+    dependencies = [ numpy ];
 
     passthru.optional-depdendencies = {
       bokeh = [
@@ -62,6 +76,8 @@ let
       matplotlib
       pillow
       pytestCheckHook
+      pytest-xdist
+      wurlitzer
     ];
 
     passthru.tests = {
@@ -72,11 +88,16 @@ let
 
     pythonImportsCheck = [ "contourpy" ];
 
-    meta = with lib; {
-      changelog = "https://github.com/contourpy/contourpy/releases/tag/v${version}";
+    # remove references to buildPackages.python3, which is not allowed for cross builds.
+    preFixup = ''
+      nuke-refs $out/${python.sitePackages}/contourpy/util/{_build_config.py,__pycache__/_build_config.*}
+    '';
+
+    meta = {
+      changelog = "https://github.com/contourpy/contourpy/releases/tag/${src.tag}";
       description = "Python library for calculating contours in 2D quadrilateral grids";
       homepage = "https://github.com/contourpy/contourpy";
-      license = licenses.bsd3;
+      license = lib.licenses.bsd3;
       maintainers = [ ];
     };
   };

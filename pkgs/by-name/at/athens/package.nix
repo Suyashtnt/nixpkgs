@@ -1,28 +1,36 @@
 {
   lib,
   fetchFromGitHub,
-  buildGoModule,
-  testers,
-  athens,
+  # Requires Go 1.26, drop when that's the default.
+  buildGo126Module,
+  nix-update-script,
+  versionCheckHook,
+  applyPatches,
 }:
 
-buildGoModule rec {
+buildGo126Module (finalAttrs: {
   pname = "athens";
-  version = "0.15.1";
+  version = "0.18.1";
 
-  src = fetchFromGitHub {
-    owner = "gomods";
-    repo = "athens";
-    rev = "v${version}";
-    hash = "sha256-JERyECQ3/pI+ApWyWvUwZqkGBmA+6pP7Uj+RfpUGsOw=";
+  src = applyPatches {
+    src = fetchFromGitHub {
+      owner = "gomods";
+      repo = "athens";
+      tag = "v${finalAttrs.version}";
+      hash = "sha256-msn/Kwwm8vdW25dSaax3dsCnCvwvsagaD/6KkqXL5dA=";
+    };
+    # Trim the patch version, not needed anyway.
+    postPatch = ''
+      sed -i 's/go 1.26.2/go 1.26/' go.mod
+    '';
   };
 
-  vendorHash = "sha256-tCpwiqJHGRo9vqUh00k+tg4X6WNPnnknV7zjPkgs6Zs=";
+  vendorHash = "sha256-9DiDSR9M25F9rQSLy671V6SopicnDizpWdL+Zd4M5A0=";
 
-  CGO_ENABLED = "0";
+  env.CGO_ENABLED = "0";
   ldflags = [
     "-s"
-    "-X github.com/gomods/athens/pkg/build.version=${version}"
+    "-X github.com/gomods/athens/pkg/build.version=${finalAttrs.version}"
   ];
 
   subPackages = [ "cmd/proxy" ];
@@ -31,20 +39,21 @@ buildGoModule rec {
     mv $out/bin/proxy $out/bin/athens
   '';
 
-  passthru = {
-    tests.version = testers.testVersion { package = athens; };
-  };
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Go module datastore and proxy";
     homepage = "https://github.com/gomods/athens";
-    changelog = "https://github.com/gomods/athens/releases/tag/v${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/gomods/athens/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
     mainProgram = "athens";
-    maintainers = with maintainers; [
+    maintainers = with lib.maintainers; [
       katexochen
       malt3
     ];
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
-}
+})

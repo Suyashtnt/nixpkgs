@@ -1,38 +1,51 @@
-{ autoreconfHook
-, lib
-, pkg-config
-, stdenv
-, fetchFromGitLab
-, gitUpdater
+{
+  autoreconfHook,
+  lib,
+  pkg-config,
+  stdenv,
+  fetchFromGitLab,
+  gitUpdater,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "ethercat";
-  version = "1.6.1";
+  version = "1.6.10";
 
   src = fetchFromGitLab {
     owner = "etherlab.org";
     repo = "ethercat";
-    rev = "refs/tags/${finalAttrs.version}";
-    hash = "sha256-fvuyADZzH1lHo1TkGd9s3n2n8y9vsGgs/ZOakIw48WI=";
+    tag = finalAttrs.version;
+    hash = "sha256-ZlvlWSZz7oWMvl3XorS2lb4i33RRv8dBwOe2uLDeOjQ=";
   };
 
   separateDebugInfo = true;
 
-  nativeBuildInputs = [ autoreconfHook pkg-config ];
+  nativeBuildInputs = [
+    autoreconfHook
+    pkg-config
+  ];
 
   configureFlags = [
     "--enable-userlib=yes"
     "--enable-kernel=no"
   ];
 
-  passthru.updateScript = gitUpdater { };
+  passthru = {
+    kernelModule = import ./kernel-module.nix finalAttrs.finalPackage;
+    updateScript = gitUpdater { };
+  };
 
-  meta = with lib; {
+  meta = {
     description = "IgH EtherCAT Master for Linux";
     homepage = "https://etherlab.org/ethercat";
     changelog = "https://gitlab.com/etherlab.org/ethercat/-/blob/${finalAttrs.version}/NEWS";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ stv0g ];
+    license = with lib.licenses; [
+      gpl2Only
+      lgpl21Only
+    ];
+    maintainers = with lib.maintainers; [
+      ninelore
+      stv0g
+    ];
     platforms = [ "x86_64-linux" ];
   };
 })

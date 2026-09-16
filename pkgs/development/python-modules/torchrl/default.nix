@@ -1,28 +1,54 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
+  cmake,
   ninja,
+  numpy,
+  pybind11,
   setuptools,
-  which,
+  setuptools-scm,
+  torch,
 
   # dependencies
   cloudpickle,
-  numpy,
+  hoptorch,
   packaging,
+  pyvers,
   tensordict,
-  torch,
 
   # optional-dependencies
-  ale-py,
-  gym,
-  pygame,
-  torchsnapshot,
+  # atari
   gymnasium,
+  # brax
+  brax,
+  jax,
+  # checkpointing
+  torchsnapshot,
+  # dm-control
+  dm-control,
+  # gym-continuous
   mujoco,
+  # llm
+  accelerate,
+  datasets,
+  einops,
+  immutabledict,
+  langdetect,
+  nltk,
+  playwright,
+  protobuf,
+  safetensors,
+  sentencepiece,
+  transformers,
+  vllm,
+  # marl
+  pettingzoo,
+  vmas,
+  # offline-data
   h5py,
   huggingface-hub,
   minari,
@@ -32,60 +58,95 @@
   scikit-learn,
   torchvision,
   tqdm,
+  # rendering
   moviepy,
+  # utils
   git,
   hydra-core,
   tensorboard,
   wandb,
 
-  # checks
+  # tests
   imageio,
   pytest-rerunfailures,
+  pytest-xdist,
   pytestCheckHook,
   pyyaml,
   scipy,
-
-  stdenv,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "torchrl";
-  version = "0.5.0";
+  version = "0.14.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pytorch";
     repo = "rl";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-uDpOdOuHTqKFKspHOpl84kD9adEKZjvO2GnYuL27H5c=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ATfvAobn9MjY+PHY7xY+iPztyKBZ5YpGXL1ZCzgvQXc=";
   };
 
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "pybind11[global]" "pybind11"
+  '';
+
   build-system = [
+    cmake
     ninja
+    numpy
+    pybind11
     setuptools
-    which
+    setuptools-scm
+    torch
   ];
+  dontUseCmakeConfigure = true;
 
   dependencies = [
     cloudpickle
+    hoptorch
     numpy
     packaging
+    pyvers
     tensordict
     torch
   ];
 
   optional-dependencies = {
     atari = [
-      ale-py
-      gym
-      pygame
+      gymnasium
+    ]
+    ++ gymnasium.optional-dependencies.atari;
+    brax = [
+      brax
+      jax
     ];
     checkpointing = [ torchsnapshot ];
+    dm-control = [ dm-control ];
     gym-continuous = [
       gymnasium
       mujoco
+    ];
+    llm = [
+      accelerate
+      datasets
+      einops
+      immutabledict
+      langdetect
+      nltk
+      playwright
+      protobuf
+      safetensors
+      sentencepiece
+      transformers
+      vllm
+    ];
+    marl = [
+      # dm-meltingpot (unpackaged)
+      pettingzoo
+      vmas
     ];
     offline-data = [
       h5py
@@ -98,10 +159,18 @@ buildPythonPackage rec {
       torchvision
       tqdm
     ];
+    open-spiel = [
+      # open-spiel (unpackaged)
+    ];
+    procgen = [
+      # procgen (unpackaged)
+    ];
     rendering = [ moviepy ];
+    replay-buffer = [ torch ];
     utils = [
       git
       hydra-core
+      # hydra-submitit-launcher (unpackaged)
       tensorboard
       tqdm
       wandb
@@ -122,24 +191,82 @@ buildPythonPackage rec {
     export XDG_RUNTIME_DIR=$(mktemp -d)
   '';
 
-  nativeCheckInputs =
-    [
-      h5py
-      gymnasium
-      imageio
-      pytest-rerunfailures
-      pytestCheckHook
-      pyyaml
-      scipy
-      torchvision
-    ]
-    ++ optional-dependencies.atari
-    ++ optional-dependencies.gym-continuous
-    ++ optional-dependencies.rendering;
+  pytestFlags = [
+    # Tests memory consumption grows significantly with the number of parallel processes
+    # -> Limit the number of parallel jobs to prevent OOMing
+    "--maxprocesses=16"
+
+    # Some tests are flaky when ran with pytest-xdist. Give them 2 more chances to succeed.
+    "--reruns=3"
+    "--reruns-delay=1"
+  ];
+
+  nativeCheckInputs = [
+    gymnasium
+    h5py
+    imageio
+    pytest-rerunfailures
+    pytest-xdist
+    pytestCheckHook
+    pyyaml
+    scipy
+    torchvision
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.atari
+  ++ finalAttrs.passthru.optional-dependencies.gym-continuous
+  ++ finalAttrs.passthru.optional-dependencies.llm
+  ++ finalAttrs.passthru.optional-dependencies.rendering;
 
   disabledTests = [
-    # mujoco.FatalError: an OpenGL platform library has not been loaded into this process, this most likely means that a valid OpenGL context has not been created before mjr_makeContext was called
+    # mujoco.FatalError: an OpenGL platform library has not been loaded into this process, this most
+    # likely means that a valid OpenGL context has not been created before mjr_makeContext was
+    # called
+    "test_from_pixels_spec_and_rollout"
+    "test_render_every"
     "test_vecenvs_env"
+
+    # Hang forever
+    "test_pixels_only_drops_observation_key"
+    "test_render_method"
+
+    # Require network
+    "test_create_or_load_dataset"
+    "test_from_text_env_tokenizer"
+    "test_from_text_env_tokenizer_catframes"
+    "test_from_text_rb_slicesampler"
+    "test_generate"
+    "test_get_dataloader"
+    "test_get_scores"
+    "test_preproc_data"
+    "test_prompt_tensordict_tokenizer"
+    "test_reward_model"
+    "test_tensordict_tokenizer"
+    "test_transform_compose"
+    "test_transform_model"
+    "test_transform_no_env"
+    "test_transform_rb"
+
+    # ray.exceptions.RuntimeEnvSetupError: Failed to set up runtime environment
+    "TestRayCollector"
+
+    # torchrl is incompatible with gymnasium>=1.0
+    # https://github.com/pytorch/rl/discussions/2483
+    "test_resetting_strategies"
+    "test_torchrl_to_gym"
+    "test_vecenvs_nan"
+
+    # gym.error.VersionNotFound: Environment version `v5` for environment `HalfCheetah` doesn't exist.
+    "test_collector_run"
+    "test_transform_inverse"
+
+    # OSError: Unable to synchronously create file (unable to truncate a file which is already open)
+    "test_multi_env"
+    "test_simple_env"
+
+    # ImportWarning: Ignoring non-library in plugin directory:
+    # /nix/store/cy8vwf1dacp3xfwnp9v6a1sz8bic8ylx-python3.12-mujoco-3.3.2/lib/python3.12/site-packages/mujoco/plugin/libmujoco.so.3.3.2
+    "test_auto_register"
+    "test_info_dict_reader"
 
     # ValueError: Can't write images with one color channel.
     "test_log_video"
@@ -159,22 +286,46 @@ buildPythonPackage rec {
     "test_trans_serial_env_check"
     "test_transform_env"
 
-    # undeterministic
+    # nondeterministic
     "test_distributed_collector_updatepolicy"
     "test_timeit"
+
+    # AssertionError: assert tensor(7.6068e-06) > 1e-05
+    "test_ddpg_prioritized_weights"
 
     # On a 24 threads system
     # assert torch.get_num_threads() == max(1, init_threads - 3)
     # AssertionError: assert 23 == 21
     "test_auto_num_threads"
+
+    # Flaky (hangs indefinitely on some CPUs)
+    "test_gae_multidim"
+    "test_gae_param_as_tensor"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    # Flaky
+    # AssertionError: assert tensor([51.]) == ((5 * 11) + 2)
+    "test_vecnorm_parallel_auto"
+  ];
+
+  disabledTestPaths = [
+    # ERROR collecting test/smoke_test.py
+    # import file mismatch:
+    # imported module 'smoke_test' has this __file__ attribute:
+    #   /build/source/test/llm/smoke_test.py
+    # which is not the same as the test file we want to collect:
+    #   /build/source/test/smoke_test.py
+    "test/llm"
+
+    # Hang indefinitely
+    "test/services/test_services.py"
   ];
 
   meta = {
     description = "Modular, primitive-first, python-first PyTorch library for Reinforcement Learning";
     homepage = "https://github.com/pytorch/rl";
-    changelog = "https://github.com/pytorch/rl/releases/tag/v${version}";
+    changelog = "https://github.com/pytorch/rl/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ GaetanLepage ];
-    # ~3k tests fail with: RuntimeError: internal error
   };
-}
+})

@@ -1,6 +1,11 @@
 # GNOME Settings Daemon
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
 
@@ -11,7 +16,7 @@ in
 {
 
   meta = {
-    maintainers = lib.teams.gnome.members;
+    teams = [ lib.teams.gnome ];
   };
 
   ###### interface
@@ -25,7 +30,6 @@ in
     };
 
   };
-
 
   ###### implementation
 

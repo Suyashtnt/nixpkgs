@@ -5,15 +5,15 @@
   jdk_headless,
   makeWrapper,
   stdenvNoCC,
+  testers,
 }:
-
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "maven";
-  version = "3.9.8";
+  version = "3.9.16";
 
   src = fetchurl {
     url = "mirror://apache/maven/maven-3/${finalAttrs.version}/binaries/apache-maven-${finalAttrs.version}-bin.tar.gz";
-    hash = "sha256-BnZyYpB1t0Dj0Kko4hAh3WFaUyh6821MzKROh+CB0QI=";
+    hash = "sha256-gP/KIq7Z6LlxOiMvM5T9gdfyAyLfde/bKwR9vT46I7s=";
   };
 
   sourceRoot = ".";
@@ -34,14 +34,49 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru = {
-    buildMaven = callPackage ./build-maven.nix {
-      maven = finalAttrs.finalPackage;
+  passthru =
+    let
+      makeOverridableMavenPackage =
+        mavenRecipe: mavenArgs:
+        let
+          drv = mavenRecipe mavenArgs;
+          overrideWith =
+            newArgs: mavenArgs // (if lib.isFunction newArgs then newArgs mavenArgs else newArgs);
+        in
+        drv
+        // {
+          overrideMavenAttrs = newArgs: makeOverridableMavenPackage mavenRecipe (overrideWith newArgs);
+        };
+
+      # Exposed so other Maven versions (e.g. maven_4) can reuse the builder
+      # without duplicating build-maven-package.nix.
+      mkBuildMavenPackage =
+        maven:
+        makeOverridableMavenPackage (
+          callPackage ./build-maven-package.nix {
+            inherit maven;
+          }
+        );
+    in
+    {
+      buildMaven = callPackage ./build-maven.nix {
+        maven = finalAttrs.finalPackage;
+      };
+
+      inherit mkBuildMavenPackage;
+
+      buildMavenPackage = mkBuildMavenPackage finalAttrs.finalPackage;
+
+      tests = {
+        version = testers.testVersion {
+          package = finalAttrs.finalPackage;
+          command = ''
+            env MAVEN_OPTS="-Dmaven.repo.local=$TMPDIR/m2" \
+              mvn --version
+          '';
+        };
+      };
     };
-    buildMavenPackage = callPackage ./build-maven-package.nix {
-      maven = finalAttrs.finalPackage;
-    };
-  };
 
   meta = {
     homepage = "https://maven.apache.org/";
@@ -52,9 +87,18 @@ stdenvNoCC.mkDerivation (finalAttrs: {
       manage a project's build, reporting and documentation from a central piece
       of information.
     '';
+    changelog = "https://maven.apache.org/docs/${finalAttrs.version}/release-notes.html";
+    sourceProvenance = with lib.sourceTypes; [
+      binaryBytecode
+      binaryNativeCode
+    ];
     license = lib.licenses.asl20;
     mainProgram = "mvn";
-    maintainers = [ ];
+    maintainers = with lib.maintainers; [
+      tricktron
+      britter
+    ];
+    teams = [ lib.teams.java ];
     inherit (jdk_headless.meta) platforms;
   };
 })

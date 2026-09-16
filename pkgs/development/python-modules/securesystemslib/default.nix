@@ -1,44 +1,53 @@
 {
   lib,
-  asn1crypto,
-  azure-identity,
-  azure-keyvault-keys,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # optional-dependencies
+  # PySPX
+  pyspx,
+  # awskms
   boto3,
   botocore,
-  buildPythonPackage,
   cryptography,
-  ed25519,
-  fetchFromGitHub,
+  # azurekms
+  azure-identity,
+  azure-keyvault-keys,
+  # hsm
+  asn1crypto,
+  # gcpkms
   google-cloud-kms,
-  hatchling,
+  # pynacl
   pynacl,
-  pyspx,
+
+  # tests
+  ed25519,
   pytestCheckHook,
-  pythonOlder,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "securesystemslib";
-  version = "0.31.0";
+  version = "1.4.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "secure-systems-lab";
     repo = "securesystemslib";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-REi38rIVZmWawFGcrPl9QzSthW4jHZDr/0ug7kJRz3Y=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-XOE690DKeAMP2KycW+fdYs/KGWqwZCZz/9PiAa6tJbw=";
   };
 
   postPatch = ''
     substituteInPlace pyproject.toml \
-      --replace-fail "hatchling==1.18.0" "hatchling"
+      --replace-fail '"hatchling==1.29.0"' '"hatchling"'
   '';
 
-  nativeBuildInputs = [ hatchling ];
+  build-system = [ hatchling ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     PySPX = [ pyspx ];
     awskms = [
       boto3
@@ -70,7 +79,8 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     ed25519
     pytestCheckHook
-  ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
   pythonImportsCheck = [ "securesystemslib" ];
 
@@ -81,11 +91,11 @@ buildPythonPackage rec {
     "securesystemslib/_vendor/"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Cryptographic and general-purpose routines";
     homepage = "https://github.com/secure-systems-lab/securesystemslib";
-    changelog = "https://github.com/secure-systems-lab/securesystemslib/blob/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/secure-systems-lab/securesystemslib/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

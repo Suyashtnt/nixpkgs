@@ -1,37 +1,96 @@
 {
   lib,
+  stdenvNoCC,
   appimageTools,
   fetchurl,
+  makeWrapper,
+  writeShellApplication,
+  curl,
+  common-updater-scripts,
+  desktop-file-utils,
 }:
 let
   pname = "clickup";
-  version = "3.3.79";
+  version = "3.5.262";
 
   src = fetchurl {
     # Using archive.org because the website doesn't store older versions of the software.
-    url = "https://web.archive.org/web/20240601173958/https%3A%2F%2Fdesktop.clickup.com%2Flinux";
-    hash = "sha256-jAOYDX9j+ZTqWsSg0rEckKZnErgsIV6+CtUv3M3wNqM=";
+    url = "https://web.archive.org/web/20260727110257/https://desktop.clickup.com/linux";
+    hash = "sha256-8stmEBpvU75JSMBZCjcObLndq+51bqTYb0PK1Yypudc=";
   };
 
-  appimageContents = appimageTools.extractType2 { inherit pname version src; };
+  appimage = appimageTools.wrapType2 {
+    inherit pname version src;
+    extraPkgs = pkgs: [ pkgs.libxkbfile ];
+  };
+
+  appimageContents = appimageTools.extract { inherit pname version src; };
 in
-appimageTools.wrapType2 {
-  inherit pname version src;
+stdenvNoCC.mkDerivation {
+  inherit pname version;
 
-  extraPkgs = pkgs: [ pkgs.xorg.libxkbfile ];
+  src = appimage;
 
-  extraInstallCommands = ''
+  nativeBuildInputs = [
+    makeWrapper
+    desktop-file-utils
+  ];
+
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/
+    cp -r bin $out/bin
+
+    mkdir -p $out/share/${pname}
+    cp -r ${appimageContents}/locales $out/share/${pname}
+    cp -r ${appimageContents}/resources $out/share/${pname}
+    cp -r --no-preserve=mode ${appimageContents}/usr/share/icons $out/share/
+    find $out/share/icons -name desktop.png -execdir mv {} clickup.png \;
+
     install -m 444 -D ${appimageContents}/desktop.desktop $out/share/applications/clickup.desktop
 
-    substituteInPlace $out/share/applications/clickup.desktop \
-      --replace-fail 'Exec=AppRun --no-sandbox %U' 'Exec=clickup' \
-      --replace-fail 'Icon=desktop' 'Icon=clickup'
+    desktop-file-edit \
+      --set-key=Exec --set-value=clickup \
+      --set-key=Icon --set-value=clickup \
+      "$out/share/applications/clickup.desktop"
 
-    for size in 16 32 64 128 256 512 1024; do
-      install -Dm444 ${appimageContents}/usr/share/icons/hicolor/''${size}x''${size}/apps/desktop.png \
-        -t $out/share/icons/hicolor/''${size}x''${size}/apps/clickup.png
-    done
+    wrapProgram $out/bin/${pname} \
+      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations,WebRTCPipeWireCapturer}} --no-update"
+
+    runHook postInstall
   '';
+
+  passthru.updateScript = lib.getExe (writeShellApplication {
+    name = "update-clickup";
+    runtimeInputs = [
+      curl
+      common-updater-scripts
+    ];
+    text = ''
+      upstream_version="$(curl --silent --location --range 0-0 --dump-header - --output /dev/null https://desktop.clickup.com/linux | grep --only-matching --extended-regexp '[0-9]+\.[0-9]+\.[0-9]+')"
+
+      current_version="$(nix-instantiate --eval --strict -A clickup.version | tr -d '"')"
+
+      if [[ "$current_version" = "$upstream_version" ]]; then
+        echo "clickup is already up-to-date at $current_version"
+        exit 0
+      fi
+
+      echo "Updating clickup from $current_version to $upstream_version"
+
+      echo "Saving new version to archive.org..."
+      archived_url="$(curl --silent --max-time 600 --output /dev/null --dump-header - "https://web.archive.org/save/https://desktop.clickup.com/linux" | grep --ignore-case '^location:' | tr -d '\r' | cut -d' ' -f2)"
+
+      if [[ -z "$archived_url" || "$archived_url" != *"web.archive.org/web/"* ]]; then
+        echo "error: failed to archive URL on archive.org" >&2
+        exit 1
+      fi
+
+      update-source-version clickup "$upstream_version" "" "$archived_url" \
+        --source-key=src.src
+    '';
+  });
 
   meta = {
     description = "All in one project management solution";

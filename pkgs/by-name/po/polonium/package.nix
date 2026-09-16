@@ -1,34 +1,34 @@
-{ lib
-, fetchFromGitHub
-, buildNpmPackage
-, libsForQt5
+{
+  lib,
+  fetchFromGitHub,
+  buildNpmPackage,
+  kdePackages,
 }:
 
-# how to update:
-# 1. check out the tag for the version in question
-# 2. run `prefetch-npm-deps package-lock.json`
-# 3. update npmDepsHash with the output of the previous step
-
-buildNpmPackage rec {
+buildNpmPackage (finalAttrs: {
   pname = "polonium";
-  version = "1.0rc";
+  version = "1.2.1";
 
   src = fetchFromGitHub {
     owner = "zeroxoneafour";
-    repo = pname;
-    rev = "v" + version;
-    hash = "sha256-AdMeIUI7ZdctpG/kblGdk1DBy31nDyolPVcTvLEHnNs=";
+    repo = "polonium";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-6Y/9+b7BfWnAkDG9HtlxM53gvoqJGsdw6YCnietc/XM=";
+    fetchSubmodules = true;
   };
 
-  npmDepsHash = "sha256-kaT3Uyq+/JkmebakG9xQuR4Kjo7vk6BzI1/LffOj/eo=";
+  npmDepsHash = "sha256-LbLzoP/amLOMrXfjC3O3F0jg+zpxJvrkf0a0nB5mKnA=";
+
+  __structuredAttrs = true;
 
   dontConfigure = true;
 
   # the installer does a bunch of stuff that fails in our sandbox, so just build here and then we
   # manually do the install
-  buildFlags = [ "res" "src" ];
-
-  nativeBuildInputs = with libsForQt5; [ plasma-framework ];
+  buildFlags = [
+    "res"
+    "src"
+  ];
 
   dontNpmBuild = true;
 
@@ -37,19 +37,22 @@ buildNpmPackage rec {
   installPhase = ''
     runHook preInstall
 
-    plasmapkg2 --install pkg --packageroot $out/share/kwin/scripts
+    mkdir -p $out/share/kwin/scripts/polonium
+    cp -a pkg/. $out/share/kwin/scripts/polonium
 
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Auto-tiler that uses KWin 6.0+ tiling functionality";
-    license = licenses.mit;
-    maintainers = with maintainers; [
-      peterhoeg
-      kotatsuyaki
+    homepage = "https://polonium.vaughanm.xyz/";
+    downloadPage = "https://github.com/zeroxoneafour/polonium/releases";
+    changelog = "https://github.com/zeroxoneafour/polonium/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      nelind
       HeitorAugustoLN
     ];
-    inherit (libsForQt5.plasma-framework.meta) platforms;
+    inherit (kdePackages.kwin.meta) platforms;
   };
-}
+})

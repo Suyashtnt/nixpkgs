@@ -1,11 +1,18 @@
-{ fetchFromGitHub
-, rustPlatform
-, pkg-config
-, python3
-, cmake
-, libmysqlclient
-, makeBinaryWrapper
-, lib
+{
+  fetchFromGitHub,
+  fetchurl,
+  rustPlatform,
+  pkg-config,
+  python3,
+  cmake,
+  libmysqlclient,
+  libpq,
+  openssl,
+  makeBinaryWrapper,
+  lib,
+  nix-update-script,
+  nixosTests,
+  dbBackend ? "mysql",
 }:
 
 let
@@ -16,17 +23,25 @@ let
     p.tokenlib
     p.cryptography
   ]);
+  # utoipa-swagger-ui downloads Swagger UI assets at build time.
+  # Prefetch the archive for sandboxed builds.
+  swaggerUi = fetchurl {
+    url = "https://github.com/swagger-api/swagger-ui/archive/refs/tags/v5.17.14.zip";
+    hash = "sha256-SBJE0IEgl7Efuu73n3HZQrFxYX+cn5UU5jrL4T5xzNw=";
+  };
 in
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "syncstorage-rs";
-  version = "0.17.0";
+  version = "0.23.3";
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "mozilla-services";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-8MxGrE8BaqSN0vPORKupKQuqHiv2vcqQhTX+SnmWFoM=";
+    repo = "syncstorage-rs";
+    rev = "refs/tags/${finalAttrs.version}";
+    hash = "sha256-d0rA/bWuo4gXvqI2inlvRI9NBP6ZRNSwLPkszNIkmhE=";
   };
 
   nativeBuildInputs = [
@@ -36,32 +51,58 @@ rustPlatform.buildRustPackage rec {
     python3
   ];
 
-  buildInputs = [
-    libmysqlclient
-  ];
+  buildInputs =
+    lib.optional (dbBackend == "mysql") libmysqlclient
+    ++ lib.optionals (dbBackend == "postgresql") [
+      libpq
+      openssl
+    ];
+
+  buildNoDefaultFeatures = true;
+  # The syncserver "postgres" feature only enables syncstorage-db/postgres.
+  # tokenserver-db/postgres must be enabled separately so the tokenserver
+  # can also connect to PostgreSQL (it dispatches on the URL scheme at runtime).
+  buildFeatures =
+    let
+      cargoFeature = if dbBackend == "postgresql" then "postgres" else dbBackend;
+    in
+    [
+      cargoFeature
+      "tokenserver-db/${cargoFeature}"
+      "py_verifier"
+    ];
+
+  env = {
+    SWAGGER_UI_DOWNLOAD_URL = "file://${swaggerUi}";
+  };
 
   preFixup = ''
     wrapProgram $out/bin/syncserver \
       --prefix PATH : ${lib.makeBinPath [ pyFxADeps ]}
   '';
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "deadpool-0.7.0" = "sha256-yQwn45EuzmPBwuT+iLJ/LLWAkBkW2vF+GLswdbpFVAY=";
-    };
-  };
+  cargoHash = "sha256-BJ5+6o57WlwsTerKCmOPXATPHQfjr5cRYMbqC8CIPg0=";
 
   # almost all tests need a DB to test against
   doCheck = false;
 
+  passthru.updateScript = nix-update-script { };
+
+  passthru.tests = {
+    firefox-syncserver =
+      nixosTests.firefox-syncserver.${if dbBackend == "postgresql" then "postgresql" else "mysql"};
+  };
+
   meta = {
     description = "Mozilla Sync Storage built with Rust";
     homepage = "https://github.com/mozilla-services/syncstorage-rs";
-    changelog = "https://github.com/mozilla-services/syncstorage-rs/releases/tag/${version}";
+    changelog = "https://github.com/mozilla-services/syncstorage-rs/blob/${finalAttrs.src.rev}/CHANGELOG.md";
     license = lib.licenses.mpl20;
-    maintainers = [ ];
+    maintainers = with lib.maintainers; [
+      titaniumtown
+      weriomat
+    ];
     platforms = lib.platforms.linux;
     mainProgram = "syncserver";
   };
-}
+})

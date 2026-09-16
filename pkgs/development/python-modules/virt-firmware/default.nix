@@ -3,21 +3,23 @@
   pkgs,
   stdenv,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitLab,
   setuptools,
   cryptography,
   pytestCheckHook,
   pefile,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "virt-firmware";
-  version = "24.4";
+  version = "25.12";
   pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-rqhaKDOQEOj6bcRz3qZJ+a4yG1qTC9SUjuxMhZlnmwU=";
+  src = fetchFromGitLab {
+    owner = "kraxel";
+    repo = "virt-firmware";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-sopmWZ8CdLuc0R+QN7MSoqT9kURzOyh9CgbreKuvANw=";
   };
 
   build-system = [ setuptools ];
@@ -36,16 +38,17 @@ buildPythonPackage rec {
     pkgs.systemd
   ];
 
-  pytestFlagsArray = [ "tests/tests.py" ];
+  enabledTestPaths = [ "tests/tests.py" ];
 
   pythonImportsCheck = [ "virt.firmware.efi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Tools for virtual machine firmware volumes";
     homepage = "https://gitlab.com/kraxel/virt-firmware";
-    license = licenses.gpl2;
-    maintainers = with maintainers; [
+    changelog = "https://gitlab.com/kraxel/virt-firmware/-/tags/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [
       raitobezarius
     ];
   };
-}
+})

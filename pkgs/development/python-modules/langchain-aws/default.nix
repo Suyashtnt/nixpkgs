@@ -4,69 +4,107 @@
   fetchFromGitHub,
 
   # build-system
-  poetry-core,
+  hatchling,
 
   # dependencies
   boto3,
   langchain-core,
   numpy,
+  pydantic,
 
   # tests
-  langchain-standard-tests,
+  langchain,
+
+  # optional-dependencies
+  anthropic,
+  langchain-anthropic,
+
+  # tests
+  langchain-tests,
   pytest-asyncio,
+  pytest-cov-stub,
   pytestCheckHook,
+
+  # passthru
+  gitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "langchain-aws";
-  version = "0.2.0";
+  version = "1.6.4";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "langchain-ai";
     repo = "langchain-aws";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-P9CfAVpKh7djhUQc3DyyJTWqs9RbrTeLyynLei0x00o=";
+    tag = "langchain-aws==${finalAttrs.version}";
+    hash = "sha256-7qg2cUjlFEo6ekK269Ew0wmmSx+1BwUdTJZCMPd2tBU=";
   };
 
   postPatch = ''
     substituteInPlace pyproject.toml \
-      --replace-fail "--snapshot-warn-unused" "" \
-      --replace-fail "--cov=langchain_aws" ""
+      --replace-fail "--snapshot-warn-unused" ""
   '';
 
-  sourceRoot = "${src.name}/libs/aws";
+  sourceRoot = "${finalAttrs.src.name}/libs/aws";
 
-  build-system = [ poetry-core ];
+  build-system = [ hatchling ];
 
   dependencies = [
     boto3
     langchain-core
     numpy
+    pydantic
   ];
+
+  pythonRelaxDeps = [
+    # Boto3 spec has outstripped the version requirement
+    "boto3"
+  ];
+
+  optional-dependencies = {
+    anthropic = anthropic.optional-dependencies.bedrock ++ [
+      langchain-anthropic
+    ];
+  };
 
   nativeCheckInputs = [
-    langchain-standard-tests
+    anthropic
+    langchain
+    langchain-tests
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
-  pytestFlagsArray = [ "tests/unit_tests" ];
+  enabledTestPaths = [ "tests/unit_tests" ];
+
+  disabledTests = [
+    # Fails when langchain-core gets ahead of this package
+    "test_serdes"
+  ];
 
   pythonImportsCheck = [ "langchain_aws" ];
 
   passthru = {
-    inherit (langchain-core) updateScript;
+    # python updater script sets the wrong tag
+    skipBulkUpdate = true;
+    updateScript = gitUpdater {
+      rev-prefix = "langchain-aws==";
+      ignoredVersions = "a|b|dev|rc";
+    };
   };
 
   meta = {
-    changelog = "https://github.com/langchain-ai/langchain-aws/releases/tag/v${version}";
+    changelog = "https://github.com/langchain-ai/langchain-aws/releases/tag/${finalAttrs.src.tag}";
     description = "Build LangChain application on AWS";
     homepage = "https://github.com/langchain-ai/langchain-aws/";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [
-      drupol
       natsukium
+      sarahec
     ];
   };
-}
+})

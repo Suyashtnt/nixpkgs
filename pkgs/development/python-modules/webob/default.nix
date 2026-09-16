@@ -1,31 +1,33 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
   setuptools,
   legacy-cgi,
   pytestCheckHook,
-  pythonAtLeast,
-  pythonOlder,
+
+  # for passthru.tests
+  pyramid,
+  routes,
+  tokenlib,
 }:
 
 buildPythonPackage rec {
   pname = "webob";
-  version = "1.8.7";
+  version = "1.8.10";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    pname = "WebOb";
-    inherit version;
-    hash = "sha256-tk71FBvlWc+t5EjwRPpFwiYDUe3Lao72t+AMfc7wwyM=";
+  src = fetchFromGitHub {
+    owner = "Pylons";
+    repo = "webob";
+    tag = version;
+    hash = "sha256-r3fURb+Je/XevpeMGb/XEF2xjj1q172P4pTAbGkeloY=";
   };
 
   build-system = [ setuptools ];
 
   # https://github.com/Pylons/webob/issues/437
-  dependencies = lib.optionals (pythonAtLeast "3.13") [ legacy-cgi ];
+  dependencies = [ legacy-cgi ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
@@ -37,10 +39,14 @@ buildPythonPackage rec {
     "tests/test_client_functional.py"
   ];
 
-  meta = with lib; {
+  passthru.tests = {
+    inherit pyramid routes tokenlib;
+  };
+
+  meta = {
     description = "WSGI request and response object";
     homepage = "https://webob.org/";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
 }

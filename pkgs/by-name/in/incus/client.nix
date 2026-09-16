@@ -9,25 +9,28 @@
   lib,
   buildGoModule,
   installShellFiles,
+  fetchpatch2,
 }:
 let
   pname = "incus${lib.optionalString lts "-lts"}-client";
+  evaluatedPatches = if lib.isFunction patches then patches fetchpatch2 else patches;
 in
 
 buildGoModule {
   inherit
-    patches
     pname
     src
     vendorHash
     version
     ;
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = 0;
 
   nativeBuildInputs = [ installShellFiles ];
 
   subPackages = [ "cmd/incus" ];
+
+  patches = evaluatedPatches;
 
   postInstall = ''
     # Needed for builds on systems with auto-allocate-uids to pass.

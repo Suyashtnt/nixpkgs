@@ -1,7 +1,7 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
+  pythonAtLeast,
   fetchPypi,
   hatchling,
   hatch-nodejs-version,
@@ -18,7 +18,6 @@ buildPythonPackage rec {
   pname = "nbformat";
   version = "5.10.4";
   pyproject = true;
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
@@ -45,6 +44,8 @@ buildPythonPackage rec {
     testpath
   ];
 
+  pytestFlags = [ "-Wignore::pytest.PytestUnraisableExceptionWarning" ];
+
   # Some of the tests use localhost networking.
   __darwinAllowLocalNetworking = true;
 
@@ -53,6 +54,6 @@ buildPythonPackage rec {
     mainProgram = "jupyter-trust";
     homepage = "https://jupyter.org/";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ globin ];
+    maintainers = [ ];
   };
 }

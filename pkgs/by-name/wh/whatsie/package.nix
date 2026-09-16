@@ -2,50 +2,37 @@
   fetchFromGitHub,
   lib,
   stdenv,
-  libX11,
+  cmake,
+  libx11,
   libxcb,
-  qt5,
+  qt6,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "whatsie";
-  version = "4.15.5";
+  version = "5.0.0";
 
   src = fetchFromGitHub {
     owner = "keshavbhatt";
     repo = "whatsie";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-6tczt9oPtcKvA59YqRHGOE2VFQLRNbyHpCJ6b4kzgks=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-GVXwZZFfPqAmBrP95zleHc2PpMMBj/8xZdW4JpFdYVs=";
   };
 
-  sourceRoot = "${finalAttrs.src.name}/src";
-
   buildInputs = [
-    libX11
+    libx11
     libxcb
-    qt5.qtwebengine
+    qt6.qtwebengine
   ];
 
   nativeBuildInputs = [
-    qt5.wrapQtAppsHook
-    qt5.qmake
+    cmake
+    qt6.wrapQtAppsHook
   ];
 
-  strictDeps = false;
+  strictDeps = true;
 
   enableParallelBuilding = true;
-
-  preBuild = ''
-    export QT_WEBENGINE_ICU_DATA_DIR=${qt5.qtwebengine.out}/resources
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    install -Dm755 whatsie -t $out/bin
-
-    runHook postInstall
-  '';
 
   meta = {
     homepage = "https://github.com/keshavbhatt/whatsie";

@@ -1,48 +1,67 @@
-{ stdenv
-, lib
-, rustPlatform
-, fetchCrate
-, pkg-config
-, alsa-lib
-, rust
+{
+  stdenv,
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  alsa-lib,
+  udevCheckHook,
+  nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "speakersafetyd";
-  version = "1.0.0";
+  version = "2.0.1";
 
-  src = fetchCrate {
-    inherit pname version;
-    hash = "sha256-I1RTtD5V4Z8R8zed/b4FitHyE7gFAja5YcA+z0VvSX0=";
+  src = fetchFromGitHub {
+    owner = "AsahiLinux";
+    repo = "speakersafetyd";
+    tag = finalAttrs.version;
+    hash = "sha256-duIPpTzZqVSZLxF/CYlxa1PPtnzeABTCYfZZ7lomkls=";
   };
-  cargoHash = "sha256-8Dmts6SCRrZqyI+pdfgqsXfJy9Hqspbdb6EpQChMKDA=";
 
-  nativeBuildInputs = [ pkg-config ];
+  cargoHash = "sha256-gg1VcCrXKk5QsNvU7wz039md0gpFom6SrLuW6tjNQog=";
+
+  nativeBuildInputs = [
+    pkg-config
+    udevCheckHook
+  ];
   buildInputs = [ alsa-lib ];
 
   postPatch = ''
-    substituteInPlace speakersafetyd.service --replace "/usr" "$out"
-    substituteInPlace Makefile --replace "target/release" "target/${stdenv.hostPlatform.rust.cargoShortTarget}/$cargoBuildType"
-    # creating files in /var does not make sense in a nix package
-    substituteInPlace Makefile --replace 'install -dDm0755 $(DESTDIR)/$(VARDIR)/lib/speakersafetyd/blackbox' ""
+    substituteInPlace speakersafetyd.service \
+      --replace-fail "/usr" \
+                     "$out"
+
+    substituteInPlace Makefile \
+      --replace-fail "target/release" \
+                     "target/${stdenv.hostPlatform.rust.cargoShortTarget}/$cargoBuildType"
   '';
 
   installFlags = [
-    "BINDIR=$(out)/bin"
-    "UNITDIR=$(out)/lib/systemd/system"
-    "UDEVDIR=$(out)/lib/udev/rules.d"
-    "SHAREDIR=$(out)/share"
-    "TMPFILESDIR=$(out)/lib/tmpfiles.d"
+    "DESTDIR=$(out)"
+    "BINDIR=bin"
+    "UNITDIR=lib/systemd/system"
+    "UDEVDIR=lib/udev/rules.d"
+    "SHAREDIR=share"
   ];
 
   dontCargoInstall = true;
+  doInstallCheck = true;
 
-  meta = with lib; {
-    description = "Userspace daemon written in Rust that implements an analogue of the Texas Instruments Smart Amp speaker protection model";
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
+    description = "Userspace daemon that implements the Smart Amp protection model";
     mainProgram = "speakersafetyd";
     homepage = "https://github.com/AsahiLinux/speakersafetyd";
-    maintainers = with maintainers; [ flokli yuka ];
-    license = licenses.mit;
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [
+      flokli
+      yuka
+    ];
+    license = lib.licenses.mit;
+    platforms = lib.platforms.linux;
   };
-}
+})

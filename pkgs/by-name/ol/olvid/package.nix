@@ -1,36 +1,45 @@
-{ stdenv
-, lib
-, fetchurl
-, zlib
-, libXext
-, libX11
-, libXrender
-, libXtst
-, libXi
-, freetype
-, alsa-lib
-, jdk21
-, openjfx21
-, autoPatchelfHook
-, makeBinaryWrapper
-, wrapGAppsHook3
+{
+  stdenv,
+  lib,
+  fetchurl,
+  zlib,
+  libxext,
+  libx11,
+  libxrender,
+  libxtst,
+  libxi,
+  freetype,
+  alsa-lib,
+  jdk21,
+  openjfx21,
+  autoPatchelfHook,
+  makeBinaryWrapper,
+  wrapGAppsHook3,
 }:
 
 let
   repo = "olvid";
 
-  javafxModules = [ "swing" "controls" "media" "fxml" "graphics" "base" ];
+  javafxModules = [
+    "swing"
+    "controls"
+    "media"
+    "fxml"
+    "graphics"
+    "base"
+  ];
 
   classpath =
     lib.concatMap (mod: [
       "${openjfx21}/modules_src/javafx.${mod}/module-info.java"
       "${openjfx21}/modules/javafx.${mod}"
       "${openjfx21}/modules_libs/javafx.${mod}"
-    ]) javafxModules ++
-    [ "$out/share/${repo}/*" ];
+    ]) javafxModules
+    ++ [ "$out/share/${repo}/*" ];
 
   jvmArgs = [
-    "-cp" (lib.concatStringsSep ":" classpath)
+    "-cp"
+    (lib.concatStringsSep ":" classpath)
     "-Djpackage.app-version=$version"
     "-Dolvid.sqlcipher=true"
     "-Dolvid.dev=false"
@@ -53,14 +62,14 @@ in
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "olvid";
-  version = "1.6.2";
+  version = "3.1.1";
 
   dontUnpack = true;
   dontWrapGApps = true;
 
   src = fetchurl {
     url = "https://static.olvid.io/linux/${repo}-${finalAttrs.version}.tar.gz";
-    hash = "sha256-Cej8ei+Dh6yn7ZRZ1DE9ay/KWWLLALhaQ5gNpBw8vDs=";
+    hash = "sha256-kdx4xUQcDvXKMvrM/9LwuiJRlfrZehxpv0rrd4H13l0=";
   };
 
   nativeBuildInputs = [
@@ -71,11 +80,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   buildInputs = [
     zlib
-    libXext
-    libX11
-    libXrender
-    libXtst
-    libXi
+    libxext
+    libx11
+    libxrender
+    libxtst
+    libxi
     freetype
     alsa-lib
   ];
@@ -97,12 +106,12 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Secure french messenger";
     homepage = "https://www.olvid.io";
-    license = licenses.agpl3Only;
+    license = lib.licenses.agpl3Only;
     mainProgram = "olvid";
-    maintainers = with maintainers; [ rookeur ];
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [ rookeur ];
+    platforms = lib.platforms.linux;
   };
 })

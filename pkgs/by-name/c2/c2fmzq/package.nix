@@ -1,36 +1,43 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, nixosTests
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  nixosTests,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "c2FmZQ";
-  version = "0.4.22";
+  version = "0.5.7";
 
   src = fetchFromGitHub {
     owner = "c2FmZQ";
-    repo = "c2FmZQ";
-    rev = "v${version}";
-    hash = "sha256-IqLG8dLi47Swp6YPxDXsM6LVDPvzcH5rWeqpgghbYsE=";
+    repo = "photos";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-7Jguv2T6x3zKRWcp7XGzmVakwXcsVz2BWcY6uADGPsg=";
   };
 
-  ldflags = [ "-s" "-w" ];
+  ldflags = [
+    "-s"
+    "-w"
+  ];
 
-  sourceRoot = "${src.name}/c2FmZQ";
+  sourceRoot = "${finalAttrs.src.name}/c2FmZQ";
 
-  vendorHash = "sha256-PTWi/M51cydmWoOj1JPyaI0wbjd0BMLlaSlQRIcmShg=";
+  vendorHash = "sha256-6rKFgCKhJQSquMhv7iuzMsm+84qz3V0ynIyB4rv2Kk8=";
 
-  subPackages = [ "c2FmZQ-client" "c2FmZQ-server" ];
+  subPackages = [
+    "c2FmZQ-client"
+    "c2FmZQ-server"
+  ];
 
   passthru.tests = { inherit (nixosTests) c2fmzq; };
 
-  meta = with lib; {
+  meta = {
     description = "Securely encrypt, store, and share files, including but not limited to pictures and videos";
-    homepage = "https://github.com/c2FmZQ/c2FmZQ";
-    license = licenses.gpl3Only;
+    homepage = "https://github.com/c2FmZQ/photos";
+    license = lib.licenses.gpl3Only;
     mainProgram = "c2FmZQ-server";
-    maintainers = with maintainers; [ hmenke ];
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [ hmenke ];
+    platforms = lib.platforms.linux;
   };
-}
+})

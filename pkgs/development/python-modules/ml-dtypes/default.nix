@@ -4,7 +4,9 @@
   fetchFromGitHub,
 
   # build-system
-  setuptools,
+  cmake,
+  ninja,
+  scikit-build-core,
 
   # dependencies
   numpy,
@@ -14,29 +16,28 @@
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "ml-dtypes";
-  version = "0.5.0";
+  version = "0.6.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jax-ml";
     repo = "ml_dtypes";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-+6job9fEHVguh9JBE/NUv+QezwQohuKPO8DlhbaawZ4=";
+    tag = "v${finalAttrs.version}";
     # Since this upstream patch (https://github.com/jax-ml/ml_dtypes/commit/1bfd097e794413b0d465fa34f2eff0f3828ff521),
     # the attempts to use the nixpkgs packaged eigen dependency have failed.
     # Hence, we rely on the bundled eigen library.
     fetchSubmodules = true;
+    hash = "sha256-NvsZrSiXfJMEVdpxBD3JmyAy5inEKSZVeLvI7YiGBy0=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail "numpy~=2.0" "numpy" \
-      --replace-fail "setuptools~=73.0.1" "setuptools"
-  '';
-
-  build-system = [ setuptools ];
+  build-system = [
+    cmake
+    ninja
+    scikit-build-core
+  ];
+  dontUseCmakeConfigure = true;
 
   dependencies = [ numpy ];
 
@@ -45,10 +46,9 @@ buildPythonPackage rec {
     pytestCheckHook
   ];
 
+  # Otherwise Python import `ml_dtypes` from the sources instead of the installed files in $out.
   preCheck = ''
-    # remove src module, so tests use the installed module instead
-    mv ./ml_dtypes/tests ./tests
-    rm -rf ./ml_dtypes
+    rm ml_dtypes/__init__.py
   '';
 
   pythonImportsCheck = [ "ml_dtypes" ];
@@ -56,11 +56,11 @@ buildPythonPackage rec {
   meta = {
     description = "Stand-alone implementation of several NumPy dtype extensions used in machine learning libraries";
     homepage = "https://github.com/jax-ml/ml_dtypes";
-    changelog = "https://github.com/jax-ml/ml_dtypes/releases/tag/v${version}";
+    changelog = "https://github.com/jax-ml/ml_dtypes/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [
       GaetanLepage
       samuela
     ];
   };
-}
+})

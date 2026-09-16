@@ -1,7 +1,8 @@
-{ lib
-, stdenv
-, fetchzip
-, perlPackages
+{
+  lib,
+  stdenv,
+  fetchzip,
+  perlPackages,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -13,13 +14,19 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-SYDoqGlsROHX1a0jJX11F+yp6CeFK+tZbYOOnScC6Ig=";
   };
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   preConfigure = ''
     chmod +x configure
   '';
 
   buildInputs = [ perlPackages.LocaleGettext ];
+
+  # Remove once upstream ports to c23: https://sourceforge.net/p/dc3dd/bugs/24/
+  env.NIX_CFLAGS_COMPILE = "-std=gnu17";
 
   makeFlags = [
     "PREFIX=$out"
@@ -28,12 +35,12 @@ stdenv.mkDerivation (finalAttrs: {
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     description = "Patched version of dd that includes a number of features useful for computer forensics";
     mainProgram = "dc3dd";
     homepage = "https://sourceforge.net/projects/dc3dd/";
-    maintainers = with maintainers; [ d3vil0p3r ];
-    platforms = platforms.linux;
-    license = licenses.gpl3Plus; # Refer to https://sourceforge.net/p/dc3dd/code/HEAD/tree/COPYING
+    maintainers = [ ];
+    platforms = lib.platforms.linux;
+    license = lib.licenses.gpl3Plus; # Refer to https://sourceforge.net/p/dc3dd/code/HEAD/tree/COPYING
   };
 })

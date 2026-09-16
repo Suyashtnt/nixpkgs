@@ -7,31 +7,30 @@
   fetchFromGitHub,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
+  typing-extensions,
   voluptuous,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-otbr-api";
-  version = "2.6.0";
+  version = "3.0.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "home-assistant-libs";
     repo = "python-otbr-api";
-    rev = "refs/tags/${version}";
-    hash = "sha256-RMj4NdEbMIxh2PDzbhUWgmcdzRXY8RxcQNN/bbGOW5Q=";
+    tag = finalAttrs.version;
+    hash = "sha256-76vYLULS8oSrO0NV6cZwfjBpafrczXpwE7wNykSXWVE=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
     bitstruct
     cryptography
+    typing-extensions
     voluptuous
   ];
 
@@ -42,11 +41,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "python_otbr_api" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for the Open Thread Border Router";
     homepage = "https://github.com/home-assistant-libs/python-otbr-api";
-    changelog = "https://github.com/home-assistant-libs/python-otbr-api/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/home-assistant-libs/python-otbr-api/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

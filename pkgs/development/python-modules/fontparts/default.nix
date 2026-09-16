@@ -1,9 +1,7 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  fetchpatch2,
-  pythonOlder,
+  fetchFromGitHub,
 
   # build-system
   setuptools,
@@ -19,45 +17,43 @@
   python,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fontparts";
-  version = "0.12.1";
+  version = "1.0.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    pname = "fontParts";
-    inherit version;
-    hash = "sha256-eeU13S1IcC+bsiK3YDlT4rVDeXDGcxx1wY/is8t5pCA=";
-    extension = "zip";
+  src = fetchFromGitHub {
+    owner = "robotools";
+    repo = "fontParts";
+    tag = finalAttrs.version;
+    hash = "sha256-dBR9Lf8ECLAOAkEkEy4JCgOKmyXzwXaOXdW4cErWQcs=";
   };
 
-  patches = [
-    (fetchpatch2 {
-      # replace remaining usage of assertEquals for Python 3.12 support
-      # https://github.com/robotools/fontParts/pull/720
-      url = "https://github.com/robotools/fontParts/commit/d7484cd98051aa1588683136da0bb99eac31523b.patch";
-      hash = "sha256-maoUgbmXY/RC4TUZI4triA9OIfB4T98qjUaQ94uhsbg=";
-    })
-  ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "vcs-versioning"' "" \
+      --replace-fail "setuptools_scm[toml]>=3.4,<10" "setuptools_scm[toml]"
+    substituteInPlace setup.cfg \
+      --replace-fail "setuptools_scm==9.2.2" "setuptools_scm"
+  '';
 
-  nativeBuildInputs = [
+  build-system = [
     setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs =
-    [
-      booleanoperations
-      defcon
-      fontmath
-      fonttools
-    ]
-    ++ defcon.optional-dependencies.pens
-    ++ fonttools.optional-dependencies.ufo
-    ++ fonttools.optional-dependencies.lxml
-    ++ fonttools.optional-dependencies.unicode;
+  dependencies = [
+    booleanoperations
+    defcon
+    fontmath
+    fonttools
+  ]
+  ++ defcon.optional-dependencies.pens
+  ++ fonttools.optional-dependencies.ufo
+  ++ fonttools.optional-dependencies.lxml
+  ++ fonttools.optional-dependencies.unicode;
+
+  pythonImportsCheck = [ "fontParts" ];
 
   checkPhase = ''
     runHook preCheck
@@ -65,11 +61,11 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-  meta = with lib; {
+  meta = {
     description = "API for interacting with the parts of fonts during the font development process";
     homepage = "https://github.com/robotools/fontParts";
-    changelog = "https://github.com/robotools/fontParts/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = [ maintainers.sternenseemann ];
+    changelog = "https://github.com/robotools/fontParts/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

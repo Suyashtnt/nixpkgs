@@ -6,33 +6,31 @@
   pydantic,
   pytestCheckHook,
   pytest-cov-stub,
-  pythonOlder,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "camel-converter";
-  version = "4.0.0";
+  version = "5.1.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "sanders41";
     repo = "camel-converter";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-JdONlMTBnZ2QMcsr+GXmfQzxaFOndmG77qbBa9A3m+k=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-JsNlXeik/u0OBgErUJK4Pc45WmW1QLsiIP3BaSP0maA=";
   };
 
   build-system = [ hatchling ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     pydantic = [ pydantic ];
   };
 
   nativeCheckInputs = [
     pytestCheckHook
     pytest-cov-stub
-  ] ++ passthru.optional-dependencies.pydantic;
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "camel_converter" ];
 
@@ -41,11 +39,11 @@ buildPythonPackage rec {
     "test_camel_config"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Module to convert strings from snake case to camel case or camel case to snake case";
     homepage = "https://github.com/sanders41/camel-converter";
-    changelog = "https://github.com/sanders41/camel-converter/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/sanders41/camel-converter/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

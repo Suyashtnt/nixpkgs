@@ -1,13 +1,19 @@
-{ lib, fetchFromGitLab, buildDunePackage, hex, uri }:
+{
+  lib,
+  fetchFromGitLab,
+  buildDunePackage,
+  hex,
+  uri,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "json-data-encoding";
   version = "1.0.1";
   minimalOCamlVersion = "4.10";
   src = fetchFromGitLab {
     owner = "nomadic-labs";
     repo = "data-encoding";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-KoA4xX4tNyi6bX5kso/Wof1LA7431EXJ34eD5X4jnd8=";
   };
 
@@ -22,4 +28,4 @@ buildDunePackage rec {
     license = lib.licenses.lgpl3;
     maintainers = [ lib.maintainers.ulrikstrid ];
   };
-}
+})

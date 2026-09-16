@@ -1,69 +1,62 @@
 {
   lib,
-  aiohttp,
-  bottle,
   buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  pkg-resources-backport,
+
+  # dependencies
+  slack-sdk,
+
+  # optional-dependencies
+  # - async
+  aiohttp,
+  websockets,
+  # - adapter
+  bottle,
   chalice,
   cherrypy,
   django,
-  docker,
   falcon,
   fastapi,
-  fetchFromGitHub,
-  fetchpatch,
   flask,
-  flask-sockets,
   gunicorn,
   moto,
   pyramid,
-  pytest-asyncio,
-  pytestCheckHook,
-  pythonOlder,
   sanic,
-  setuptools,
   sanic-testing,
-  slack-sdk,
   starlette,
   tornado,
   uvicorn,
   websocket-client,
-  websockets,
   werkzeug,
+
+  # tests
+  docker,
+  pytest-asyncio,
+  pytestCheckHook,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "slack-bolt";
-  version = "1.18.1";
+  version = "1.30.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "slackapi";
     repo = "bolt-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-UwVStemFVA4hgqnSpCKpQGwLYG+p5z7MwFXXnIhrvNk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-B9yE2nZ+GF2s2pj5mCaVUiV2rSr6ilaXgQUiLB0XVRQ=";
   };
-
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace-fail "pytest-runner==5.2" ""
-  '';
-
-  patches = [
-    # moto >=5 support, https://github.com/slackapi/bolt-python/pull/1046
-    (fetchpatch {
-      name = "moto-support.patch";
-      url = "https://github.com/slackapi/bolt-python/commit/69c2015ef49773de111f184dca9668aefac9e7c0.patch";
-      hash = "sha256-KW7KPeOqanV4n1UOv4DCadplJsqsPY+ju4ry0IvUqpA=";
-    })
-  ];
 
   build-system = [ setuptools ];
 
   dependencies = [ slack-sdk ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     async = [
       aiohttp
       websockets
@@ -76,7 +69,6 @@ buildPythonPackage rec {
       falcon
       fastapi
       flask
-      flask-sockets
       gunicorn
       moto
       pyramid
@@ -90,40 +82,43 @@ buildPythonPackage rec {
     ];
   };
 
+  pythonImportsCheck = [ "slack_bolt" ];
+
   nativeCheckInputs = [
     docker
+    pkg-resources-backport
     pytest-asyncio
     pytestCheckHook
-  ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
-  preCheck = ''
-    export HOME="$(mktemp -d)"
-  '';
+  __darwinAllowLocalNetworking = true;
 
   disabledTestPaths = [
     # boddle is not packaged as of 2023-07-15
     "tests/adapter_tests/bottle/"
-    # Tests are blocking at some point. Blocking could be performance-related.
-    "tests/scenario_tests_async/"
-    "tests/slack_bolt_async/"
   ];
 
   disabledTests = [
     # Require network access
-    "test_events"
-    "test_interactions"
-    "test_lazy_listener_calls"
-    "test_lazy_listeners"
     "test_failure"
+    # TypeError
+    "test_oauth"
+    # AssertionError
+    "test_buffer_size_overrides"
+    "test_buffer_size_overrides"
+    "test_default_params"
+    "test_default_params"
+    "test_parameter_overrides"
+    "test_parameter_overrides"
   ];
 
-  pythonImportsCheck = [ "slack_bolt" ];
-
-  meta = with lib; {
+  meta = {
     description = "Framework to build Slack apps using Python";
     homepage = "https://github.com/slackapi/bolt-python";
-    changelog = "https://github.com/slackapi/bolt-python/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ samuela ];
+    changelog = "https://github.com/slackapi/bolt-python/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ samuela ];
   };
-}
+})

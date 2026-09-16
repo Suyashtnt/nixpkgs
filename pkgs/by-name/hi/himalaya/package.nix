@@ -1,67 +1,88 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, stdenv
-, pkg-config
-, darwin
-, installShellFiles
-, installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform
-, installManPages ? stdenv.buildPlatform.canExecute stdenv.hostPlatform
-, notmuch
-, gpgme
-, buildNoDefaultFeatures ? false
-, buildFeatures ? []
+{
+  buildFeatures ? [ ],
+  buildNoDefaultFeatures ? false,
+  buildPackages,
+  fetchFromGitHub,
+  installManPages ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
+  installShellCompletions ? stdenv.buildPlatform.canExecute stdenv.hostPlatform,
+  installShellFiles,
+  lib,
+  openssl,
+  pkg-config,
+  rustPlatform,
+  stdenv,
 }:
 
-rustPlatform.buildRustPackage rec {
-  # Learn more about available cargo features at:
-  #  - <https://pimalaya.org/himalaya/cli/latest/installation.html#cargo>
-  inherit buildNoDefaultFeatures buildFeatures;
+let
+  version = "2.0.0";
+  hash = "sha256-rOCMjJV0lFSIlvstkSMqGwXKDZsBkWtTYhvXpA73ucA=";
+  cargoHash = "sha256-ppZYlGWNS5lXQZNt7RcwJIvU5jp07cXhEpmFJ9UtxRE=";
+
+  withOpenssl = stdenv.hostPlatform.isLinux && builtins.elem "native-tls" buildFeatures;
+  emulator = stdenv.hostPlatform.emulator buildPackages;
+  exe = stdenv.hostPlatform.extensions.executable;
+
+in
+rustPlatform.buildRustPackage {
+  inherit
+    version
+    cargoHash
+    buildFeatures
+    buildNoDefaultFeatures
+    ;
 
   pname = "himalaya";
-  version = "1.0.0-beta.4";
 
   src = fetchFromGitHub {
-    owner = "soywod";
-    repo = pname;
+    inherit hash;
+    owner = "pimalaya";
+    repo = "himalaya";
     rev = "v${version}";
-    hash = "sha256-NrWBg0sjaz/uLsNs8/T4MkUgHOUvAWRix1O5usKsw6o=";
   };
 
-  cargoHash = "sha256-YS8IamapvmdrOPptQh2Ef9Yold0IK1XIeGs0kDIQ5b8=";
+  env.OPENSSL_NO_VENDOR = 1;
 
-  NIX_LDFLAGS = lib.optionals stdenv.hostPlatform.isDarwin [
-    "-F${darwin.apple_sdk.frameworks.AppKit}/Library/Frameworks"
-    "-framework"
-    "AppKit"
+  nativeBuildInputs = [
+    pkg-config
+    installShellFiles
   ];
 
-  nativeBuildInputs = [ pkg-config ]
-    ++ lib.optional (builtins.elem "pgp-gpg" buildFeatures) pkg-config
-    ++ lib.optional (installManPages || installShellCompletions) installShellFiles;
+  buildInputs = lib.optional withOpenssl openssl;
 
-  buildInputs = [ ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin (with darwin.apple_sdk.frameworks; [ AppKit Cocoa Security ])
-    ++ lib.optional (builtins.elem "notmuch" buildFeatures) notmuch
-    ++ lib.optional (builtins.elem "pgp-gpg" buildFeatures) gpgme;
+  postInstall =
+    lib.optionalString (lib.hasInfix "wine" emulator) ''
+      export WINEPREFIX="''${WINEPREFIX:-$(mktemp -d)}"
+      mkdir -p $WINEPREFIX
+    ''
+    + ''
+      mkdir -p $out/share/{applications,completions,man,schemas}
+      cp assets/himalaya.desktop "$out"/share/applications/
+      ${emulator} "$out"/bin/himalaya${exe} completion -d "$out"/share/completions bash elvish fish powershell zsh
+      ${emulator} "$out"/bin/himalaya${exe} manual "$out"/share/man
+      ${emulator} "$out"/bin/himalaya${exe} json-schema "$out"/share/schemas
+    ''
+    + lib.optionalString installManPages ''
+      installManPage "$out"/share/man/*
+    ''
+    + lib.optionalString installShellCompletions ''
+      installShellCompletion --cmd himalaya \
+        --bash "$out"/share/completions/himalaya.bash \
+        --fish "$out"/share/completions/himalaya.fish \
+        --zsh "$out"/share/completions/_himalaya
+    '';
 
-  postInstall = lib.optionalString installManPages ''
-    mkdir -p $out/man
-    $out/bin/himalaya man $out/man
-    installManPage $out/man/*
-  '' + lib.optionalString installShellCompletions ''
-    installShellCompletion --cmd himalaya \
-      --bash <($out/bin/himalaya completion bash) \
-      --fish <($out/bin/himalaya completion fish) \
-      --zsh <($out/bin/himalaya completion zsh)
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "CLI to manage emails";
     mainProgram = "himalaya";
-    homepage = "https://pimalaya.org/himalaya/cli/latest/";
-    changelog = "https://github.com/soywod/himalaya/blob/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ soywod toastal yanganto ];
+    homepage = "https://github.com/pimalaya/himalaya";
+    changelog = "https://github.com/pimalaya/himalaya/blob/v${version}/CHANGELOG.md";
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
+    maintainers = with lib.maintainers; [
+      soywod
+      yanganto
+    ];
   };
 }

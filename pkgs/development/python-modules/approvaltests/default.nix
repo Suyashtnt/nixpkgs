@@ -7,13 +7,12 @@
   empty-files,
   fetchFromGitHub,
   mock,
-  mrjob,
   numpy,
   pyperclip,
   pytest,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
+  pyyaml,
   setuptools,
   testfixtures,
   typing-extensions,
@@ -21,17 +20,23 @@
 
 buildPythonPackage rec {
   pname = "approvaltests";
-  version = "14.0.0";
+  version = "18.0.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "approvals";
     repo = "ApprovalTests.Python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-BTTmmtmFjYBfzbVf/Fi8PwnpVJBcOOBTdFBmGowGez4=";
+    tag = "v${version}";
+    hash = "sha256-2lz3TMI4/QoNVfnZga5Ro9rheixFpVJfNbvVLy0lnLA=";
   };
+
+  postPatch = ''
+    test -f setup.py || mv setup/setup.approvaltests.py setup.py
+
+    python3 setup/set_version.py '${version}'
+
+    patchShebangs internal_documentation/scripts
+  '';
 
   build-system = [ setuptools ];
 
@@ -41,7 +46,6 @@ buildPythonPackage rec {
     beautifulsoup4
     empty-files
     mock
-    mrjob
     pyperclip
     pytest
     testfixtures
@@ -52,12 +56,13 @@ buildPythonPackage rec {
     numpy
     pytest-asyncio
     pytestCheckHook
+    pyyaml
   ];
 
   disabledTests = [
-    # Tests expect paths below ApprovalTests.Python directory
-    "test_received_filename"
-    "test_pytest_namer"
+    "test_warnings"
+    # test runs another python interpreter, ignoring $PYTHONPATH
+    "test_command_line_verify"
   ];
 
   pythonImportsCheck = [
@@ -65,11 +70,11 @@ buildPythonPackage rec {
     "approvaltests.reporters.generic_diff_reporter_factory"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Assertion/verification library to aid testing";
     homepage = "https://github.com/approvals/ApprovalTests.Python";
-    changelog = "https://github.com/approvals/ApprovalTests.Python/releases/tag/v${version}";
-    license = licenses.asl20;
+    changelog = "https://github.com/approvals/ApprovalTests.Python/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
     maintainers = [ ];
   };
 }

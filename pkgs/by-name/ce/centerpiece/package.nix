@@ -1,28 +1,33 @@
-{ lib
-, stdenv
-, pkg-config
-, dbus
-, vulkan-loader
-, libGL
-, fetchFromGitHub
-, rustPlatform
-, libxkbcommon
-, wayland
-, enableX11 ? true, xorg
+{
+  lib,
+  stdenv,
+  pkg-config,
+  dbus,
+  vulkan-loader,
+  libGL,
+  fetchFromGitHub,
+  rustPlatform,
+  libxkbcommon,
+  wayland,
+  enableX11 ? true,
+  libxrandr,
+  libxi,
+  libxcursor,
+  libx11,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "centerpiece";
   version = "1.1.1";
 
   src = fetchFromGitHub {
     owner = "friedow";
     repo = "centerpiece";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-tZNwMPL1ITWVvoywojsd5j0GIVQt6pOKFLwi7jwqLKg=";
   };
 
-  cargoHash = "sha256-d5qGuQ8EnIkE/PhI9t4JxtnNbvh3rse9NpowZ+ESZuU=";
+  cargoHash = "sha256-qwKn9NN7+F/S8ojObjWBU2y2wG0TNeYbYHiwou8AhnI=";
 
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [
@@ -31,14 +36,15 @@ rustPlatform.buildRustPackage rec {
     libxkbcommon
     vulkan-loader
     wayland
-  ] ++ lib.optionals enableX11 (with xorg; [
-    libX11
-    libXcursor
-    libXi
-    libXrandr
-  ]);
+  ]
+  ++ lib.optionals enableX11 [
+    libx11
+    libxcursor
+    libxi
+    libxrandr
+  ];
 
-  postFixup = lib.optional stdenv.hostPlatform.isLinux ''
+  postFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
     rpath=$(patchelf --print-rpath $out/bin/centerpiece)
     patchelf --set-rpath "$rpath:${
       lib.makeLibraryPath [
@@ -50,12 +56,15 @@ rustPlatform.buildRustPackage rec {
     }" $out/bin/centerpiece
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/friedow/centerpiece";
     description = "Your trusty omnibox search";
-    license = licenses.mit;
-    maintainers = with maintainers; [ a-kenji friedow ];
-    platforms = platforms.linux;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      a-kenji
+      friedow
+    ];
+    platforms = lib.platforms.linux;
     mainProgram = "centerpiece";
   };
-}
+})

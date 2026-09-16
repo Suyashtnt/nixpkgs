@@ -1,47 +1,52 @@
-{ buildGo123Module
-, buildPackages
-, fetchFromGitHub
-, fetchNpmDeps
-, lib
-, nodejs
-, npmHooks
-, pkg-config
-, stdenv
-, ffmpeg-headless
-, taglib
-, zlib
-, nixosTests
-, nix-update-script
-, ffmpegSupport ? true
+{
+  buildGo127Module,
+  buildPackages,
+  fetchFromGitHub,
+  fetchNpmDeps,
+  lib,
+  nodejs_24,
+  npmHooks,
+  pkg-config,
+  stdenv,
+  ffmpeg-headless,
+  taglib,
+  zlib,
+  nixosTests,
+  nix-update-script,
+  ffmpegSupport ? true,
+  versionCheckHook,
+  plugins ? [ ],
 }:
 
-buildGo123Module rec {
+buildGo127Module (finalAttrs: {
   pname = "navidrome";
-  version = "0.53.3";
+  version = "0.64.0";
 
   src = fetchFromGitHub {
     owner = "navidrome";
     repo = "navidrome";
-    rev = "v${version}";
-    hash = "sha256-RLmGjkeBHuvVdxXaGvlIFPI+6beAdtSLukVmwe6Hnag=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-2GUAGuwVE3i49g/mGN3zd1J1y9jVhF0g4hKGceSQwD8=";
   };
 
-  vendorHash = "sha256-XjiRMRfsmcw/4RLZXN36BbzbCKu98BgD3cn89e/vra4=";
+  vendorHash = "sha256-1aKih0Xl5OfV4IO/2E0S31rHhRx356zl2QPM96jcFco=";
 
   npmRoot = "ui";
 
   npmDeps = fetchNpmDeps {
-    inherit src;
-    sourceRoot = "${src.name}/ui";
-    hash = "sha256-0vHInRly5xirjfV7tcYVNVLaMk4YtJeB7Ky0mrDDDnY=";
+    inherit (finalAttrs) src;
+    sourceRoot = "${finalAttrs.src.name}/ui";
+    hash = "sha256-uRF9cf6HZE0gyCvGTEZ520d2gMsxmccEYLJBgc47pMg=";
   };
 
   nativeBuildInputs = [
     buildPackages.makeWrapper
-    nodejs
+    nodejs_24
     npmHooks.npmConfigHook
     pkg-config
   ];
+
+  runtimeInputs = plugins;
 
   overrideModAttrs = oldAttrs: {
     nativeBuildInputs = lib.filter (drv: drv != npmHooks.npmConfigHook) oldAttrs.nativeBuildInputs;
@@ -53,16 +58,41 @@ buildGo123Module rec {
     zlib
   ];
 
-  ldflags = [
-    "-X github.com/navidrome/navidrome/consts.gitSha=${src.rev}"
-    "-X github.com/navidrome/navidrome/consts.gitTag=v${version}"
+  excludedPackages = [
+    "plugins"
   ];
 
-  CGO_CFLAGS = lib.optionals stdenv.cc.isGNU [ "-Wno-return-local-addr" ];
+  ldflags = [
+    "-X github.com/navidrome/navidrome/consts.gitSha=${finalAttrs.src.rev}"
+    "-X github.com/navidrome/navidrome/consts.gitTag=v${finalAttrs.version}"
+  ];
+
+  env = lib.optionalAttrs stdenv.cc.isGNU {
+    CGO_CFLAGS = toString [ "-Wno-return-local-addr" ];
+  };
+
+  postPatch = ''
+    patchShebangs ui/bin/update-workbox.sh
+  '';
 
   preBuild = ''
     make buildjs
   '';
+
+  postInstall = ''
+    mkdir -p $out/share/plugins/
+    ${lib.concatMapStringsSep "\n" (plugin: ''
+      ln -s ${plugin}/share/${plugin.pname}.ndp $out/share/plugins/
+    '') plugins}
+  '';
+
+  tags = [
+    "netgo"
+    "sqlite_fts5"
+  ];
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
 
   postFixup = lib.optionalString ffmpegSupport ''
     wrapProgram $out/bin/navidrome \
@@ -70,18 +100,22 @@ buildGo123Module rec {
   '';
 
   passthru = {
+    inherit plugins;
     tests.navidrome = nixosTests.navidrome;
     updateScript = nix-update-script { };
   };
 
   meta = {
-    description = "Navidrome Music Server and Streamer compatible with Subsonic/Airsonic";
+    description = "Music Server and Streamer compatible with Subsonic/Airsonic";
     mainProgram = "navidrome";
     homepage = "https://www.navidrome.org/";
     license = lib.licenses.gpl3Only;
     sourceProvenance = with lib.sourceTypes; [ fromSource ];
-    maintainers = with lib.maintainers; [ aciceri squalus ];
+    maintainers = with lib.maintainers; [
+      aciceri
+      tebriel
+    ];
     # Broken on Darwin: sandbox-exec: pattern serialization length exceeds maximum (NixOS/nix#4119)
     broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

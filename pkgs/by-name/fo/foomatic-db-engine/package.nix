@@ -1,31 +1,32 @@
-{ lib
-, perlPackages
-, fetchFromGitHub
-, withCupsAccess ? false  # needed to access local cups server
-, cups
-, cups-filters
-, curl
-, withSocketAccess ? false  # needed to access network printers
-, netcat-gnu
-, withSMBAccess ? false  # needed to access SMB-connected printers
-, samba
-, autoconf
-, automake
-, file
-, makeWrapper
+{
+  lib,
+  perlPackages,
+  fetchFromGitHub,
+  withCupsAccess ? false, # needed to access local cups server
+  cups,
+  cups-filters,
+  curl,
+  withSocketAccess ? false, # needed to access network printers
+  netcat-gnu,
+  withSMBAccess ? false, # needed to access SMB-connected printers
+  samba,
+  autoconf,
+  automake,
+  file,
+  makeWrapper,
 }:
 
 perlPackages.buildPerlPackage rec {
   pname = "foomatic-db-engine";
-  version = "unstable-2024-02-10";
+  version = "0-unstable-2026-04-13";
 
   src = fetchFromGitHub {
     # there is also a daily snapshot at the `downloadPage`,
     # but it gets deleted quickly and would provoke 404 errors
     owner = "OpenPrinting";
     repo = "foomatic-db-engine";
-    rev = "a2b12271e145fe3fd34c3560d276a57e928296cb";
-    hash = "sha256-qM12qtGotf9C0cjO9IkmzlW9GWCkT2Um+6dU3mZm3DU=";
+    rev = "e4e7b9cd28ba160428f82bc5234559d1f50e5c42";
+    hash = "sha256-wpGFGr2H2adN4AVrYBNc+f4nE9x7OtzAxF5PkzmieXc=";
   };
 
   outputs = [ "out" ];
@@ -36,21 +37,29 @@ perlPackages.buildPerlPackage rec {
     perlPackages.XMLLibXML
   ];
 
-  buildInputs =
-       [ curl ]
-       # provide some "cups-*" commands to `foomatic-{configure,printjob}`
-       # so that they can manage a local cups server (add queues, add jobs...)
-    ++ lib.optionals withCupsAccess [ cups cups-filters ]
-       # the commands `foomatic-{configure,getpjloptions}` need
-       # netcat if they are used to query or alter a network
-       # printer via AppSocket/HP JetDirect protocol
-    ++ lib.optional withSocketAccess netcat-gnu
-       # `foomatic-configure` can be used to access printers that are
-       # shared via the SMB protocol, but it needs the `smbclient` binary
-    ++ lib.optional withSMBAccess samba
-  ;
+  buildInputs = [
+    curl
+  ]
+  # provide some "cups-*" commands to `foomatic-{configure,printjob}`
+  # so that they can manage a local cups server (add queues, add jobs...)
+  ++ lib.optionals withCupsAccess [
+    cups
+    cups-filters
+  ]
+  # the commands `foomatic-{configure,getpjloptions}` need
+  # netcat if they are used to query or alter a network
+  # printer via AppSocket/HP JetDirect protocol
+  ++ lib.optional withSocketAccess netcat-gnu
+  # `foomatic-configure` can be used to access printers that are
+  # shared via the SMB protocol, but it needs the `smbclient` binary
+  ++ lib.optional withSMBAccess samba;
 
-  nativeBuildInputs = [ autoconf automake file makeWrapper ];
+  nativeBuildInputs = [
+    autoconf
+    automake
+    file
+    makeWrapper
+  ];
 
   # sed-substitute indirection is more robust against
   # characters in paths that might need escaping
@@ -77,7 +86,7 @@ perlPackages.buildPerlPackage rec {
     done
   '';
 
-  doCheck = false;  # no tests, would fail
+  doCheck = false; # no tests, would fail
 
   meta = {
     changelog = "https://github.com/OpenPrinting/foomatic-db-engine/blob/${src.rev}/ChangeLog";

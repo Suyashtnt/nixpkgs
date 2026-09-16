@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.environment.memoryAllocator;
 
@@ -35,21 +40,25 @@ let
       '';
     };
 
-    scudo = let
-      platformMap = {
-        aarch64-linux = "aarch64";
-        x86_64-linux  = "x86_64";
-      };
+    scudo =
+      let
+        platformMap = {
+          aarch64-linux = "aarch64";
+          x86_64-linux = "x86_64";
+        };
 
-      systemPlatform = platformMap.${pkgs.stdenv.hostPlatform.system} or (throw "scudo not supported on ${pkgs.stdenv.hostPlatform.system}");
-    in {
-      libPath = "${pkgs.llvmPackages_14.compiler-rt}/lib/linux/libclang_rt.scudo-${systemPlatform}.so";
-      description = ''
-        A user-mode allocator based on LLVM Sanitizer’s CombinedAllocator,
-        which aims at providing additional mitigations against heap based
-        vulnerabilities, while maintaining good performance.
-      '';
-    };
+        systemPlatform =
+          platformMap.${pkgs.stdenv.hostPlatform.system}
+            or (throw "scudo not supported on ${pkgs.stdenv.hostPlatform.system}");
+      in
+      {
+        libPath = "${pkgs.llvmPackages.compiler-rt}/lib/linux/libclang_rt.scudo_standalone-${systemPlatform}.so";
+        description = ''
+          A user-mode allocator based on LLVM Sanitizer’s CombinedAllocator,
+          which aims at providing additional mitigations against heap based
+          vulnerabilities, while maintaining good performance.
+        '';
+      };
 
     mimalloc = {
       libPath = "${pkgs.mimalloc}/lib/libmimalloc.so";
@@ -65,17 +74,18 @@ let
 
   # An output that contains only the shared library, to avoid
   # needlessly bloating the system closure
-  mallocLib = pkgs.runCommand "malloc-provider-${cfg.provider}"
-    rec {
-      preferLocalBuild = true;
-      allowSubstitutes = false;
-      origLibPath = providerConf.libPath;
-      libName = baseNameOf origLibPath;
-    }
-    ''
-      mkdir -p $out/lib
-      cp -L $origLibPath $out/lib/$libName
-    '';
+  mallocLib =
+    pkgs.runCommand "malloc-provider-${cfg.provider}"
+      rec {
+        preferLocalBuild = true;
+        allowSubstitutes = false;
+        origLibPath = providerConf.libPath;
+        libName = baseNameOf origLibPath;
+      }
+      ''
+        mkdir -p $out/lib
+        cp -L $origLibPath $out/lib/$libName
+      '';
 
   # The full path to the selected provider shlib.
   providerLibPath = "${mallocLib}/lib/${mallocLib.libName}";
@@ -83,7 +93,7 @@ in
 
 {
   meta = {
-    maintainers = [ lib.maintainers.joachifm ];
+    maintainers = [ ];
   };
 
   options = {
@@ -96,9 +106,11 @@ in
         Briefly, the system-wide memory allocator providers are:
 
         - `libc`: the standard allocator provided by libc
-        ${lib.concatStringsSep "\n" (lib.mapAttrsToList
-            (name: value: "- `${name}`: ${lib.replaceStrings [ "\n" ] [ " " ] value.description}")
-            providers)}
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (
+            name: value: "- `${name}`: ${lib.replaceStrings [ "\n" ] [ " " ] value.description}"
+          ) providers
+        )}
 
         ::: {.warning}
         Selecting an alternative allocator (i.e., anything other than
@@ -110,6 +122,35 @@ in
   };
 
   config = lib.mkIf (cfg.provider != "libc") {
+    # Legacy (LLVM < 13) Scudo uses CamelCase options.
+    # Standalone (LLVM >= 13) Scudo uses snake_case options.
+    # NixOS switched in 25.11: https://github.com/NixOS/nixpkgs/pull/444605
+    warnings =
+      let
+        scudoOpts = config.environment.variables.SCUDO_OPTIONS;
+
+        legacyOptionNames = [
+          "QuarantineSizeKb"
+          "QuarantineChunksUpToSize"
+          "ThreadLocalQuarantineSizeKb"
+          "DeallocationTypeMismatch"
+          "DeleteSizeMismatch"
+          "ZeroContents"
+        ];
+
+        # Check which legacy options are in SCUDO_OPTIONS,
+        # so we can warn the user about the change.
+        legacyOptionsUsed = lib.lists.filter (opt: lib.strings.hasInfix opt scudoOpts) legacyOptionNames;
+      in
+      lib.optional
+        (
+          config.environment.variables ? SCUDO_OPTIONS && cfg.provider == "scudo" && legacyOptionsUsed != [ ]
+        )
+        ''
+          environment.variables.SCUDO_OPTIONS: ${lib.concatStringsSep ", " legacyOptionsUsed} is/are no longer valid Scudo options.
+          Use snake_case instead of CamelCase: https://llvm.org/docs/ScudoHardenedAllocator.html#options
+        '';
+
     environment.etc."ld-nix.so.preload".text = ''
       ${providerLibPath}
     '';
@@ -117,10 +158,12 @@ in
       "abstractions/base" = ''
         r /etc/ld-nix.so.preload,
         r ${config.environment.etc."ld-nix.so.preload".source},
-        include "${pkgs.apparmorRulesFromClosure {
+        include "${
+          pkgs.apparmorRulesFromClosure {
             name = "mallocLib";
-            baseRules = ["mr $path/lib/**.so*"];
-          } [ mallocLib ] }"
+            baseRules = [ "mr $path/lib/**.so*" ];
+          } [ mallocLib ]
+        }"
       '';
     };
   };

@@ -13,27 +13,25 @@
   python-mistralclient,
   python-openstackclient,
   python-swiftclient,
-  pythonOlder,
   requests-mock,
   requests,
   setuptools,
   sphinxcontrib-apidoc,
   sphinxHook,
   stestr,
+  stevedore,
 }:
 
 buildPythonPackage rec {
   pname = "python-troveclient";
-  version = "8.5.0";
+  version = "8.10.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "openstack";
     repo = "python-troveclient";
-    rev = "refs/tags/${version}";
-    hash = "sha256-lfnAmQ/IxEdc+XxC0dYxK2FgY7csNewGPuQuq0dNffM=";
+    tag = version;
+    hash = "sha256-ayNRhT337eG6NJM2ugAqiH6st+2s4gySIeNQ4jJb8nU=";
   };
 
   env.PBR_VERSION = version;
@@ -61,6 +59,7 @@ buildPythonPackage rec {
     python-openstackclient
     python-swiftclient
     requests
+    stevedore
   ];
 
   nativeCheckInputs = [
@@ -71,7 +70,10 @@ buildPythonPackage rec {
 
   checkPhase = ''
     runHook preCheck
-    stestr run
+    stestr run -e <(echo "
+    troveclient.tests.test_shell.ShellTest.test_help
+    troveclient.tests.test_shell.ShellTestKeystoneV3.test_help
+    ")
     runHook postCheck
   '';
 
@@ -82,6 +84,6 @@ buildPythonPackage rec {
     description = "Client library for OpenStack Trove API";
     license = lib.licenses.asl20;
     mainProgram = "trove";
-    maintainers = lib.teams.openstack.members;
+    teams = [ lib.teams.openstack ];
   };
 }

@@ -1,10 +1,15 @@
-{ lib, buildDunePackage, fetchFromGitLab
-, sedlex, uunf, uutf
+{
+  lib,
+  buildDunePackage,
+  fetchFromGitLab,
+  sedlex,
+  uunf,
+  uutf,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "iri";
-  version = "1.0.0";
+  version = "1.2.0";
 
   minimalOCamlVersion = "4.12";
 
@@ -12,16 +17,20 @@ buildDunePackage rec {
     domain = "framagit.org";
     owner = "zoggy";
     repo = "ocaml-iri";
-    rev = version;
-    hash = "sha256-6Q7qPezmdcO6JSevWl55XAxFuIROZNDrMkYw8VRR7qg=";
+    rev = finalAttrs.version;
+    hash = "sha256-+wBQBzRkN36T3zAQWmqq/VdhgLrCnbvOouEmVg37s/w=";
   };
 
-  propagatedBuildInputs = [ sedlex uunf uutf ];
+  propagatedBuildInputs = [
+    sedlex
+    uunf
+    uutf
+  ];
 
   meta = {
     description = "IRI (RFC3987) native OCaml implementation";
     license = lib.licenses.lgpl3;
     maintainers = [ lib.maintainers.vbgl ];
-    inherit (src.meta) homepage;
+    inherit (finalAttrs.src.meta) homepage;
   };
-}
+})

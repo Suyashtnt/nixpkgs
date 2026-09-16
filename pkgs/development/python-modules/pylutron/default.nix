@@ -1,38 +1,44 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  pythonOlder,
+  fetchFromGitHub,
+  pytestCheckHook,
   setuptools,
+  telnetlib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pylutron";
-  version = "0.2.15";
+  version = "0.4.5";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-1UUW3Ym11jR4dxSS1OOVPl6h69I6H782Q4ZeVitty0c=";
+  src = fetchFromGitHub {
+    owner = "thecynic";
+    repo = "pylutron";
+    tag = finalAttrs.version;
+    hash = "sha256-xpa/kZv4cwNuadTuVhopFJSBP4eGzsSQOadcAiM/RKY=";
   };
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail TEMPLATE_VERSION ${finalAttrs.version}
+  '';
 
   build-system = [ setuptools ];
 
-  # Project has no tests
-  doCheck = false;
+  dependencies = [ telnetlib3 ];
 
   pythonImportsCheck = [ "pylutron" ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  enabledTestPaths = [ "tests" ];
+
+  meta = {
     description = "Python library for controlling a Lutron RadioRA 2 system";
     homepage = "https://github.com/thecynic/pylutron";
-    changelog = "https://github.com/thecynic/pylutron/releases/tag/${version}";
-    license = with licenses; [
-      mit
-      psfl
-    ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/thecynic/pylutron/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

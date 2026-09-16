@@ -1,18 +1,23 @@
 {
   lib,
-  buildNimPackage,
   fetchFromGitHub,
+  buildNimPackage,
 }:
 
 buildNimPackage (finalAttrs: {
   pname = "nph";
-  version = "0.6.0";
+  version = "0.7.0";
+
+  postPatch = ''
+    substituteInPlace src/nph.nim \
+      --replace-fail 'git describe --long --dirty --always --tags' "echo ${finalAttrs.version}"
+  '';
 
   src = fetchFromGitHub {
     owner = "arnetheduck";
     repo = "nph";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-9t5VeGsxyytGdu7+Uv/J+x6bmeB5+eQapbyp30iPxqs=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-mH7yEyveR6cM7CFr93rO2K/5tAtKbawyTgbtU0kk5o8=";
   };
 
   lockFile = ./lock.json;

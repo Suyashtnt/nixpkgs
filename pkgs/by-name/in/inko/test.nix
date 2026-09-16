@@ -1,39 +1,51 @@
-{ inko
-, writeText
-, runCommand
-, ...
+{
+  inko,
+  writeText,
+  writableTmpDirAsHomeHook,
+  runCommand,
+  ...
 }:
 
 let
-  source = writeText "hello.inko" /* inko */ ''
-    import std.process (sleep)
-    import std.stdio (STDOUT)
-    import std.time (Duration)
+  source =
+    # https://docs.inko-lang.org/manual/v0.19.1/getting-started/hello-concurrency/#channels
+    writeText "hello.inko" # inko
+      ''
+        import std.process (sleep)
+        import std.stdio (Stdout)
+        import std.sync (Channel)
+        import std.time (Duration)
 
-    class async Printer {
-      fn async print(message: String, channel: Channel[Nil]) {
-        let _ = STDOUT.new.print(message)
+        type async Printer {
+          fn async print(message: String, channel: uni Channel[Nil]) {
+            let _ = Stdout.new.print(message)
 
-        channel.send(nil)
-      }
-    }
+            channel.send(nil)
+          }
+        }
 
-    class async Main {
-      fn async main {
-        let channel = Channel.new(size: 2)
+        type async Main {
+          fn async main {
+            let channel = Channel.new
 
-        Printer().print('Hello', channel)
-        Printer().print('world', channel)
+            Printer().print('Hello', recover channel.clone)
+            Printer().print('world', recover channel.clone)
 
-        channel.receive
-        channel.receive
-      }
-    }
-  '';
+            sleep(Duration.from_millis(500))
+
+            channel.receive
+            channel.receive
+          }
+        }
+      '';
 in
 
-runCommand "inko-test" { } ''
-  ${inko}/bin/inko run ${source} > $out
-  cat $out | grep -q Hello
-  cat $out | grep -q world
-''
+runCommand "inko-test"
+  {
+    nativeBuildInputs = [ writableTmpDirAsHomeHook ];
+  }
+  ''
+    ${inko}/bin/inko run ${source} > $out
+    cat $out | grep -q Hello
+    cat $out | grep -q world
+  ''

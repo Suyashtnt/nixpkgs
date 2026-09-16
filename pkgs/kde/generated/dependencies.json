@@ -18,8 +18,11 @@
       "kcrash",
       "ki18n",
       "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
       "kitemmodels",
       "kwidgetsaddons",
+      "kwindowsystem",
       "kxmlgui"
     ],
     "akonadi-calendar": [
@@ -30,6 +33,7 @@
       "kcalendarcore",
       "kcalutils",
       "kcontacts",
+      "kcrash",
       "kdbusaddons",
       "kidentitymanagement",
       "kmailtransport",
@@ -48,11 +52,44 @@
       "extra-cmake-modules",
       "grantleetheme",
       "kcodecs",
+      "kcolorscheme",
       "kcontacts",
       "kmime",
       "ktextaddons",
       "ktexttemplate",
       "prison"
+    ],
+    "akonadi-e2e-tests": [
+      "akonadi",
+      "akonadi-calendar",
+      "akonadi-contacts",
+      "akonadi-mime",
+      "extra-cmake-modules",
+      "kcalendarcore",
+      "kcalutils",
+      "kcmutils",
+      "kcodecs",
+      "kconfig",
+      "kconfigwidgets",
+      "kcontacts",
+      "kdav",
+      "kdepim-runtime",
+      "kidentitymanagement",
+      "kimap",
+      "kio",
+      "kio-extras",
+      "kitemmodels",
+      "kldap",
+      "kmailtransport",
+      "kmbox",
+      "kmime",
+      "knotifications",
+      "knotifyconfig",
+      "ktextaddons",
+      "kwallet",
+      "kwindowsystem",
+      "libkgapi",
+      "qtkeychain"
     ],
     "akonadi-import-wizard": [
       "akonadi",
@@ -70,11 +107,6 @@
       "akonadi",
       "extra-cmake-modules",
       "kio",
-      "kmime"
-    ],
-    "akonadi-notes": [
-      "akonadi",
-      "extra-cmake-modules",
       "kmime"
     ],
     "akonadi-search": [
@@ -122,7 +154,8 @@
       "kuserfeedback",
       "libkdepim",
       "messagelib",
-      "pimcommon"
+      "pimcommon",
+      "plasma-activities"
     ],
     "alkimia": [
       "extra-cmake-modules",
@@ -139,12 +172,12 @@
     ],
     "alligator": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
       "ki18n",
       "kirigami",
       "kirigami-addons",
-      "qqc2-desktop-style",
       "syndication"
     ],
     "alpaka": [
@@ -156,13 +189,12 @@
       "kguiaddons",
       "ki18n",
       "kirigami",
+      "kirigami-addons",
       "kstatusnotifieritem",
       "kwidgetsaddons",
-      "kwindowsystem",
-      "kxmlgui"
+      "kwindowsystem"
     ],
     "amarok": [
-      "attica",
       "extra-cmake-modules",
       "karchive",
       "kcmutils",
@@ -172,7 +204,6 @@
       "kcoreaddons",
       "kcrash",
       "kdbusaddons",
-      "kdeclarative",
       "kdnssd",
       "kdoctools",
       "kglobalaccel",
@@ -184,24 +215,12 @@
       "knewstuff",
       "knotifications",
       "kpackage",
+      "kstatusnotifieritem",
       "ktexteditor",
       "kwidgetsaddons",
       "kwindowsystem",
-      "phonon",
-      "qca",
       "solid",
       "threadweaver"
-    ],
-    "amor": [
-      "extra-cmake-modules",
-      "kconfig",
-      "kcoreaddons",
-      "kdbusaddons",
-      "kdoctools",
-      "ki18n",
-      "kwidgetsaddons",
-      "kwindowsystem",
-      "kxmlgui"
     ],
     "analitza": [
       "extra-cmake-modules"
@@ -225,6 +244,7 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kfilemetadata",
       "ki18n",
@@ -265,10 +285,19 @@
       "kcrash",
       "ki18n",
       "kirigami",
+      "kitemmodels",
       "knewstuff"
     ],
     "atcore": [
       "extra-cmake-modules"
+    ],
+    "atelier": [
+      "atcore",
+      "extra-cmake-modules",
+      "kconfig",
+      "ki18n",
+      "ktexteditor",
+      "kxmlgui"
     ],
     "atlantik": [
       "extra-cmake-modules",
@@ -313,7 +342,7 @@
       "ki18n",
       "kio",
       "libkcddb",
-      "libkcompactdisc"
+      "solid"
     ],
     "aura-browser": [
       "kcmutils",
@@ -334,6 +363,21 @@
       "libplasma",
       "plasma-workspace",
       "solid"
+    ],
+    "aurorae": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfig",
+      "kcoreaddons",
+      "kdecoration",
+      "ki18n",
+      "knewstuff",
+      "kpackage",
+      "ksvg"
+    ],
+    "auto-chmod": [
+      "extra-cmake-modules",
+      "ki18n"
     ],
     "baloo": [
       "extra-cmake-modules",
@@ -359,6 +403,7 @@
       "extra-cmake-modules",
       "karchive",
       "kcmutils",
+      "kcolorscheme",
       "kcompletion",
       "kconfig",
       "kconfigwidgets",
@@ -372,14 +417,14 @@
       "ki18n",
       "kiconthemes",
       "kio",
+      "kjobwidgets",
       "knotifications",
       "kparts",
       "kservice",
       "ktextwidgets",
       "kwidgetsaddons",
       "kwindowsystem",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "blinken": [
       "extra-cmake-modules",
@@ -388,8 +433,7 @@
       "kdoctools",
       "kguiaddons",
       "ki18n",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "bluedevil": [
       "bluez-qt",
@@ -413,6 +457,7 @@
       "kwindowsystem",
       "kxmlgui",
       "libplasma",
+      "plasma-workspace",
       "solid"
     ],
     "bluez-qt": [
@@ -426,6 +471,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -437,6 +483,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -468,7 +515,6 @@
     "calendarsupport": [
       "akonadi",
       "akonadi-calendar",
-      "akonadi-notes",
       "extra-cmake-modules",
       "kcalendarcore",
       "kcalutils",
@@ -508,7 +554,6 @@
       "kjobwidgets",
       "knotifications",
       "knotifyconfig",
-      "kparts",
       "ktextwidgets",
       "kwidgetsaddons",
       "kwindowsystem",
@@ -525,6 +570,7 @@
       "kcoreaddons",
       "kdbusaddons",
       "kdiagram",
+      "kdoctools",
       "kguiaddons",
       "kholidays",
       "ki18n",
@@ -544,6 +590,7 @@
       "threadweaver"
     ],
     "cantor": [
+      "analitza",
       "extra-cmake-modules",
       "karchive",
       "kcompletion",
@@ -561,49 +608,21 @@
       "kxmlgui",
       "syntax-highlighting"
     ],
-    "cervisia": [
+    "chessament": [
       "extra-cmake-modules",
-      "kdesu",
-      "kdoctools",
-      "ki18n",
-      "kiconthemes",
-      "kitemviews",
-      "knotifications",
-      "kparts",
-      "ktextwidgets",
-      "kwidgetsaddons"
-    ],
-    "choqok": [
-      "extra-cmake-modules",
-      "kcmutils",
-      "kconfigwidgets",
+      "karchive",
+      "kconfig",
       "kcoreaddons",
       "kdoctools",
-      "kglobalaccel",
-      "ki18n",
-      "kio",
-      "knotifications",
-      "knotifyconfig",
-      "ktextwidgets",
-      "kwallet",
-      "kwidgetsaddons",
-      "kxmlgui",
-      "purpose",
-      "sonnet"
-    ],
-    "codevis": [
-      "extra-cmake-modules",
-      "kcmutils",
-      "kcrash",
-      "kdoctools",
       "ki18n",
       "kiconthemes",
-      "knewstuff",
-      "ktexteditor",
-      "ktexttemplate",
-      "ktextwidgets",
-      "kuserfeedback",
-      "plasma-activities"
+      "kio",
+      "kirigami",
+      "kirigami-addons",
+      "kitemmodels",
+      "qcoro",
+      "qqc2-desktop-style",
+      "qtkeychain"
     ],
     "colord-kde": [
       "extra-cmake-modules",
@@ -615,16 +634,21 @@
       "kwidgetsaddons",
       "kwindowsystem"
     ],
-    "croutons": [
-      "extra-cmake-modules"
-    ],
-    "daykountdown": [
+    "crow-translate": [
       "extra-cmake-modules",
+      "kwayland"
+    ],
+    "cxx-kde-frameworks": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
-      "kio",
-      "kirigami",
-      "kwidgetsaddons"
+      "kiconthemes"
+    ],
+    "cxx-rust-cssparser": [
+      "extra-cmake-modules"
     ],
     "digikam": [
       "extra-cmake-modules",
@@ -660,6 +684,7 @@
       "kidletime",
       "kio",
       "kirigami-addons",
+      "kitemmodels",
       "knewstuff",
       "knotifications",
       "kservice",
@@ -679,6 +704,7 @@
       "kbookmarks",
       "kcmutils",
       "kcodecs",
+      "kcolorscheme",
       "kcompletion",
       "kconfig",
       "kcoreaddons",
@@ -697,7 +723,6 @@
       "kuserfeedback",
       "kwindowsystem",
       "packagekit-qt",
-      "phonon",
       "selenium-webdriver-at-spi",
       "solid"
     ],
@@ -717,20 +742,27 @@
     "dragon": [
       "extra-cmake-modules",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
-      "kdbusaddons",
       "kdoctools",
       "ki18n",
       "kio",
-      "kjobwidgets",
-      "kparts",
+      "kirigami"
+    ],
+    "drawy": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kconfigwidgets",
+      "kcoreaddons",
+      "kcrash",
+      "kdoctools",
+      "ki18n",
+      "kiconthemes",
+      "ktextaddons",
+      "kuserfeedback",
       "kwidgetsaddons",
-      "kwindowsystem",
       "kxmlgui",
-      "phonon",
-      "solid"
+      "syntax-highlighting"
     ],
     "drkonqi": [
       "extra-cmake-modules",
@@ -764,6 +796,7 @@
     ],
     "elisa": [
       "extra-cmake-modules",
+      "kcodecs",
       "kcolorscheme",
       "kconfig",
       "kconfigwidgets",
@@ -794,9 +827,8 @@
       "extra-cmake-modules",
       "kcalendarcore",
       "kcalutils",
-      "kconfigwidgets",
+      "kcolorscheme",
       "kdiagram",
-      "kmime",
       "libkdepim"
     ],
     "falkon": [
@@ -872,7 +904,8 @@
       "extra-cmake-modules"
     ],
     "gcompris": [
-      "extra-cmake-modules"
+      "extra-cmake-modules",
+      "kdoctools"
     ],
     "ghostwriter": [
       "extra-cmake-modules",
@@ -899,6 +932,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -927,6 +961,7 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "kglobalaccel",
@@ -942,17 +977,24 @@
       "kwindowsystem",
       "kxmlgui",
       "libkdcraw",
-      "phonon",
       "plasma-activities",
       "purpose",
       "wayland",
       "wayland-protocols"
+    ],
+    "hana": [
+      "extra-cmake-modules",
+      "kconfig",
+      "ki18n",
+      "kio",
+      "kirigami"
     ],
     "haruna": [
       "extra-cmake-modules",
       "kconfig",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kfilemetadata",
       "ki18n",
       "kiconthemes",
@@ -969,6 +1011,7 @@
       "kdbusaddons",
       "ki18n",
       "kirigami",
+      "kirigami-addons",
       "kwindowsystem",
       "libkleo",
       "qqc2-desktop-style"
@@ -992,6 +1035,7 @@
       "kcalendarcore",
       "kcalutils",
       "kdiagram",
+      "kguiaddons",
       "kidentitymanagement",
       "kldap",
       "kmime",
@@ -1023,6 +1067,7 @@
     "itinerary": [
       "extra-cmake-modules",
       "karchive",
+      "kcolorscheme",
       "kconfig",
       "kcontacts",
       "kcoreaddons",
@@ -1044,11 +1089,12 @@
       "kunitconversion",
       "kwindowsystem",
       "libquotient",
-      "networkmanager-qt",
       "plasma-integration",
       "prison",
+      "qcoro",
       "qqc2-breeze-style",
       "qqc2-desktop-style",
+      "qtkeychain",
       "selenium-webdriver-at-spi"
     ],
     "juk": [
@@ -1068,12 +1114,12 @@
       "kwallet",
       "kwidgetsaddons",
       "kwindowsystem",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "k3b": [
       "extra-cmake-modules",
       "karchive",
+      "kauth",
       "kcmutils",
       "kconfig",
       "kcoreaddons",
@@ -1125,7 +1171,6 @@
       "kio",
       "kservice",
       "kwidgetsaddons",
-      "kwindowsystem",
       "kxmlgui"
     ],
     "kaddressbook": [
@@ -1134,19 +1179,69 @@
       "akonadi-search",
       "extra-cmake-modules",
       "grantleetheme",
+      "kcolorscheme",
       "kiconthemes",
       "kontactinterface",
+      "ktextaddons",
       "kuserfeedback",
       "libkdepim",
-      "pimcommon"
+      "pimcommon",
+      "plasma-activities"
+    ],
+    "kaffeine": [
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "kdbusaddons",
+      "ki18n",
+      "kio",
+      "kwidgetsaddons",
+      "kwindowsystem",
+      "kxmlgui",
+      "solid"
+    ],
+    "kaichat": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "kdoctools",
+      "ki18n",
+      "kiconthemes",
+      "kio",
+      "knotifications",
+      "knotifyconfig",
+      "kstatusnotifieritem",
+      "ktextaddons",
+      "kuserfeedback",
+      "kwidgetsaddons",
+      "kxmlgui",
+      "purpose",
+      "sonnet",
+      "syntax-highlighting"
+    ],
+    "kaichat-addons": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
+      "ki18n",
+      "kio",
+      "ktextaddons",
+      "kweathercore"
     ],
     "kaidan": [
       "extra-cmake-modules",
       "kcoreaddons",
+      "kcrash",
       "kio",
       "kirigami",
       "kirigami-addons",
-      "kquickimageeditor"
+      "kitemmodels",
+      "kquickimageeditor",
+      "kwindowsystem",
+      "prison",
+      "qxmpp"
     ],
     "kajongg": [
       "extra-cmake-modules",
@@ -1205,6 +1300,7 @@
       "kcoreaddons",
       "ki18n",
       "kirigami",
+      "kirigami-addons",
       "kunitconversion",
       "qqc2-desktop-style"
     ],
@@ -1218,21 +1314,13 @@
       "kirigami-addons",
       "qqc2-desktop-style"
     ],
-    "kalternatives": [
-      "extra-cmake-modules",
-      "kconfigwidgets",
-      "kcoreaddons",
-      "ki18n",
-      "kiconthemes",
-      "kio",
-      "kwidgetsaddons"
-    ],
     "kalzium": [
       "extra-cmake-modules",
       "karchive",
       "kconfig",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kio",
@@ -1289,6 +1377,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -1296,31 +1385,55 @@
     "kapptemplate": [
       "extra-cmake-modules",
       "karchive",
-      "kcompletion",
+      "kconfig",
       "kconfigwidgets",
       "kcoreaddons",
       "kdoctools",
       "ki18n",
-      "kio"
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons"
     ],
     "karchive": [
       "extra-cmake-modules"
+    ],
+    "karp": [
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "kirigami-app-components"
+    ],
+    "karton": [
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "qqc2-desktop-style"
     ],
     "kasts": [
       "extra-cmake-modules",
       "kcolorscheme",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
       "ki18n",
+      "kiconthemes",
       "kirigami",
       "kirigami-addons",
+      "kwindowsystem",
       "qqc2-desktop-style",
       "qtkeychain",
       "syndication",
       "threadweaver"
-    ],
-    "kasync": [
-      "extra-cmake-modules"
     ],
     "kate": [
       "breeze-icons",
@@ -1330,10 +1443,8 @@
       "kiconthemes",
       "knewstuff",
       "ktexteditor",
-      "ktextwidgets",
       "kuserfeedback",
-      "qtkeychain",
-      "selenium-webdriver-at-spi"
+      "qtkeychain"
     ],
     "katomic": [
       "extra-cmake-modules",
@@ -1343,6 +1454,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "knewstuff",
       "kwidgetsaddons",
       "kxmlgui",
@@ -1374,6 +1486,7 @@
       "kconfig",
       "kcoreaddons",
       "kcrash",
+      "kdoctools",
       "ki18n",
       "kiconthemes",
       "kio",
@@ -1392,6 +1505,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
@@ -1406,6 +1520,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -1413,8 +1528,8 @@
     "kbookmarks": [
       "extra-cmake-modules",
       "kconfig",
-      "kconfigwidgets",
-      "kcoreaddons"
+      "kcoreaddons",
+      "kwidgetsaddons"
     ],
     "kbounce": [
       "extra-cmake-modules",
@@ -1427,6 +1542,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kwidgetsaddons",
       "kxmlgui",
@@ -1441,6 +1557,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -1468,11 +1585,14 @@
     ],
     "kcalc": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
+      "kdoctools",
       "kguiaddons",
       "ki18n",
+      "kiconthemes",
       "knotifications",
       "kxmlgui",
       "selenium-webdriver-at-spi"
@@ -1504,6 +1624,7 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kirigami",
@@ -1553,6 +1674,11 @@
     "kconfig": [
       "extra-cmake-modules"
     ],
+    "kconfigeditor": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kirigami"
+    ],
     "kconfigwidgets": [
       "extra-cmake-modules",
       "kcodecs",
@@ -1579,47 +1705,35 @@
     ],
     "kcron": [
       "extra-cmake-modules",
+      "kauth",
       "kcmutils",
       "kconfigwidgets",
+      "kcoreaddons",
       "kdoctools",
       "ki18n",
-      "kio"
+      "kirigami-addons"
     ],
     "kdav": [
       "extra-cmake-modules",
       "kio"
-    ],
-    "kdav2": [
-      "extra-cmake-modules",
-      "kcoreaddons"
-    ],
-    "kdb": [
-      "extra-cmake-modules",
-      "kcoreaddons"
     ],
     "kdbusaddons": [
       "extra-cmake-modules"
     ],
     "kde-cli-tools": [
       "extra-cmake-modules",
-      "kauth",
       "kcmutils",
-      "kcodecs",
       "kcompletion",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "kdesu",
       "ki18n",
       "kiconthemes",
       "kio",
-      "kjobwidgets",
       "kparts",
-      "kpty",
       "kservice",
       "kwidgetsaddons",
-      "kwindowsystem",
-      "solid"
+      "kwindowsystem"
     ],
     "kde-dev-scripts": [
       "extra-cmake-modules",
@@ -1668,18 +1782,22 @@
       "solid",
       "syntax-highlighting"
     ],
+    "kde-qdoc-common": [
+      "extra-cmake-modules"
+    ],
     "kdebugsettings": [
       "extra-cmake-modules",
       "kcompletion",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kiconthemes",
       "kitemviews",
       "kwidgetsaddons",
-      "kxmlgui",
-      "selenium-webdriver-at-spi"
+      "kwindowsystem",
+      "kxmlgui"
     ],
     "kdeclarative": [
       "extra-cmake-modules",
@@ -1743,6 +1861,7 @@
     ],
     "kdenetwork-filesharing": [
       "extra-cmake-modules",
+      "kauth",
       "kcompletion",
       "kcoreaddons",
       "ki18n",
@@ -1777,7 +1896,8 @@
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
-      "purpose"
+      "purpose",
+      "selenium-webdriver-at-spi"
     ],
     "kdepim-addons": [
       "akonadi",
@@ -1791,7 +1911,10 @@
       "kaddressbook",
       "kcalendarcore",
       "kcalutils",
+      "kcmutils",
+      "kcolorscheme",
       "kconfig",
+      "kconfigwidgets",
       "kcontacts",
       "kdbusaddons",
       "kdeclarative",
@@ -1818,6 +1941,7 @@
       "mailimporter",
       "messagelib",
       "pimcommon",
+      "plasma-activities",
       "prison"
     ],
     "kdepim-runtime": [
@@ -1825,7 +1949,6 @@
       "akonadi-calendar",
       "akonadi-contacts",
       "akonadi-mime",
-      "akonadi-notes",
       "extra-cmake-modules",
       "kcalendarcore",
       "kcalutils",
@@ -1846,9 +1969,9 @@
       "knotifications",
       "knotifyconfig",
       "ktextaddons",
-      "ktextwidgets",
       "kwindowsystem",
       "libkgapi",
+      "plasma-activities",
       "qtkeychain"
     ],
     "kdeplasma-addons": [
@@ -1862,6 +1985,7 @@
       "kconfigwidgets",
       "kcoreaddons",
       "kglobalaccel",
+      "kguiaddons",
       "kholidays",
       "ki18n",
       "kio",
@@ -1879,7 +2003,6 @@
       "plasma-desktop",
       "plasma-nano",
       "plasma-workspace",
-      "plasma5support",
       "selenium-webdriver-at-spi",
       "solid",
       "sonnet"
@@ -1891,9 +2014,7 @@
     ],
     "kdesdk-thumbnailers": [
       "extra-cmake-modules",
-      "kconfig",
       "kcoreaddons",
-      "ki18n",
       "kio"
     ],
     "kdesu": [
@@ -1925,42 +2046,6 @@
       "kwidgetsaddons",
       "kxmlgui"
     ],
-    "kdev-css": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "kdevelop-pg-qt",
-      "ki18n",
-      "ktexteditor"
-    ],
-    "kdev-embedded": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "kitemmodels",
-      "knewstuff",
-      "ktexteditor",
-      "threadweaver"
-    ],
-    "kdev-executebrowser": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "kitemmodels",
-      "ktexteditor"
-    ],
-    "kdev-krazy2": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "kitemmodels",
-      "ktexteditor",
-      "threadweaver"
-    ],
-    "kdev-mercurial": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n"
-    ],
     "kdev-php": [
       "extra-cmake-modules",
       "kcmutils",
@@ -1972,42 +2057,19 @@
     ],
     "kdev-python": [
       "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
       "kdevelop",
       "ki18n",
+      "kparts",
+      "kservice",
       "ktexteditor",
+      "kwidgetsaddons",
+      "kxmlgui",
       "threadweaver"
-    ],
-    "kdev-ruby": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "ktexteditor"
-    ],
-    "kdev-upload": [
-      "extra-cmake-modules",
-      "kcmutils",
-      "kdevelop",
-      "ki18n",
-      "kio",
-      "kitemmodels",
-      "ktexteditor"
     ],
     "kdev-valgrind": [
       "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "kitemmodels",
-      "ktexteditor"
-    ],
-    "kdev-verapp": [
-      "extra-cmake-modules",
-      "kdevelop",
-      "ki18n",
-      "ktexteditor"
-    ],
-    "kdev-xdebug": [
-      "extra-cmake-modules",
-      "kdev-executebrowser",
       "kdevelop",
       "ki18n",
       "kitemmodels",
@@ -2036,6 +2098,7 @@
       "kcmutils",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "kio",
       "kjobwidgets",
@@ -2066,6 +2129,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "knotifications",
       "knotifyconfig",
       "kwidgetsaddons",
@@ -2091,6 +2155,19 @@
       "karchive",
       "ki18n"
     ],
+    "kdominate": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kconfigwidgets",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "kdoctools",
+      "ki18n",
+      "kiconthemes",
+      "kxmlgui",
+      "libkdegames"
+    ],
     "kdsoap-ws-discovery-client": [
       "extra-cmake-modules",
       "kdsoap"
@@ -2101,12 +2178,38 @@
       "kcodecs",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kiconthemes",
       "kio",
       "kparts",
       "kwidgetsaddons",
+      "kwindowsystem"
+    ],
+    "keepsecret": [
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "kirigami-app-components",
+      "kitemmodels",
+      "qqc2-desktop-style"
+    ],
+    "kemoji": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "ki18n",
+      "kirigami",
       "kwindowsystem"
     ],
     "keurocalc": [
@@ -2131,30 +2234,29 @@
       "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
-      "kdb",
       "kdoctools",
       "kguiaddons",
       "ki18n",
       "kiconthemes",
       "kio",
       "kitemviews",
-      "kproperty",
-      "kreport",
       "ktexteditor",
       "ktextwidgets",
       "kwidgetsaddons",
-      "kxmlgui",
-      "marble"
+      "kxmlgui"
     ],
     "keysmith": [
       "extra-cmake-modules",
       "kconfig",
+      "kcoreaddons",
       "kdbusaddons",
       "kguiaddons",
       "ki18n",
       "kirigami",
+      "kirigami-addons",
       "kwidgetsaddons",
       "kwindowsystem",
+      "prison",
       "qqc2-desktop-style"
     ],
     "kfilemetadata": [
@@ -2170,6 +2272,7 @@
       "extra-cmake-modules",
       "karchive",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "kfilemetadata",
       "ki18n",
@@ -2197,6 +2300,7 @@
       "kdnssd",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -2223,6 +2327,7 @@
     ],
     "kgeotag": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
@@ -2263,8 +2368,6 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
-      "kcrash",
-      "kdbusaddons",
       "kglobalaccel",
       "kio",
       "kjobwidgets",
@@ -2280,6 +2383,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kwidgetsaddons",
       "kxmlgui",
@@ -2319,13 +2423,13 @@
     "kguiaddons": [
       "extra-cmake-modules",
       "plasma-wayland-protocols",
-      "wayland"
+      "wayland",
+      "wayland-protocols"
     ],
     "khangman": [
       "extra-cmake-modules",
       "kcompletion",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
       "kdoctools",
@@ -2356,19 +2460,6 @@
       "kwindowsystem",
       "kxmlgui"
     ],
-    "khipu": [
-      "analitza",
-      "extra-cmake-modules",
-      "kcoreaddons",
-      "kdoctools",
-      "kguiaddons",
-      "ki18n",
-      "kitemmodels",
-      "kitemviews",
-      "knewstuff",
-      "kwidgetsaddons",
-      "kxmlgui"
-    ],
     "kholidays": [
       "extra-cmake-modules"
     ],
@@ -2380,7 +2471,7 @@
       "extra-cmake-modules",
       "karchive",
       "kcolorscheme",
-      "kconfigwidgets",
+      "kconfig",
       "ki18n",
       "kwidgetsaddons"
     ],
@@ -2427,6 +2518,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "knewstuff",
       "ktextwidgets",
@@ -2436,6 +2528,7 @@
     ],
     "kile": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
       "kcrash",
@@ -2461,6 +2554,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -2512,12 +2606,10 @@
     "kio": [
       "extra-cmake-modules",
       "karchive",
-      "kauth",
       "kbookmarks",
       "kcolorscheme",
       "kcompletion",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "kcrash",
       "kdbusaddons",
@@ -2555,7 +2647,6 @@
       "ki18n",
       "kio",
       "libkexiv2",
-      "phonon",
       "plasma-activities",
       "plasma-activities-stats",
       "qcoro",
@@ -2565,10 +2656,12 @@
     "kio-fuse": [
       "extra-cmake-modules",
       "kcoreaddons",
-      "kio"
+      "kio",
+      "kio-extras"
     ],
     "kio-gdrive": [
       "extra-cmake-modules",
+      "kaccounts-integration",
       "kdoctools",
       "ki18n",
       "kio",
@@ -2589,6 +2682,10 @@
       "ki18n",
       "kio"
     ],
+    "kio-snapshot": [
+      "extra-cmake-modules",
+      "kio"
+    ],
     "kio-stash": [
       "extra-cmake-modules",
       "kconfig",
@@ -2603,27 +2700,31 @@
       "ki18n",
       "kio"
     ],
-    "kipi-plugins": [
-      "extra-cmake-modules",
-      "kconfig",
-      "ki18n",
-      "kio",
-      "kwindowsystem",
-      "kxmlgui",
-      "libkipi",
-      "libmediawiki"
-    ],
     "kirigami": [
       "extra-cmake-modules"
     ],
     "kirigami-addons": [
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kglobalaccel",
+      "kguiaddons",
+      "ki18n",
+      "kiconthemes",
+      "kirigami"
+    ],
+    "kirigami-app-components": [
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
       "kglobalaccel",
       "kguiaddons",
       "ki18n",
-      "kirigami"
+      "kiconthemes",
+      "kirigami",
+      "kitemmodels"
     ],
     "kirigami-gallery": [
       "extra-cmake-modules",
@@ -2643,16 +2744,6 @@
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
-    ],
-    "kirogi": [
-      "extra-cmake-modules",
-      "kconfigwidgets",
-      "kcoreaddons",
-      "kcrash",
-      "kdnssd",
-      "ki18n",
-      "kirigami",
-      "kirigami-addons"
     ],
     "kitemmodels": [
       "extra-cmake-modules"
@@ -2685,6 +2776,7 @@
     ],
     "kitinerary-workbench": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kio",
       "kitinerary",
       "ktexteditor"
@@ -2695,27 +2787,13 @@
       "knotifications",
       "kwidgetsaddons"
     ],
-    "kjots": [
-      "akonadi",
-      "akonadi-notes",
-      "extra-cmake-modules",
-      "kbookmarks",
-      "kcmutils",
-      "kconfig",
-      "kconfigwidgets",
-      "kio",
-      "kmime",
-      "kontactinterface",
-      "kparts",
-      "kpimtextedit",
-      "ktextaddons",
-      "ktexttemplate",
-      "kxmlgui"
-    ],
     "kjournald": [
       "extra-cmake-modules",
       "kcoreaddons",
-      "ki18n"
+      "kcrash",
+      "ki18n",
+      "kirigami",
+      "kirigami-addons"
     ],
     "kjumpingcube": [
       "extra-cmake-modules",
@@ -2726,6 +2804,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kjobwidgets",
       "kwidgetsaddons",
@@ -2755,7 +2834,6 @@
       "kitemmodels",
       "kmailtransport",
       "kmime",
-      "kstatusnotifieritem",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
@@ -2771,8 +2849,7 @@
       "ki18n",
       "knewstuff",
       "kwidgetsaddons",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "klevernotes": [
       "extra-cmake-modules",
@@ -2794,6 +2871,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kwidgetsaddons",
       "kxmlgui",
@@ -2815,12 +2893,14 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
     ],
     "kmag": [
       "extra-cmake-modules",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kio",
@@ -2874,7 +2954,6 @@
       "kservice",
       "kstatusnotifieritem",
       "ktextaddons",
-      "ktextwidgets",
       "ktnef",
       "kuserfeedback",
       "kwidgetsaddons",
@@ -2887,6 +2966,7 @@
       "mailcommon",
       "messagelib",
       "pimcommon",
+      "plasma-activities",
       "qtkeychain",
       "sonnet"
     ],
@@ -2903,6 +2983,7 @@
     ],
     "kmailtransport": [
       "extra-cmake-modules",
+      "kconfigwidgets",
       "ksmtp",
       "libkgapi",
       "qtkeychain"
@@ -2911,8 +2992,19 @@
       "extra-cmake-modules",
       "kmime"
     ],
+    "kmcpclientinspector": [
+      "kcoreaddons",
+      "kcrash",
+      "kdoctools",
+      "ki18n",
+      "kiconthemes",
+      "knotifyconfig",
+      "ktextaddons",
+      "kxmlgui"
+    ],
     "kmenuedit": [
       "extra-cmake-modules",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "kglobalaccel",
@@ -2937,6 +3029,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
@@ -2946,22 +3039,18 @@
       "extra-cmake-modules",
       "kconfig",
       "kconfigwidgets",
+      "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "kglobalaccel",
       "ki18n",
       "knotifications",
+      "kstatusnotifieritem",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
       "solid"
-    ],
-    "kmoretools": [
-      "extra-cmake-modules",
-      "ki18n",
-      "kio",
-      "kjobwidgets",
-      "kwidgetsaddons"
     ],
     "kmousetool": [
       "extra-cmake-modules",
@@ -2973,8 +3062,7 @@
       "kstatusnotifieritem",
       "kwidgetsaddons",
       "kwindowsystem",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "kmouth": [
       "extra-cmake-modules",
@@ -3017,6 +3105,7 @@
       "kxmlgui"
     ],
     "kmymoney": [
+      "akonadi",
       "alkimia",
       "extra-cmake-modules",
       "kcmutils",
@@ -3024,11 +3113,13 @@
       "kconfig",
       "kcontacts",
       "kcoreaddons",
+      "kcrash",
       "kdiagram",
       "kguiaddons",
       "kholidays",
       "ki18n",
       "kiconthemes",
+      "kidentitymanagement",
       "kio",
       "kitemmodels",
       "kitemviews",
@@ -3060,6 +3151,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
@@ -3096,38 +3188,13 @@
       "libkdegames",
       "libplasma"
     ],
-    "knotes": [
-      "akonadi",
-      "akonadi-notes",
-      "akonadi-search",
+    "knighttime": [
       "extra-cmake-modules",
-      "grantleetheme",
-      "kcalutils",
-      "kcmutils",
-      "kcompletion",
       "kconfig",
       "kcoreaddons",
-      "kcrash",
-      "kdnssd",
-      "kdoctools",
-      "kglobalaccel",
-      "kiconthemes",
-      "kitemmodels",
-      "kitemviews",
-      "kmime",
-      "knewstuff",
-      "knotifications",
-      "knotifyconfig",
-      "kontactinterface",
-      "kparts",
-      "kstatusnotifieritem",
-      "ktextaddons",
-      "ktexttemplate",
-      "ktextwidgets",
-      "kwidgetsaddons",
-      "kwindowsystem",
-      "kxmlgui",
-      "pimcommon"
+      "kdbusaddons",
+      "kholidays",
+      "ki18n"
     ],
     "knotifications": [
       "extra-cmake-modules",
@@ -3138,29 +3205,33 @@
       "ki18n",
       "kio",
       "knotifications",
-      "kxmlgui",
-      "phonon"
+      "kxmlgui"
     ],
     "kodaskanna": [
       "extra-cmake-modules",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kio",
       "kwidgetsaddons",
+      "kxmlgui",
       "purpose"
     ],
     "koko": [
       "extra-cmake-modules",
       "kconfig",
+      "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdeclarative",
       "kfilemetadata",
-      "kguiaddons",
       "ki18n",
       "kio",
       "kirigami",
+      "kirigami-addons",
+      "kirigami-app-components",
       "knotifications",
       "kquickimageeditor",
       "purpose"
@@ -3175,6 +3246,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "ktextwidgets",
       "kwidgetsaddons",
@@ -3189,6 +3261,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -3199,12 +3272,12 @@
     ],
     "kolourpaint": [
       "extra-cmake-modules",
+      "kcrash",
       "kdoctools",
       "kguiaddons",
       "ki18n",
       "kio",
       "kjobwidgets",
-      "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
       "libksane"
@@ -3222,6 +3295,22 @@
       "kxmlgui",
       "syntax-highlighting"
     ],
+    "komodo": [
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kdbusaddons",
+      "kdoctools",
+      "kguiaddons",
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "kitemmodels",
+      "libplasma",
+      "qqc2-desktop-style"
+    ],
     "kompare": [
       "extra-cmake-modules",
       "kcodecs",
@@ -3238,14 +3327,28 @@
     "kongress": [
       "extra-cmake-modules",
       "kcalendarcore",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kirigami",
       "kirigami-addons",
       "knotifications",
       "kosmindoormap"
+    ],
+    "konlineaccounts": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "ki18n",
+      "kio",
+      "libkgapi",
+      "qcoro"
     ],
     "konqueror": [
       "extra-cmake-modules",
@@ -3260,6 +3363,7 @@
       "kiconthemes",
       "kio",
       "kparts",
+      "ktexteditor",
       "kwindowsystem",
       "plasma-activities"
     ],
@@ -3307,6 +3411,7 @@
       "grantleetheme",
       "kiconthemes",
       "kontactinterface",
+      "ktextaddons",
       "ktexttemplate",
       "libkdepim",
       "pimcommon"
@@ -3323,10 +3428,12 @@
       "extra-cmake-modules",
       "futuresql",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kirigami",
-      "kirigami-addons"
+      "kirigami-addons",
+      "qcoro"
     ],
     "konversation": [
       "extra-cmake-modules",
@@ -3352,6 +3459,13 @@
       "kwidgetsaddons",
       "kwindowsystem"
     ],
+    "konvex": [
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "ki18n",
+      "kirigami",
+      "kwindowsystem"
+    ],
     "kooka": [
       "extra-cmake-modules",
       "kconfig",
@@ -3374,30 +3488,10 @@
       "kholidays",
       "ki18n"
     ],
-    "kopete": [
-      "extra-cmake-modules",
-      "kcmutils",
-      "kconfig",
-      "kcontacts",
-      "kcoreaddons",
-      "kcrash",
-      "kdbusaddons",
-      "kdnssd",
-      "kdoctools",
-      "ki18n",
-      "kidentitymanagement",
-      "knotifyconfig",
-      "kparts",
-      "ktexteditor",
-      "kwallet",
-      "libkleo",
-      "phonon"
-    ],
     "korganizer": [
       "akonadi",
       "akonadi-calendar",
       "akonadi-contacts",
-      "akonadi-notes",
       "calendarsupport",
       "eventviews",
       "extra-cmake-modules",
@@ -3406,7 +3500,6 @@
       "kcalutils",
       "kcmutils",
       "kconfig",
-      "kconfigwidgets",
       "kcontacts",
       "kcoreaddons",
       "kcrash",
@@ -3415,24 +3508,25 @@
       "kholidays",
       "ki18n",
       "kiconthemes",
-      "kidentitymanagement",
       "kitemviews",
       "kjobwidgets",
       "kldap",
       "kmailtransport",
       "kmime",
-      "knewstuff",
       "kontactinterface",
       "kparts",
+      "ktextaddons",
       "kuserfeedback",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
       "libkdepim",
-      "pimcommon"
+      "pimcommon",
+      "plasma-activities"
     ],
     "kosmindoormap": [
       "extra-cmake-modules",
+      "kcontacts",
       "ki18n",
       "kirigami",
       "kirigami-addons",
@@ -3466,15 +3560,9 @@
       "kitemviews",
       "kwidgetsaddons"
     ],
-    "kpeoplevcard": [
-      "extra-cmake-modules",
-      "kcontacts",
-      "kcoreaddons",
-      "ki18n",
-      "kpeople"
-    ],
     "kphotoalbum": [
       "karchive",
+      "kcolorscheme",
       "kcompletion",
       "kconfig",
       "kcoreaddons",
@@ -3525,21 +3613,30 @@
       "kwidgetsaddons",
       "polkit-qt-1"
     ],
-    "kproperty": [
-      "extra-cmake-modules",
-      "kconfig",
-      "kcoreaddons",
-      "kguiaddons",
-      "kwidgetsaddons"
-    ],
     "kpty": [
       "extra-cmake-modules",
       "kcoreaddons",
       "ki18n"
     ],
+    "kpublicalerts": [
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "kguiaddons",
+      "ki18n",
+      "kirigami",
+      "kirigami-addons",
+      "kitemmodels",
+      "knotifications",
+      "kunifiedpush",
+      "kweathercore"
+    ],
     "kpublictransport": [
       "extra-cmake-modules",
       "ki18n",
+      "kirigami-addons",
+      "kitemmodels",
       "networkmanager-qt"
     ],
     "kqtquickcharts": [
@@ -3549,7 +3646,8 @@
       "extra-cmake-modules"
     ],
     "kquickimageeditor": [
-      "extra-cmake-modules"
+      "extra-cmake-modules",
+      "kconfig"
     ],
     "krdc": [
       "extra-cmake-modules",
@@ -3557,31 +3655,35 @@
       "kcmutils",
       "kcompletion",
       "kconfig",
+      "kcrash",
       "kdnssd",
       "ki18n",
       "kiconthemes",
       "knotifications",
       "knotifyconfig",
       "kstatusnotifieritem",
-      "kwallet",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
-      "plasma-activities"
+      "qtkeychain"
     ],
     "krdp": [
       "extra-cmake-modules",
       "kcmutils",
       "kconfig",
+      "kcrash",
       "kdbusaddons",
+      "kirigami-addons",
       "kpipewire",
-      "kstatusnotifieritem"
+      "kstatusnotifieritem",
+      "qtkeychain"
     ],
     "krecorder": [
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
       "ki18n",
+      "kio",
       "kirigami",
       "kirigami-addons"
     ],
@@ -3591,7 +3693,6 @@
       "kcrash",
       "kdoctools",
       "ki18n",
-      "kiconthemes",
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui"
@@ -3612,13 +3713,15 @@
       "kwidgetsaddons",
       "kxmlgui"
     ],
-    "kreport": [
+    "kretro": [
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
-      "kguiaddons",
-      "kproperty",
-      "kwidgetsaddons"
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "qqc2-desktop-style"
     ],
     "kreversi": [
       "extra-cmake-modules",
@@ -3630,6 +3733,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kjobwidgets",
       "kwidgetsaddons",
@@ -3640,6 +3744,7 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdnssd",
       "kdoctools",
@@ -3666,6 +3771,7 @@
     ],
     "kruler": [
       "extra-cmake-modules",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "knotifications",
@@ -3679,6 +3785,7 @@
       "kcoreaddons",
       "ki18n",
       "kitemmodels",
+      "kwindowsystem",
       "threadweaver"
     ],
     "krusader": [
@@ -3686,6 +3793,7 @@
       "karchive",
       "kbookmarks",
       "kcodecs",
+      "kcolorscheme",
       "kcompletion",
       "kconfig",
       "kcoreaddons",
@@ -3697,6 +3805,7 @@
       "kitemviews",
       "knotifications",
       "kparts",
+      "kstatusnotifieritem",
       "ktextwidgets",
       "kwallet",
       "kwidgetsaddons",
@@ -3718,6 +3827,9 @@
       "kcoreaddons",
       "kdbusaddons",
       "ki18n",
+      "kimageformats",
+      "kirigami",
+      "kitemmodels",
       "kpackage",
       "kservice",
       "ksvg",
@@ -3726,7 +3838,8 @@
       "kxmlgui",
       "layer-shell-qt",
       "libkscreen",
-      "libplasma"
+      "libplasma",
+      "plasma5support"
     ],
     "kscreenlocker": [
       "extra-cmake-modules",
@@ -3771,6 +3884,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kxmlgui",
       "libkdegames",
       "libkmahjongg"
@@ -3809,6 +3923,7 @@
       "kdoctools",
       "kguiaddons",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -3843,15 +3958,14 @@
       "kcoreaddons",
       "kdoctools",
       "ki18n",
-      "kwallet",
-      "kwidgetsaddons"
+      "kwidgetsaddons",
+      "qtkeychain"
     ],
     "kstars": [
       "breeze-icons",
       "extra-cmake-modules",
       "kconfig",
       "kcrash",
-      "kdoctools",
       "kguiaddons",
       "ki18n",
       "knewstuff",
@@ -3897,6 +4011,7 @@
       "kcompletion",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kio",
@@ -3908,8 +4023,10 @@
     "ksystemstats": [
       "extra-cmake-modules",
       "kcoreaddons",
+      "kcrash",
       "kio",
       "libksysguard",
+      "networkmanager-qt",
       "solid"
     ],
     "kteatime": [
@@ -3921,6 +4038,7 @@
       "kiconthemes",
       "knotifications",
       "knotifyconfig",
+      "kstatusnotifieritem",
       "ktextwidgets",
       "kxmlgui"
     ],
@@ -3931,11 +4049,15 @@
       "breeze-icons",
       "extra-cmake-modules",
       "karchive",
+      "kcolorscheme",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "ki18n",
+      "kiconthemes",
       "kio",
+      "kitemviews",
+      "kservice",
+      "ktextwidgets",
       "qtkeychain",
       "sonnet",
       "syntax-highlighting"
@@ -3945,13 +4067,13 @@
       "extra-cmake-modules",
       "karchive",
       "kauth",
+      "kcolorscheme",
       "kconfig",
       "kguiaddons",
       "ki18n",
       "kio",
       "kjobwidgets",
       "kparts",
-      "ktextwidgets",
       "kxmlgui",
       "sonnet",
       "syntax-highlighting"
@@ -3963,7 +4085,6 @@
       "extra-cmake-modules",
       "kcompletion",
       "kconfig",
-      "kconfigwidgets",
       "ki18n",
       "kwidgetsaddons",
       "sonnet"
@@ -3973,6 +4094,7 @@
       "kconfig",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "ki18n",
@@ -3987,6 +4109,7 @@
       "kcmutils",
       "kconfig",
       "kconfigwidgets",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "ki18n",
@@ -4025,8 +4148,6 @@
       "ktextwidgets",
       "kxmlgui",
       "libktorrent",
-      "phonon",
-      "solid",
       "syndication"
     ],
     "ktouch": [
@@ -4050,6 +4171,7 @@
       "kconfig",
       "kcontacts",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kirigami",
       "kirigami-addons",
@@ -4095,12 +4217,23 @@
       "kxmlgui",
       "libkdegames"
     ],
+    "kuickshow": [
+      "extra-cmake-modules",
+      "kdoctools",
+      "ki18n",
+      "kiconthemes",
+      "kio",
+      "kwindowsystem",
+      "kxmlgui"
+    ],
     "kunifiedpush": [
       "extra-cmake-modules",
       "kcmutils",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
-      "kservice"
+      "kservice",
+      "solid"
     ],
     "kunitconversion": [
       "extra-cmake-modules",
@@ -4112,6 +4245,7 @@
       "kcmutils",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kidletime",
@@ -4127,10 +4261,10 @@
     ],
     "kwallet": [
       "extra-cmake-modules",
-      "gpgme",
       "kcolorscheme",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kiconthemes",
@@ -4190,10 +4324,12 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kirigami",
       "kirigami-addons",
       "knotifications",
+      "krunner",
       "kweathercore",
       "libplasma"
     ],
@@ -4206,6 +4342,46 @@
       "extra-cmake-modules"
     ],
     "kwin": [
+      "aurorae",
+      "breeze",
+      "breeze-icons",
+      "extra-cmake-modules",
+      "kcmutils",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdeclarative",
+      "kdecoration",
+      "kdoctools",
+      "kglobalaccel",
+      "kglobalacceld",
+      "ki18n",
+      "kidletime",
+      "kirigami",
+      "knewstuff",
+      "knighttime",
+      "knotifications",
+      "kpackage",
+      "kpipewire",
+      "krunner",
+      "kscreenlocker",
+      "kservice",
+      "ksvg",
+      "kwayland",
+      "kwidgetsaddons",
+      "kwindowsystem",
+      "kxmlgui",
+      "libplasma",
+      "libqaccessibilityclient",
+      "milou",
+      "plasma-activities",
+      "plasma-wayland-protocols",
+      "wayland",
+      "wayland-protocols"
+    ],
+    "kwin-x11": [
+      "aurorae",
       "breeze",
       "breeze-icons",
       "extra-cmake-modules",
@@ -4223,9 +4399,9 @@
       "kidletime",
       "kirigami",
       "knewstuff",
+      "knighttime",
       "knotifications",
       "kpackage",
-      "kpipewire",
       "kscreenlocker",
       "kservice",
       "ksvg",
@@ -4237,6 +4413,14 @@
       "libqaccessibilityclient",
       "plasma-activities",
       "plasma-wayland-protocols",
+      "plasma-workspace",
+      "wayland",
+      "wayland-protocols"
+    ],
+    "kwin-zones": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kwin",
       "wayland",
       "wayland-protocols"
     ],
@@ -4305,38 +4489,22 @@
       "kxmlgui",
       "purpose"
     ],
-    "latte-dock": [
-      "extra-cmake-modules",
-      "karchive",
-      "kcoreaddons",
-      "kcrash",
-      "kdbusaddons",
-      "kdeclarative",
-      "kdoctools",
-      "kglobalaccel",
-      "kguiaddons",
-      "ki18n",
-      "kiconthemes",
-      "kio",
-      "kirigami",
-      "knewstuff",
-      "knotifications",
-      "kwayland",
-      "kwidgetsaddons",
-      "kwindowsystem",
-      "kxmlgui",
-      "libplasma",
-      "plasma-activities",
-      "plasma-workspace"
-    ],
     "layer-shell-qt": [
       "extra-cmake-modules",
       "wayland",
       "wayland-protocols"
     ],
+    "libdebconf-kde": [
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "ki18n",
+      "kiconthemes",
+      "ktextwidgets",
+      "kwidgetsaddons"
+    ],
     "libgravatar": [
       "extra-cmake-modules",
-      "pimcommon"
+      "kconfigwidgets"
     ],
     "libkcddb": [
       "extra-cmake-modules",
@@ -4392,12 +4560,6 @@
       "kcontacts",
       "kwallet"
     ],
-    "libkipi": [
-      "extra-cmake-modules",
-      "kconfig",
-      "kservice",
-      "kxmlgui"
-    ],
     "libkleo": [
       "extra-cmake-modules",
       "kcodecs",
@@ -4441,6 +4603,7 @@
     ],
     "libksieve": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kidentitymanagement",
       "kimap",
       "kmailtransport",
@@ -4468,16 +4631,11 @@
       "kio",
       "solid"
     ],
-    "libmediawiki": [
-      "extra-cmake-modules",
-      "kcoreaddons"
-    ],
     "libplasma": [
       "extra-cmake-modules",
       "karchive",
-      "kcmutils",
+      "kcolorscheme",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
       "kdbusaddons",
       "kglobalaccel",
@@ -4497,9 +4655,6 @@
     "libqaccessibilityclient": [
       "extra-cmake-modules"
     ],
-    "libqmycroft": [
-      "extra-cmake-modules"
-    ],
     "licensedigger": [
       "extra-cmake-modules"
     ],
@@ -4513,8 +4668,26 @@
       "kirigami-addons",
       "kitemmodels"
     ],
+    "lightdm-kde-greeter": [
+      "extra-cmake-modules",
+      "kauth",
+      "kcmutils",
+      "kconfig",
+      "kconfigwidgets",
+      "kcoreaddons",
+      "kdeclarative",
+      "ki18n",
+      "kiconthemes",
+      "kpackage",
+      "kservice",
+      "libplasma",
+      "networkmanager-qt",
+      "plasma-workspace",
+      "plasma5support"
+    ],
     "lokalize": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
       "kcrash",
@@ -4535,6 +4708,7 @@
       "kdoctools",
       "kguiaddons",
       "ki18n",
+      "kiconthemes",
       "kwidgetsaddons",
       "kxmlgui",
       "libkdegames"
@@ -4545,12 +4719,14 @@
       "extra-cmake-modules",
       "karchive",
       "kcodecs",
+      "kcolorscheme",
       "kmailtransport",
       "kmime",
       "libkdepim",
       "mailimporter",
       "messagelib",
-      "pimcommon"
+      "pimcommon",
+      "plasma-activities"
     ],
     "mailimporter": [
       "akonadi",
@@ -4559,14 +4735,19 @@
       "kmime",
       "pimcommon"
     ],
-    "marble": [
-      "extra-cmake-modules"
-    ],
-    "mark": [
+    "mankalaengine": [
       "extra-cmake-modules",
-      "kconfigwidgets",
+      "ki18n"
+    ],
+    "marble": [
+      "extra-cmake-modules",
+      "kconfig",
       "kcoreaddons",
-      "kxmlgui"
+      "kcrash",
+      "ki18n",
+      "kio",
+      "knewstuff",
+      "kparts"
     ],
     "markdownpart": [
       "extra-cmake-modules",
@@ -4580,10 +4761,14 @@
       "kcoreaddons",
       "kcrash",
       "ki18n",
+      "kiconthemes",
       "kirigami",
       "kirigami-addons",
+      "kitemmodels",
       "kmime",
-      "kxmlgui"
+      "knotifications",
+      "kwindowsystem",
+      "syntax-highlighting"
     ],
     "massif-visualizer": [
       "extra-cmake-modules",
@@ -4660,12 +4845,29 @@
       "mauikit",
       "syntax-highlighting"
     ],
+    "mauiman": [
+      "extra-cmake-modules"
+    ],
     "mbox-importer": [
       "akonadi",
       "extra-cmake-modules",
       "kiconthemes",
       "mailcommon",
       "mailimporter"
+    ],
+    "md4qt": [
+      "extra-cmake-modules"
+    ],
+    "melon": [
+      "baloo",
+      "kbookmarks",
+      "kconfig",
+      "ki18n",
+      "kio",
+      "kitemmodels",
+      "kwindowsystem",
+      "kxmlgui",
+      "nongurigaeru"
     ],
     "merkuro": [
       "akonadi",
@@ -4675,7 +4877,9 @@
       "kcalutils",
       "kconfigwidgets",
       "kcontacts",
+      "kcrash",
       "kdepim-runtime",
+      "kholidays",
       "kirigami",
       "kirigami-addons",
       "kmime",
@@ -4718,6 +4922,8 @@
     "mimetreeparser": [
       "extra-cmake-modules",
       "kcalendarcore",
+      "kio",
+      "kirigami",
       "kmbox",
       "kmime",
       "kwidgetsaddons",
@@ -4728,7 +4934,10 @@
       "kcoreaddons",
       "kcrash",
       "kdoctools",
-      "ki18n"
+      "ki18n",
+      "kirigami",
+      "kirigami-addons",
+      "qqc2-desktop-style"
     ],
     "modemmanager-qt": [
       "extra-cmake-modules"
@@ -4742,9 +4951,9 @@
       "kcolorscheme",
       "kconfig",
       "kcoreaddons",
-      "kcrash",
       "kdbusaddons",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kirigami",
       "kirigami-addons",
@@ -4752,7 +4961,7 @@
       "knotifications",
       "kquickcharts",
       "kquickimageeditor",
-      "kstatusnotifieritem",
+      "kunifiedpush",
       "kwindowsystem",
       "libquotient",
       "prison",
@@ -4766,6 +4975,13 @@
     ],
     "networkmanager-qt": [
       "extra-cmake-modules"
+    ],
+    "nongurigaeru": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
+      "kdbusaddons",
+      "ki18n"
     ],
     "notae": [
       "extra-cmake-modules",
@@ -4783,6 +4999,7 @@
     ],
     "okteta": [
       "extra-cmake-modules",
+      "karchive",
       "kbookmarks",
       "kcompletion",
       "kconfigwidgets",
@@ -4806,15 +5023,12 @@
       "kdegraphics-mobipocket",
       "ki18n",
       "kio",
-      "kitemviews",
       "kparts",
-      "kpty",
       "ktextwidgets",
       "kwidgetsaddons",
       "kxmlgui",
       "libkexiv2",
       "phonon",
-      "plasma-activities",
       "purpose",
       "threadweaver"
     ],
@@ -4861,6 +5075,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kitemviews",
       "knotifications",
@@ -4932,6 +5147,7 @@
       "kdbusaddons",
       "kdoctools",
       "ki18n",
+      "kiconthemes",
       "knewstuff",
       "kwidgetsaddons",
       "kxmlgui",
@@ -4939,7 +5155,6 @@
     ],
     "pim-data-exporter": [
       "akonadi",
-      "akonadi-notes",
       "extra-cmake-modules",
       "kcalendarcore",
       "kcontacts",
@@ -4959,7 +5174,9 @@
       "kiconthemes",
       "kimap",
       "kmailtransport",
+      "ktextaddons",
       "kuserfeedback",
+      "kwindowsystem",
       "kxmlgui",
       "libksieve",
       "pimcommon",
@@ -4972,6 +5189,7 @@
       "extra-cmake-modules",
       "kcalendarcore",
       "kcmutils",
+      "kcolorscheme",
       "kconfig",
       "kcontacts",
       "kcrash",
@@ -4990,11 +5208,11 @@
       "kparts",
       "kservice",
       "ktextaddons",
-      "ktextwidgets",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
       "libkdepim",
+      "plasma-activities",
       "purpose",
       "sonnet"
     ],
@@ -5025,9 +5243,11 @@
     ],
     "plasma-activities-stats": [
       "extra-cmake-modules",
+      "kactivitymanagerd",
       "plasma-activities"
     ],
     "plasma-bigscreen": [
+      "bluez-qt",
       "kauth",
       "kcmutils",
       "kcodecs",
@@ -5036,6 +5256,7 @@
       "kconfigwidgets",
       "kcoreaddons",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kjobwidgets",
       "knotifications",
@@ -5045,6 +5266,7 @@
       "kwayland",
       "kwidgetsaddons",
       "kwindowsystem",
+      "libkscreen",
       "libplasma",
       "plasma-activities",
       "plasma-activities-stats",
@@ -5082,8 +5304,8 @@
       "baloo",
       "breeze",
       "extra-cmake-modules",
+      "kaccounts-integration",
       "kactivitymanagerd",
-      "kauth",
       "kcmutils",
       "kcodecs",
       "kcompletion",
@@ -5122,6 +5344,8 @@
       "plasma-activities",
       "plasma-activities-stats",
       "plasma-integration",
+      "plasma-pa",
+      "plasma-sdk",
       "plasma-workspace",
       "powerdevil",
       "qqc2-desktop-style",
@@ -5156,6 +5380,7 @@
       "kconfig",
       "kcoreaddons",
       "kdbusaddons",
+      "kdeclarative",
       "ki18n",
       "kio",
       "knotifications",
@@ -5188,13 +5413,36 @@
       "kstatusnotifieritem",
       "kwidgetsaddons",
       "kwindowsystem",
-      "kxmlgui",
       "wayland"
+    ],
+    "plasma-keyboard": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "ki18n",
+      "libplasma"
+    ],
+    "plasma-login-manager": [
+      "extra-cmake-modules",
+      "kauth",
+      "kcmutils",
+      "kconfig",
+      "kdbusaddons",
+      "ki18n",
+      "kio",
+      "kpackage",
+      "kwindowsystem",
+      "layer-shell-qt",
+      "libplasma",
+      "plasma-workspace"
     ],
     "plasma-mobile": [
       "bluedevil",
       "bluez-qt",
       "extra-cmake-modules",
+      "kauth",
       "kconfig",
       "kcoreaddons",
       "ki18n",
@@ -5216,6 +5464,7 @@
       "plasma-nm",
       "plasma-pa",
       "plasma-workspace",
+      "powerdevil",
       "qqc2-breeze-style"
     ],
     "plasma-nano": [
@@ -5240,20 +5489,23 @@
       "kconfigwidgets",
       "kcoreaddons",
       "kdbusaddons",
+      "kdeclarative",
       "ki18n",
       "kio",
+      "kirigami-addons",
       "kjobwidgets",
       "knotifications",
       "kpackage",
+      "kquickcharts",
       "kservice",
-      "ksvg",
-      "kwallet",
       "kwidgetsaddons",
       "kwindowsystem",
       "libplasma",
       "modemmanager-qt",
       "networkmanager-qt",
+      "prison",
       "qcoro",
+      "qtkeychain",
       "solid"
     ],
     "plasma-pa": [
@@ -5265,6 +5517,7 @@
       "kglobalaccel",
       "ki18n",
       "kirigami-addons",
+      "kitemmodels",
       "kpackage",
       "kstatusnotifieritem",
       "ksvg",
@@ -5289,27 +5542,6 @@
       "kirigami-addons",
       "kpeople"
     ],
-    "plasma-remotecontrollers": [
-      "kcmutils",
-      "kcodecs",
-      "kcompletion",
-      "kconfig",
-      "kconfigwidgets",
-      "kcoreaddons",
-      "ki18n",
-      "kio",
-      "kjobwidgets",
-      "knotifications",
-      "kpackage",
-      "kservice",
-      "kstatusnotifieritem",
-      "kwidgetsaddons",
-      "kwindowsystem",
-      "libplasma",
-      "plasma-workspace",
-      "solid",
-      "wayland"
-    ],
     "plasma-sdk": [
       "extra-cmake-modules",
       "karchive",
@@ -5318,8 +5550,8 @@
       "kcodecs",
       "kcompletion",
       "kconfig",
-      "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kiconthemes",
@@ -5344,14 +5576,22 @@
       "extra-cmake-modules",
       "kcmutils",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
-      "kirigami-addons"
+      "kirigami-addons",
+      "kitemmodels",
+      "qqc2-desktop-style"
     ],
-    "plasma-simplemenu": [
+    "plasma-setup": [
       "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
       "ki18n",
-      "libplasma"
+      "kpackage",
+      "libkscreen",
+      "plasma-desktop",
+      "plasma-workspace"
     ],
     "plasma-systemmonitor": [
       "attica",
@@ -5406,12 +5646,16 @@
       "solid"
     ],
     "plasma-wayland-protocols": [
-      "extra-cmake-modules"
+      "extra-cmake-modules",
+      "wayland"
     ],
     "plasma-welcome": [
       "extra-cmake-modules",
+      "kcmutils",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
+      "kglobalaccel",
       "ki18n",
       "kio",
       "kirigami",
@@ -5430,10 +5674,12 @@
       "attica",
       "baloo",
       "extra-cmake-modules",
+      "kactivitymanagerd",
       "kauth",
       "kbookmarks",
       "kcmutils",
       "kcodecs",
+      "kcolorscheme",
       "kcompletion",
       "kconfig",
       "kconfigwidgets",
@@ -5442,7 +5688,6 @@
       "kdbusaddons",
       "kdeclarative",
       "kded",
-      "kdesu",
       "kfilemetadata",
       "kglobalaccel",
       "kglobalacceld",
@@ -5457,11 +5702,10 @@
       "kitemviews",
       "kjobwidgets",
       "knewstuff",
+      "knighttime",
       "knotifications",
-      "knotifyconfig",
       "kpackage",
       "kparts",
-      "kpipewire",
       "kquickcharts",
       "krunner",
       "kscreenlocker",
@@ -5469,7 +5713,6 @@
       "kstatusnotifieritem",
       "ktexteditor",
       "ktextwidgets",
-      "kunitconversion",
       "kuserfeedback",
       "kwallet",
       "kwayland",
@@ -5485,12 +5728,10 @@
       "milou",
       "networkmanager-qt",
       "packagekit-qt",
-      "phonon",
       "plasma-activities",
       "plasma-activities-stats",
       "plasma-nano",
       "plasma-wayland-protocols",
-      "plasma5support",
       "polkit-qt-1",
       "prison",
       "qcoro",
@@ -5506,9 +5747,15 @@
       "kconfig",
       "kcoreaddons",
       "kguiaddons",
+      "kholidays",
       "ki18n",
+      "kidletime",
+      "kio",
       "knotifications",
+      "kunitconversion",
       "libksysguard",
+      "networkmanager-qt",
+      "plasma-activities",
       "solid"
     ],
     "plasmatube": [
@@ -5546,6 +5793,7 @@
       "kcrash",
       "kdbusaddons",
       "ki18n",
+      "knotifications",
       "kwindowsystem",
       "polkit-qt-1"
     ],
@@ -5571,6 +5819,7 @@
       "libkscreen",
       "plasma-activities",
       "plasma-workspace",
+      "selenium-webdriver-at-spi",
       "solid"
     ],
     "powerplant": [
@@ -5578,9 +5827,13 @@
       "futuresql",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kirigami",
       "kirigami-addons",
+      "kitemmodels",
+      "kquickcharts",
+      "kweathercore",
       "qqc2-desktop-style"
     ],
     "poxml": [
@@ -5594,14 +5847,18 @@
       "kconfigwidgets",
       "kcoreaddons",
       "kdbusaddons",
+      "kdeclarative",
       "ki18n",
-      "kiconthemes",
       "kio",
       "kirigami",
+      "kirigami-addons",
+      "kitemmodels",
       "knotifications",
       "kwidgetsaddons",
       "kwindowsystem",
-      "libplasma"
+      "libplasma",
+      "plasma-workspace",
+      "qqc2-desktop-style"
     ],
     "prison": [
       "extra-cmake-modules",
@@ -5610,14 +5867,30 @@
     "pulseaudio-qt": [
       "extra-cmake-modules"
     ],
+    "pumoku": [
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kconfig",
+      "kcoreaddons",
+      "kcrash",
+      "kdbusaddons",
+      "ki18n",
+      "kiconthemes",
+      "kirigami",
+      "kirigami-addons",
+      "qqc2-desktop-style"
+    ],
     "purpose": [
       "extra-cmake-modules",
+      "kcmutils",
       "kconfig",
       "kcoreaddons",
       "ki18n",
       "kio",
       "kirigami",
-      "kservice"
+      "kitemmodels",
+      "kservice",
+      "prison"
     ],
     "pvfviewer": [
       "extra-cmake-modules",
@@ -5642,11 +5915,9 @@
       "kcodecs",
       "kcolorscheme",
       "kconfig",
-      "kcoreaddons",
       "kguiaddons",
       "kiconthemes",
-      "kirigami",
-      "kquickcharts"
+      "kirigami"
     ],
     "qqc2-desktop-style": [
       "extra-cmake-modules",
@@ -5659,19 +5930,31 @@
       "extra-cmake-modules",
       "kcontacts",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kio",
       "kirigami",
+      "kirigami-addons",
       "knotifications",
       "kservice",
       "networkmanager-qt",
       "prison",
       "purpose"
     ],
+    "qrtfreader": [
+      "extra-cmake-modules"
+    ],
+    "qxmpp": [
+      "extra-cmake-modules"
+    ],
+    "rattlesnake": [
+      "extra-cmake-modules",
+      "kconfig",
+      "kcoreaddons",
+      "ki18n",
+      "kirigami"
+    ],
     "raven": [
-      "akonadi",
-      "akonadi-contacts",
-      "akonadi-mime",
       "extra-cmake-modules",
       "kcmutils",
       "kconfig",
@@ -5681,14 +5964,7 @@
       "kio",
       "kirigami",
       "kirigami-addons",
-      "kitemmodels",
-      "kldap",
-      "kmailtransport",
-      "kmime",
-      "libkdepim",
-      "mailcommon",
-      "messagelib",
-      "pimcommon"
+      "kitemmodels"
     ],
     "rkward": [
       "extra-cmake-modules",
@@ -5715,15 +5991,20 @@
       "ki18n",
       "kitemviews",
       "ktexteditor",
+      "ktexttemplate",
       "kxmlgui"
     ],
     "rolisteam": [
       "extra-cmake-modules"
     ],
+    "rolisteam-diceparser": [
+      "extra-cmake-modules"
+    ],
     "rsibreak": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfig",
-      "kconfigwidgets",
+      "kcoreaddons",
       "kcrash",
       "kdbusaddons",
       "kdoctools",
@@ -5731,6 +6012,7 @@
       "kidletime",
       "knotifications",
       "knotifyconfig",
+      "kstatusnotifieritem",
       "ktextwidgets",
       "kwindowsystem",
       "kxmlgui"
@@ -5739,6 +6021,7 @@
       "breeze-icons",
       "extra-cmake-modules",
       "karchive",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
       "kdbusaddons",
@@ -5759,20 +6042,12 @@
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
+      "plasma-activities",
       "prison",
       "purpose",
       "qtkeychain",
       "sonnet",
       "syntax-highlighting"
-    ],
-    "samba-mounter": [
-      "extra-cmake-modules",
-      "kauth",
-      "kcmutils",
-      "kconfig",
-      "ki18n",
-      "kio",
-      "solid"
     ],
     "sddm-kcm": [
       "extra-cmake-modules",
@@ -5799,6 +6074,7 @@
     "skanlite": [
       "extra-cmake-modules",
       "kcoreaddons",
+      "kcrash",
       "kdoctools",
       "ki18n",
       "kio",
@@ -5811,6 +6087,7 @@
       "kcoreaddons",
       "kcrash",
       "ki18n",
+      "kio",
       "kirigami",
       "kquickimageeditor",
       "ksanecore",
@@ -5843,13 +6120,14 @@
       "kiconthemes",
       "kio",
       "kitemviews",
-      "kjobwidgets",
       "knewstuff",
       "knotifyconfig",
       "kparts",
+      "krunner",
+      "kstatusnotifieritem",
+      "ktexttemplate",
       "kwallet",
       "kwidgetsaddons",
-      "kwindowsystem",
       "kxmlgui",
       "plasma-activities"
     ],
@@ -5880,6 +6158,13 @@
       "qtkeychain",
       "solid"
     ],
+    "snap-kcm": [
+      "extra-cmake-modules",
+      "kcmutils",
+      "kconfig",
+      "kcoreaddons",
+      "ki18n"
+    ],
     "solid": [
       "extra-cmake-modules"
     ],
@@ -5892,6 +6177,7 @@
       "kconfig",
       "kcontacts",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "ki18n",
       "kio",
@@ -5906,6 +6192,7 @@
       "extra-cmake-modules",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdoctools",
       "kglobalaccel",
@@ -5915,6 +6202,7 @@
       "kirigami",
       "knotifications",
       "kpipewire",
+      "kquickimageeditor",
       "kstatusnotifieritem",
       "kwidgetsaddons",
       "kwindowsystem",
@@ -5997,11 +6285,14 @@
       "kauth",
       "kcrash",
       "ki18n",
+      "ktexteditor",
       "kxmlgui"
     ],
     "systemsettings": [
       "extra-cmake-modules",
+      "kauth",
       "kcmutils",
+      "kcolorscheme",
       "kconfig",
       "kcrash",
       "kdbusaddons",
@@ -6013,28 +6304,32 @@
       "kirigami",
       "kitemmodels",
       "kitemviews",
-      "knotifications",
       "krunner",
       "kservice",
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
-      "plasma-activities"
+      "plasma-activities",
+      "selenium-webdriver-at-spi"
     ],
     "tellico": [
       "extra-cmake-modules",
+      "kcolorscheme",
       "kconfig",
       "kconfigwidgets",
+      "kcrash",
       "kdoctools",
       "kfilemetadata",
       "ki18n",
       "kiconthemes",
       "kio",
+      "kio-extras",
       "kitemmodels",
       "knewstuff",
       "kwidgetsaddons",
       "libkcddb",
-      "libksane"
+      "libksane",
+      "solid"
     ],
     "telly-skout": [
       "extra-cmake-modules",
@@ -6058,16 +6353,19 @@
       "kirigami",
       "kirigami-addons",
       "kitemmodels",
-      "kwindowsystem"
+      "kwindowsystem",
+      "qqc2-desktop-style"
     ],
     "tokodon": [
       "extra-cmake-modules",
       "kcolorscheme",
       "kconfig",
       "kcoreaddons",
+      "kcrash",
       "kdbusaddons",
       "kdeclarative",
       "ki18n",
+      "kiconthemes",
       "kio",
       "kirigami",
       "kirigami-addons",
@@ -6075,8 +6373,9 @@
       "knotifications",
       "kunifiedpush",
       "kwindowsystem",
-      "mpvqt",
+      "prison",
       "purpose",
+      "qcoro",
       "qqc2-desktop-style",
       "qtkeychain",
       "selenium-webdriver-at-spi"
@@ -6093,9 +6392,6 @@
       "kconfig",
       "kcoreaddons",
       "kcrash",
-      "kdev-php",
-      "kdevelop",
-      "kdevelop-pg-qt",
       "kdoctools",
       "ki18n",
       "kiconthemes",
@@ -6104,6 +6400,14 @@
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui"
+    ],
+    "union": [
+      "cxx-rust-cssparser",
+      "extra-cmake-modules",
+      "kcolorscheme",
+      "kcoreaddons",
+      "kiconthemes",
+      "kirigami"
     ],
     "upnp-lib-qt": [
       "extra-cmake-modules",
@@ -6160,7 +6464,11 @@
       "plasma5support"
     ],
     "washipad": [
-      "extra-cmake-modules"
+      "extra-cmake-modules",
+      "kcoreaddons",
+      "kcrash",
+      "ki18n",
+      "kirigami"
     ],
     "xdg-desktop-portal-kde": [
       "extra-cmake-modules",
@@ -6170,6 +6478,8 @@
       "kconfig",
       "kconfigwidgets",
       "kcoreaddons",
+      "kcrash",
+      "kdeclarative",
       "ki18n",
       "kiconthemes",
       "kio",
@@ -6183,6 +6493,7 @@
       "kwidgetsaddons",
       "kwindowsystem",
       "kxmlgui",
+      "plasma-workspace",
       "solid",
       "wayland",
       "wayland-protocols"
@@ -6197,8 +6508,8 @@
     "xwaylandvideobridge": [
       "extra-cmake-modules",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
-      "knotifications",
       "kpipewire",
       "kstatusnotifieritem",
       "kwindowsystem"
@@ -6206,6 +6517,7 @@
     "yakuake": [
       "extra-cmake-modules",
       "karchive",
+      "kcolorscheme",
       "kconfig",
       "kcoreaddons",
       "kcrash",
@@ -6228,11 +6540,12 @@
       "akonadi-calendar",
       "extra-cmake-modules",
       "kcoreaddons",
+      "kcrash",
       "ki18n",
       "kontactinterface",
       "krunner",
       "kwindowsystem"
     ]
   },
-  "version": "55fdd899"
+  "version": "929dcd4d"
 }

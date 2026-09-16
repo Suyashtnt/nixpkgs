@@ -11,14 +11,14 @@
 
 buildPythonPackage rec {
   pname = "proton-keyring-linux";
-  version = "0.0.2";
+  version = "0.2.3";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ProtonVPN";
     repo = "python-proton-keyring-linux";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-c2wdbd8Hkz2hF9zYMy4/V/W6uZRItz7tWqLJqTsJoHU=";
+    tag = "v${version}";
+    hash = "sha256-Oj0jcoJJGTh/eIE5byS4XohnvfnzlYWkozu9VJJH2vk=";
   };
 
   build-system = [ setuptools ];
@@ -28,7 +28,10 @@ buildPythonPackage rec {
     proton-core
   ];
 
-  pythonImportsCheck = [ "proton.keyring_linux.core" ];
+  pythonImportsCheck = [
+    "proton.keyring_linux.core"
+    "proton.keyring_linux"
+  ];
 
   nativeCheckInputs = [
     pytestCheckHook
@@ -39,6 +42,7 @@ buildPythonPackage rec {
     description = "ProtonVPN core component to access Linux's keyring";
     homepage = "https://github.com/ProtonVPN/python-proton-keyring-linux";
     license = lib.licenses.gpl3Only;
-    maintainers = with lib.maintainers; [ sebtm ];
+    maintainers = with lib.maintainers; [ anthonyroussel ];
+    platforms = lib.platforms.linux;
   };
 }

@@ -8,7 +8,7 @@
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "flask-mail";
   version = "0.10.0";
   pyproject = true;
@@ -16,7 +16,7 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "pallets-eco";
     repo = "flask-mail";
-    rev = "refs/tags/${version}";
+    tag = finalAttrs.version;
     hash = "sha256-G2Z8dj1/IuLsZoNJVrL6LYu0XjTEHtWB9Z058aqG9Ic=";
   };
 
@@ -31,10 +31,17 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
+  disabledTests = [
+    # Broken by fix for CVE-2023-27043.
+    # Reported upstream in https://github.com/pallets-eco/flask-mail/issues/233
+    "test_unicode_sender_tuple"
+    "test_unicode_sender"
+  ];
+
   meta = {
     description = "Flask extension providing simple email sending capabilities";
     homepage = "https://github.com/pallets-eco/flask-mail";
-    changelog = "https://github.com/pallets-eco/flask-mail/blob/${src.rev}/CHANGES.md";
+    changelog = "https://github.com/pallets-eco/flask-mail/blob/${finalAttrs.src.rev}/CHANGES.md";
     license = lib.licenses.bsd3;
   };
-}
+})

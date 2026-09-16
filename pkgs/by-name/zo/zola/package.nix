@@ -1,27 +1,27 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, rustPlatform
-, pkg-config
-, oniguruma
-, darwin
-, installShellFiles
-, zola
-, testers
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  rustPlatform,
+  cacert,
+  pkg-config,
+  oniguruma,
+  installShellFiles,
+  testers,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "zola";
-  version = "0.19.2";
+  version = "0.23.6";
 
   src = fetchFromGitHub {
     owner = "getzola";
     repo = "zola";
-    rev = "v${version}";
-    hash = "sha256-BjHAHj3EGE1L+EQdniS4OGOViOmcRDR5RhgmYK2zmVY=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-MJfxJ1Lh6V4fOw8HDjIZvMwHYu9DaGmxHLs3p+qt97w=";
   };
 
-  cargoHash = "sha256-ZbSdPi90Nl15YYN1tx9iNsdAjh6x02XKGG73IlOKdXo=";
+  cargoHash = "sha256-Pj3qMAtsEFcd47F2ecYO/Dr0Ht+hSrhEH6IhjUvhMKM=";
 
   nativeBuildInputs = [
     pkg-config
@@ -30,11 +30,13 @@ rustPlatform.buildRustPackage rec {
 
   buildInputs = [
     oniguruma
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin (with darwin.apple_sdk.frameworks; [
-    CoreServices SystemConfiguration
-  ]);
+  ];
 
-  RUSTONIG_SYSTEM_LIBONIG = true;
+  checkInputs = [
+    cacert
+  ];
+
+  env.RUSTONIG_SYSTEM_LIBONIG = true;
 
   postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     installShellCompletion --cmd zola \
@@ -43,14 +45,18 @@ rustPlatform.buildRustPackage rec {
       --zsh <($out/bin/zola completion zsh)
   '';
 
-  passthru.tests.version = testers.testVersion { package = zola; };
+  passthru.tests.version = testers.testVersion { package = finalAttrs.finalPackage; };
 
-  meta = with lib; {
+  meta = {
     description = "Fast static site generator with everything built-in";
     mainProgram = "zola";
     homepage = "https://www.getzola.org/";
-    changelog = "https://github.com/getzola/zola/raw/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dandellion dywedir _0x4A6F ];
+    changelog = "https://github.com/getzola/zola/raw/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      dandellion
+      dywedir
+      _0x4A6F
+    ];
   };
-}
+})

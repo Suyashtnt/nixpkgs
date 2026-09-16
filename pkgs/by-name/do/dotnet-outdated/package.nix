@@ -1,44 +1,24 @@
-{ lib
-, fetchFromGitHub
-, buildDotnetModule
-, dotnetCorePackages
+{
+  lib,
+  buildDotnetGlobalTool,
+  dotnetCorePackages,
 }:
-let
-  dotnet-sdk = with dotnetCorePackages; combinePackages [ sdk_6_0 sdk_7_0 sdk_8_0 ];
-
-in buildDotnetModule rec {
+buildDotnetGlobalTool rec {
   pname = "dotnet-outdated";
-  version = "4.6.4";
+  nugetName = "dotnet-outdated-tool";
+  version = "4.8.1";
 
-  src = fetchFromGitHub {
-    owner = "dotnet-outdated";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-Ah5VOCIkSRkeDWk/KYHIc/OELo0T/HuJl0LEUiumlu0=";
-  };
+  dotnet-sdk = dotnetCorePackages.sdk_10_0;
 
-  inherit dotnet-sdk;
-  dotnet-runtime = dotnetCorePackages.runtime_8_0;
-  useDotnetFromEnv = true;
+  nugetHash = "sha256-f5su1er+1wP35rrU3S+qvwfPp/C55tR7xZ4bv4z7zL0=";
 
-  nugetDeps = ./deps.nix;
-
-  projectFile = "src/DotNetOutdated/DotNetOutdated.csproj";
-  executables = "dotnet-outdated";
-
-  dotnetInstallFlags = [ "--framework" "net8.0" ];
-
-  meta = with lib; {
+  meta = {
     description = ".NET Core global tool to display and update outdated NuGet packages in a project";
+    downloadPage = "https://www.nuget.org/packages/dotnet-outdated-tool";
     homepage = "https://github.com/dotnet-outdated/dotnet-outdated";
-    sourceProvenance = with sourceTypes; [
-      fromSource
-      # deps
-      binaryBytecode
-      binaryNativeCode
-    ];
-    license = licenses.mit;
-    maintainers = with maintainers; [ emilioziniades ];
+    changelog = "https://github.com/dotnet-outdated/dotnet-outdated/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ emilioziniades ];
     mainProgram = "dotnet-outdated";
   };
 }

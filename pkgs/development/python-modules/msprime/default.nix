@@ -9,7 +9,6 @@
   oldest-supported-numpy,
   pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
   scipy,
   setuptools-scm,
   tskit,
@@ -18,15 +17,19 @@
 
 buildPythonPackage rec {
   pname = "msprime";
-  version = "1.3.1";
+  version = "1.4.4";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-s/Ys1RatLkPIQS6h8kKsrRvJOTkc/pyqGWJYdOLjSDU=";
+    hash = "sha256-VN62vj2A8tn6A7fwOYgwJM3r2xSFGokKEmUNetb+xWg=";
   };
+
+  postPatch = ''
+    # build-time constriant, used to ensure forward and backward compat
+    substituteInPlace pyproject.toml \
+      --replace-fail "numpy>=2" "numpy"
+  '';
 
   nativeBuildInputs = [
     gsl
@@ -72,11 +75,11 @@ buildPythonPackage rec {
   '';
   pythonImportsCheck = [ "msprime" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simulate genealogical trees and genomic sequence data using population genetic models";
     homepage = "https://github.com/tskit-dev/msprime";
     changelog = "https://github.com/tskit-dev/msprime/blob/${version}/CHANGELOG.md";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ alxsimon ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
   };
 }

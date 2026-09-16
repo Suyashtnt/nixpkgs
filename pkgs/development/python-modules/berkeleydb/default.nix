@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
   fetchPypi,
   setuptools,
@@ -9,15 +10,19 @@
 
 buildPythonPackage rec {
   pname = "berkeleydb";
-  version = "18.1.10";
+  version = "18.1.15";
   pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-QmNBoWAHqQAtmHpvTZcib46v/8saBIhIgFPTijEnyBo=";
+    hash = "sha256-evpTFD11TGuyyFZWwTJeuuUYrc/NG1nhPMKruI3fdY4=";
   };
 
   build-system = [ setuptools ];
+
+  # Every test currently fails with:
+  # berkeleydb.db.DBRunRecoveryError: (-30973, 'BDB0087 DB_RUNRECOVERY: Fatal error, run database recovery -- BDB1546 unable to join the environment')
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
   checkPhase = ''
     ${python.interpreter} test.py
@@ -29,10 +34,10 @@ buildPythonPackage rec {
     BERKELEYDB_LIBDIR = "${lib.getLib pkgs.db}/lib";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for Oracle Berkeley DB";
     homepage = "https://www.jcea.es/programacion/pybsddb.htm";
-    license = with licenses; [ bsd3 ];
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

@@ -4,31 +4,30 @@
   fetchFromGitHub,
   flask,
   flask-migrate,
+  flask-sqlalchemy,
   ldap3,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "automx2";
-  version = "2024.2";
+  version = "2026.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "rseichter";
     repo = "automx2";
-    rev = "refs/tags/${version}";
-    hash = "sha256-7SbSKSjDHTppdqfPPKvuWbdoksHa6BMIOXOq0jDggTE=";
+    tag = version;
+    hash = "sha256-7tMcX4BZ6yxlYGy2/3Ffr0X7xtPgcC9YtKcoz1i32sM=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     flask
     flask-migrate
+    flask-sqlalchemy
     ldap3
   ];
 
@@ -36,11 +35,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "automx2" ];
 
-  meta = with lib; {
+  meta = {
     description = "Email client configuration made easy";
     homepage = "https://rseichter.github.io/automx2/";
     changelog = "https://github.com/rseichter/automx2/blob/${version}/CHANGELOG";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ twey ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ twey ];
   };
 }

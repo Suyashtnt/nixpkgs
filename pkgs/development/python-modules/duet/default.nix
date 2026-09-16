@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   typing-extensions,
 }:
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "0.2.9";
   pyproject = true;
 
-  disabled = pythonOlder "3.10";
-
   src = fetchFromGitHub {
     owner = "google";
     repo = "duet";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-P7JxUigD7ZyhtocV+YuAVxuUYVa4F7PpXuA1CCmcMvg=";
   };
 
@@ -30,9 +27,15 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "duet" ];
 
-  meta = with lib; {
+  disabledTests = [
+    # test fails because builder is too busy and cannot finish quickly enough
+    "test_repeated_sleep"
+  ];
+
+  meta = {
     description = "Simple future-based async library for python";
     homepage = "https://github.com/google/duet";
-    maintainers = with maintainers; [ drewrisinger ];
+    maintainers = [ ];
+    license = lib.licenses.asl20;
   };
 }

@@ -8,21 +8,20 @@
   nettle,
   openssl,
   sqlite,
-  darwin,
   gnupg,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "sequoia-wot";
-  version = "0.12.0";
+  version = "0.15.0-unstable-2026-02-25";
 
   src = fetchFromGitLab {
     owner = "sequoia-pgp";
     repo = "sequoia-wot";
-    rev = "v${version}";
-    hash = "sha256-Xbj1XLZQxyEYf/+R5e6EJMmL0C5ohfwZMZPVK5PwmUU=";
+    rev = "47a8fe9fe42319cae7a1185a2370e2e07f7e2898";
+    hash = "sha256-yL5Rod35M+wWfK3Ido+EPtyRKsOqEYmUW7v17oF6iZs=";
   };
 
-  cargoHash = "sha256-BidSKnsIEEEU8UarbhqALcp44L0pes6O4m2mSEL1r4Q=";
+  cargoHash = "sha256-ykQbFoMH9+HILSlqhPuuW0xaNnUpXiSbhzQfNo66IKc=";
 
   nativeBuildInputs = [
     pkg-config
@@ -33,10 +32,8 @@ rustPlatform.buildRustPackage rec {
   buildInputs = [
     openssl
     sqlite
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.SystemConfiguration
-    # See comment near sequoia-openpgp/crypto- buildFeatures
-  ] ++ lib.optionals (!stdenv.targetPlatform.isWindows) [
+  ]
+  ++ lib.optionals (!stdenv.targetPlatform.isWindows) [
     nettle
   ];
 
@@ -48,10 +45,11 @@ rustPlatform.buildRustPackage rec {
     # propagate this logic here as well.
     #
     # [1]: https://crates.io/crates/sequoia-openpgp#user-content-intermediate-crate
-    (if stdenv.targetPlatform.isWindows then
-      "sequoia-openpgp/crypto-cng"
-    else
-      "sequoia-openpgp/crypto-nettle"
+    (
+      if stdenv.targetPlatform.isWindows then
+        "sequoia-openpgp/crypto-cng"
+      else
+        "sequoia-openpgp/crypto-nettle"
     )
   ];
 
@@ -59,7 +57,7 @@ rustPlatform.buildRustPackage rec {
 
   nativeCheckInputs = [ gnupg ];
 
-  # Install shell completion files and manual pages. Unfortunatly it is hard to
+  # Install shell completion files and manual pages. Unfortunately it is hard to
   # predict the paths to all of these files generated during the build, and it
   # is impossible to control these using `$OUT_DIR` or alike, as implied by
   # upstream's `build.rs`. This is a general Rust issue also discussed in
@@ -84,7 +82,10 @@ rustPlatform.buildRustPackage rec {
     description = "Rust CLI tool for authenticating bindings and exploring a web of trust";
     homepage = "https://gitlab.com/sequoia-pgp/sequoia-wot";
     license = lib.licenses.gpl2Only;
-    maintainers = with lib.maintainers; [ doronbehar Cryolitia ];
+    maintainers = with lib.maintainers; [
+      doronbehar
+      Cryolitia
+    ];
     mainProgram = "sq-wot";
   };
-}
+})

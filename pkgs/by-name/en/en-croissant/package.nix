@@ -1,121 +1,107 @@
 {
   lib,
   stdenv,
-  overrideSDK,
   rustPlatform,
   fetchFromGitHub,
+  fetchPnpmDeps,
 
-  pnpm_9,
   nodejs,
+  pnpm_10,
+  pnpmConfigHook,
   cargo-tauri,
+  jq,
+  moreutils,
   pkg-config,
   wrapGAppsHook3,
   makeBinaryWrapper,
 
   openssl,
-  libsoup,
-  webkitgtk,
+  webkitgtk_4_1,
   gst_all_1,
-  darwin,
+
+  nix-update-script,
 }:
 
 let
-  buildRustPackage = rustPlatform.buildRustPackage.override {
-    stdenv = if stdenv.hostPlatform.isDarwin then overrideSDK stdenv "11.0" else stdenv;
-  };
+  pnpm = pnpm_10;
 in
-buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "en-croissant";
-  version = "0.11.1";
+  version = "0.15.1";
 
   src = fetchFromGitHub {
     owner = "franciscoBSalgueiro";
     repo = "en-croissant";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-EiGML3oFCJR4TZkd+FekUrJwCYe/nGdWD9mAtKKtITQ=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-a+UVorsX3A8/NYjXJM+k2uDvCdySLr88UqzTq7ROJEM=";
   };
 
-  pnpmDeps = pnpm_9.fetchDeps {
-    inherit pname version src;
-    hash = "sha256-hjSioKpvrGyo5UKvBrwln0S3aIpnJZ2PUdzBfbT7IC4=";
+  pnpmDeps = fetchPnpmDeps {
+    inherit (finalAttrs)
+      pname
+      version
+      src
+      ;
+    inherit pnpm;
+    fetcherVersion = 3;
+    hash = "sha256-U6iJFtbgQV8VV3tvTP0DMUQWZ5FI+QUGpqpEhQJl40E=";
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "tauri-plugin-log-0.0.0" = "sha256-t+zmMMSnD9ASZZvqlhu1ah2OjCUtRXdk/xaI37uI49c=";
-      "vampirc-uci-0.11.1" = "sha256-g2JjHZoAmmZ7xsw4YnkUPRXJxsYmBqflWxCFkFEvMXQ=";
-    };
-  };
+  postPatch = ''
+    # disable updater and disable mac codesigning
+    jq '
+      .plugins.updater.endpoints = [ ] |
+      .bundle.createUpdaterArtifacts = false |
+      .bundle.macOS.signingIdentity = null
+    ' src-tauri/tauri.conf.json | sponge src-tauri/tauri.conf.json
+  '';
 
   cargoRoot = "src-tauri";
 
-  buildAndTestSubdir = cargoRoot;
+  cargoHash = "sha256-B5LAt2SKGZ8ksQZDvajWfkTKDzFZPCWGqRWvQAJPh/c=";
 
-  nativeBuildInputs =
-    [
-      pnpm_9.configHook
-      nodejs
-      cargo-tauri
-      pkg-config
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [ wrapGAppsHook3 ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ makeBinaryWrapper ];
+  buildAndTestSubdir = finalAttrs.cargoRoot;
 
-  buildInputs =
-    lib.optionals stdenv.hostPlatform.isLinux [
-      openssl
-      libsoup
-      webkitgtk
-      gst_all_1.gstreamer
-      gst_all_1.gst-plugins-base
-      gst_all_1.gst-plugins-bad
-      gst_all_1.gst-plugins-good
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk_11_0.frameworks.Cocoa
-      darwin.apple_sdk_11_0.frameworks.WebKit
-    ];
+  nativeBuildInputs = [
+    nodejs
+    pnpm
+    pnpmConfigHook
 
-  # remove once cargo-tauri.hook becomes available
-  # https://github.com/NixOS/nixpkgs/pull/335751
-  buildPhase = ''
-    runHook preBuild
+    cargo-tauri.hook
+    jq
+    moreutils
+    pkg-config
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ wrapGAppsHook3 ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ makeBinaryWrapper ];
 
-    cargo tauri build --bundles ${if stdenv.hostPlatform.isDarwin then "app" else "deb"}
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    openssl
+    webkitgtk_4_1
 
-    runHook postBuild
-  '';
+    gst_all_1.gstreamer
+    gst_all_1.gst-plugins-base
+    gst_all_1.gst-plugins-good
+    gst_all_1.gst-plugins-bad
+  ];
 
   doCheck = false; # many scoring tests fail
-
-  # remove once cargo-tauri.hook becomes available
-  installPhase = ''
-    runHook preInstall
-
-    ${lib.optionalString stdenv.hostPlatform.isDarwin ''
-      mkdir -p "$out"/Applications
-      cp -r src-tauri/target/release/bundle/macos/* "$out"/Applications
-    ''}
-
-    ${lib.optionalString stdenv.hostPlatform.isLinux ''
-      mkdir -p "$out"
-      cp -r src-tauri/target/release/bundle/deb/*/data/usr/* "$out"
-    ''}
-
-    runHook postInstall
-  '';
 
   postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
     makeWrapper "$out"/Applications/en-croissant.app/Contents/MacOS/en-croissant $out/bin/en-croissant
   '';
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Ultimate Chess Toolkit";
     homepage = "https://github.com/franciscoBSalgueiro/en-croissant/";
     license = lib.licenses.gpl3Only;
     mainProgram = "en-croissant";
-    maintainers = with lib.maintainers; [ tomasajt ];
+    maintainers = with lib.maintainers; [
+      tomasajt
+      snu
+    ];
     platforms = lib.platforms.linux ++ lib.platforms.darwin;
   };
-}
+})

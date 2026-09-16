@@ -29,37 +29,58 @@ let
     mkIf
     mkMerge
     mkOption
+    mkOrder
     mkPackageOption
+    mkRenamedOptionModule
     optional
+    optionals
     optionalString
     splitString
     subtractLists
     types
     unique
+    versionAtLeast
     ;
 
   cfg = config.services.kanidm;
   settingsFormat = pkgs.formats.toml { };
   # Remove null values, so we can document optional values that don't end up in the generated TOML file.
   filterConfig = converge (filterAttrsRecursive (_: v: v != null));
-  serverConfigFile = settingsFormat.generate "server.toml" (filterConfig cfg.serverSettings);
-  clientConfigFile = settingsFormat.generate "kanidm-config.toml" (filterConfig cfg.clientSettings);
-  unixConfigFile = settingsFormat.generate "kanidm-unixd.toml" (filterConfig cfg.unixSettings);
-  certPaths = builtins.map builtins.dirOf [
-    cfg.serverSettings.tls_chain
-    cfg.serverSettings.tls_key
-  ];
+  serverConfigFile = settingsFormat.generate "server.toml" (filterConfig cfg.server.settings);
+  clientConfigFile = settingsFormat.generate "kanidm-config.toml" (filterConfig cfg.client.settings);
+  unixConfigFile = settingsFormat.generate "kanidm-unixd.toml" (filterConfig cfg.unix.settings);
+  provisionSecretFiles = filter (x: x != null) (
+    [
+      cfg.provision.idmAdminPasswordFile
+      cfg.provision.adminPasswordFile
+    ]
+    ++ optional (cfg.provision.extraJsonFile != null) cfg.provision.extraJsonFile
+    ++ mapAttrsToList (_: x: x.basicSecretFile) cfg.provision.systems.oauth2
+  );
+  secretPaths = [
+    cfg.server.settings.tls_chain
+    cfg.server.settings.tls_key
+  ]
+  ++ optionals cfg.provision.enable provisionSecretFiles;
+  enableServerBackup = cfg.server.enable && (cfg.server.settings.online_backup.versions != 0);
 
   # Merge bind mount paths and remove paths where a prefix is already mounted.
   # This makes sure that if e.g. the tls_chain is in the nix store and /nix/store is already in the mount
   # paths, no new bind mount is added. Adding subpaths caused problems on ofborg.
-  hasPrefixInList =
-    list: newPath: any (path: hasPrefix (builtins.toString path) (builtins.toString newPath)) list;
+  hasDirPrefix =
+    prefix: path:
+    let
+      normalizedDir = builtins.match "(.*[^/])/*" (toString prefix);
+      normalizedPrefix =
+        (if normalizedDir != null then builtins.head normalizedDir else toString prefix) + "/";
+    in
+    hasPrefix normalizedPrefix (toString path);
+  hasPrefixInList = list: newPath: any (path: hasDirPrefix path newPath) list;
   mergePaths = foldl' (
     merged: newPath:
     let
-      # If the new path is a prefix to some existing path, we need to filter it out
-      filteredPaths = filter (p: !hasPrefix (builtins.toString newPath) (builtins.toString p)) merged;
+      # If the new path is a prefix to some existing path, we need to filter it out. We make sure the prefix is a directory.
+      filteredPaths = filter (p: !hasDirPrefix newPath p) merged;
       # If a prefix of the new path is already in the list, do not add it
       filteredNew = optional (!hasPrefixInList filteredPaths newPath) newPath;
     in
@@ -130,12 +151,14 @@ let
     builtins.toJSON { inherit (cfg.provision) groups persons systems; }
   );
 
+  scriptingArg = optionalString (versionAtLeast cfg.package.version "1.9") "scripting";
+
   # Only recover the admin account if a password should explicitly be provisioned
   # for the account. Otherwise it is not needed for provisioning.
   maybeRecoverAdmin = optionalString (cfg.provision.adminPasswordFile != null) ''
     KANIDM_ADMIN_PASSWORD=$(< ${cfg.provision.adminPasswordFile})
     # We always reset the admin account password if a desired password was specified.
-    if ! KANIDM_RECOVER_ACCOUNT_PASSWORD=$KANIDM_ADMIN_PASSWORD ${cfg.package}/bin/kanidmd recover-account -c ${serverConfigFile} admin --from-environment >/dev/null; then
+    if ! KANIDM_RECOVER_ACCOUNT_PASSWORD=$KANIDM_ADMIN_PASSWORD ${cfg.package}/bin/kanidmd ${scriptingArg} recover-account -c ${serverConfigFile} admin --from-environment >/dev/null; then
       echo "Failed to recover admin account" >&2
       exit 1
     fi
@@ -149,8 +172,23 @@ let
       ''
         KANIDM_IDM_ADMIN_PASSWORD=$(< ${cfg.provision.idmAdminPasswordFile})
         # We always reset the idm_admin account password if a desired password was specified.
-        if ! KANIDM_RECOVER_ACCOUNT_PASSWORD=$KANIDM_IDM_ADMIN_PASSWORD ${cfg.package}/bin/kanidmd recover-account -c ${serverConfigFile} idm_admin --from-environment >/dev/null; then
+        if ! KANIDM_RECOVER_ACCOUNT_PASSWORD=$KANIDM_IDM_ADMIN_PASSWORD ${cfg.package}/bin/kanidmd ${scriptingArg} recover-account -c ${serverConfigFile} idm_admin --from-environment >/dev/null; then
           echo "Failed to recover idm_admin account" >&2
+          exit 1
+        fi
+      ''
+    else if versionAtLeast cfg.package.version "1.9" then
+      ''
+        # Recover idm_admin account
+        if ! recover_out=$(${cfg.package}/bin/kanidmd scripting recover-account -c ${serverConfigFile} idm_admin); then
+          echo "$recover_out" >&2
+          echo "kanidm provision: Failed to recover idm_admin account" >&2
+          exit 1
+        fi
+
+        if ! KANIDM_IDM_ADMIN_PASSWORD=$(${getExe pkgs.jq} -r .output <<< "$recover_out"); then
+          echo "$recover_out" >&2
+          echo "kanidm provision: Failed to parse password for idm_admin account" >&2
           exit 1
         fi
       ''
@@ -159,15 +197,24 @@ let
         # Recover idm_admin account
         if ! recover_out=$(${cfg.package}/bin/kanidmd recover-account -c ${serverConfigFile} idm_admin -o json); then
           echo "$recover_out" >&2
-          echo "kanidm provision: Failed to recover admin account" >&2
+          echo "kanidm provision: Failed to recover idm_admin account" >&2
           exit 1
         fi
+
         if ! KANIDM_IDM_ADMIN_PASSWORD=$(grep '{"password' <<< "$recover_out" | ${getExe pkgs.jq} -r .password); then
           echo "$recover_out" >&2
           echo "kanidm provision: Failed to parse password for idm_admin account" >&2
           exit 1
         fi
       '';
+
+  finalJson =
+    if cfg.provision.extraJsonFile != null then
+      ''
+        <(${lib.getExe pkgs.yq-go} '. *+ load("${cfg.provision.extraJsonFile}") | (.. | select(type == "!!seq")) |= unique' ${provisionStateJson})
+      ''
+    else
+      provisionStateJson;
 
   postStartScript = pkgs.writeShellScript "post-start" ''
     set -euo pipefail
@@ -183,7 +230,7 @@ let
         echo "Tried for at least 30 seconds, giving up..."
         exit 1
       fi
-      count=$((count++))
+      count=$((++count))
     done
 
     ${recoverIdmAdmin}
@@ -194,30 +241,59 @@ let
         ${optionalString (!cfg.provision.autoRemove) "--no-auto-remove"} \
         ${optionalString cfg.provision.acceptInvalidCerts "--accept-invalid-certs"} \
         --url "${cfg.provision.instanceUrl}" \
-        --state ${provisionStateJson}
+        --state ${finalJson}
   '';
 
   serverPort =
+    let
+      address = cfg.server.settings.bindaddress;
+    in
     # ipv6:
-    if hasInfix "]:" cfg.serverSettings.bindaddress then
-      last (splitString "]:" cfg.serverSettings.bindaddress)
+    if hasInfix "]:" address then
+      last (splitString "]:" address)
     else
     # ipv4:
-    if hasInfix "." cfg.serverSettings.bindaddress then
-      last (splitString ":" cfg.serverSettings.bindaddress)
+    if hasInfix "." address then
+      last (splitString ":" address)
     # default is 8443
     else
-      "8443";
+      throw "Address not parseable as IPv4 nor IPv6.";
+
+  addKaniSshKeys = cfg.unix.enable && cfg.unix.sshIntegration;
 in
 {
+  imports = [
+    (mkRenamedOptionModule
+      [ "services" "kanidm" "enableServer" ]
+      [ "services" "kanidm" "server" "enable" ]
+    )
+    (mkRenamedOptionModule
+      [ "services" "kanidm" "serverSettings" ]
+      [ "services" "kanidm" "server" "settings" ]
+    )
+    (mkRenamedOptionModule
+      [ "services" "kanidm" "enableClient" ]
+      [ "services" "kanidm" "client" "enable" ]
+    )
+    (mkRenamedOptionModule
+      [ "services" "kanidm" "clientSettings" ]
+      [ "services" "kanidm" "client" "settings" ]
+    )
+    (mkRenamedOptionModule [ "services" "kanidm" "enablePam" ] [ "services" "kanidm" "unix" "enable" ])
+    (mkRenamedOptionModule
+      [ "services" "kanidm" "unixSettings" ]
+      [ "services" "kanidm" "unix" "settings" ]
+    )
+  ];
+
   options.services.kanidm = {
-    enableClient = mkEnableOption "the Kanidm client";
-    enableServer = mkEnableOption "the Kanidm server";
-    enablePam = mkEnableOption "the Kanidm PAM and NSS integration";
+    package = mkPackageOption pkgs "kanidm" {
+      example = "kanidm_1_8";
+      extraDescription = "Must be set to an explicit version.";
+    };
 
-    package = mkPackageOption pkgs "kanidm" { };
-
-    serverSettings = mkOption {
+    server.enable = mkEnableOption "the Kanidm server";
+    server.settings = mkOption {
       type = types.submodule {
         freeformType = settingsFormat.type;
 
@@ -225,6 +301,7 @@ in
           bindaddress = mkOption {
             description = "Address/port combination the webserver binds to.";
             example = "[::1]:8443";
+            default = "127.0.0.1:8443";
             type = types.str;
           };
           # Should be optional but toml does not accept null
@@ -244,11 +321,11 @@ in
           domain = mkOption {
             description = ''
               The `domain` that Kanidm manages. Must be below or equal to the domain
-              specified in `serverSettings.origin`.
+              specified in `server.settings.origin`.
               This can be left at `null`, only if your instance has the role `ReadOnlyReplica`.
               While it is possible to change the domain later on, it requires extra steps!
               Please consider the warnings and execute the steps described
-              [in the documentation](https://kanidm.github.io/kanidm/stable/administrivia.html#rename-the-domain).
+              [in the documentation](https://kanidm.github.io/kanidm/stable/domain_rename.html).
             '';
             example = "example.org";
             default = null;
@@ -319,7 +396,8 @@ in
       '';
     };
 
-    clientSettings = mkOption {
+    client.enable = mkEnableOption "the Kanidm client";
+    client.settings = mkOption {
       type = types.submodule {
         freeformType = settingsFormat.type;
 
@@ -337,12 +415,16 @@ in
       '';
     };
 
-    unixSettings = mkOption {
+    unix = {
+      enable = mkEnableOption "the Kanidm PAM and NSS integration";
+      sshIntegration = mkEnableOption "Kanidm SSH keys login";
+    };
+    unix.settings = mkOption {
       type = types.submodule {
         freeformType = settingsFormat.type;
 
         options = {
-          pam_allowed_login_groups = mkOption {
+          kanidm.pam_allowed_login_groups = mkOption {
             description = "Kanidm groups that are allowed to login using PAM.";
             example = "my_pam_group";
             type = types.listOf types.str;
@@ -368,7 +450,7 @@ in
       instanceUrl = mkOption {
         description = "The instance url to which the provisioning tool should connect.";
         default = "https://localhost:${serverPort}";
-        defaultText = ''"https://localhost:<port from serverSettings.bindaddress>"'';
+        defaultText = "https://localhost:<port from server.settings.bindaddress>";
         type = types.str;
       };
 
@@ -411,6 +493,17 @@ in
         default = true;
       };
 
+      extraJsonFile = mkOption {
+        description = ''
+          A JSON file for provisioning persons, groups & systems.
+          Options set in this file take precedence over values set using the other options.
+          The files get deeply merged, and deduplicated.
+          The accepted JSON schema can be found at <https://github.com/oddlama/kanidm-provision#json-schema>.
+        '';
+        type = types.nullOr types.path;
+        default = null;
+      };
+
       groups = mkOption {
         description = "Provisioning of kanidm groups";
         default = { };
@@ -424,6 +517,17 @@ in
                 type = types.listOf types.str;
                 apply = unique;
                 default = [ ];
+              };
+
+              overwriteMembers = mkOption {
+                description = ''
+                  Whether the member list should be overwritten each time (true) or appended
+                  (false). Append mode allows interactive group management in addition to the
+                  declared members. Also, future member removals cannot be reflected
+                  automatically in append mode.
+                '';
+                type = types.bool;
+                default = true;
               };
             };
             config.members = concatLists (
@@ -498,13 +602,13 @@ in
               };
 
               originUrl = mkOption {
-                description = "The origin URL of the service. OAuth2 redirects will only be allowed to sites under this origin. Must end with a slash.";
+                description = "The redirect URL of the service. These need to exactly match the OAuth2 redirect target";
                 type =
                   let
-                    originStrType = types.strMatching ".*://.*/$";
+                    originStrType = types.strMatching ".*://?.*$";
                   in
                   types.either originStrType (types.nonEmptyListOf originStrType);
-                example = "https://someservice.example.com/";
+                example = "https://someservice.example.com/auth/login";
               };
 
               originLanding = mkOption {
@@ -520,6 +624,16 @@ in
                 '';
                 type = types.nullOr types.path;
                 example = "/run/secrets/some-oauth2-basic-secret";
+                default = null;
+              };
+
+              imageFile = mkOption {
+                description = ''
+                  Application image to display in the WebUI.
+                  Kanidm supports "image/jpeg", "image/png", "image/gif", "image/svg+xml", and "image/webp".
+                  The image will be uploaded each time kanidm-provision is run.
+                '';
+                type = types.nullOr types.path;
                 default = null;
               };
 
@@ -613,7 +727,13 @@ in
     };
   };
 
-  config = mkIf (cfg.enableClient || cfg.enableServer || cfg.enablePam) {
+  config = mkIf (cfg.client.enable || cfg.server.enable || cfg.unix.enable) {
+    warnings = lib.optionals (cfg.package.eolMessage != "") [ cfg.package.eolMessage ];
+    services.kanidm = {
+      unix.settings.version = "2";
+      server.settings.version = "2";
+    };
+
     assertions =
       let
         entityList =
@@ -635,7 +755,7 @@ in
             unknownGroups = subtractLists knownGroups groups;
           in
           {
-            assertion = (cfg.enableServer && cfg.provision.enable) -> unknownGroups == [ ];
+            assertion = (cfg.server.enable && cfg.provision.enable) -> unknownGroups == [ ];
             message = "${opt} refers to unknown groups: ${toString unknownGroups}";
           };
 
@@ -645,63 +765,71 @@ in
             unknownEntities = subtractLists (attrNames entitiesByName) entities;
           in
           {
-            assertion = (cfg.enableServer && cfg.provision.enable) -> unknownEntities == [ ];
+            assertion = (cfg.server.enable && cfg.provision.enable) -> unknownEntities == [ ];
             message = "${opt} refers to unknown entities: ${toString unknownEntities}";
           };
       in
       [
         {
-          assertion =
-            !cfg.enableServer
-            || ((cfg.serverSettings.tls_chain or null) == null)
-            || (!isStorePath cfg.serverSettings.tls_chain);
+          assertion = cfg.unix.enable -> !(cfg.unix.settings ? pam_allowed_login_groups);
           message = ''
-            <option>services.kanidm.serverSettings.tls_chain</option> points to
+            <option>services.kanidm.unix.settings.pam_allowed_login_groups</option> has been renamed
+            to <option>services.kanidm.unix.settings.kanidm.pam_allowed_login_groups</option>.
+            Please change your usage.
+          '';
+        }
+        {
+          assertion =
+            !cfg.server.enable
+            || ((cfg.server.settings.tls_chain or null) == null)
+            || (!isStorePath cfg.server.settings.tls_chain);
+          message = ''
+            <option>services.kanidm.server.settings.tls_chain</option> points to
             a file in the Nix store. You should use a quoted absolute path to
             prevent this.
           '';
         }
         {
           assertion =
-            !cfg.enableServer
-            || ((cfg.serverSettings.tls_key or null) == null)
-            || (!isStorePath cfg.serverSettings.tls_key);
+            !cfg.server.enable
+            || ((cfg.server.settings.tls_key or null) == null)
+            || (!isStorePath cfg.server.settings.tls_key);
           message = ''
-            <option>services.kanidm.serverSettings.tls_key</option> points to
+            <option>services.kanidm.server.settings.tls_key</option> points to
             a file in the Nix store. You should use a quoted absolute path to
             prevent this.
           '';
         }
         {
-          assertion = !cfg.enableClient || options.services.kanidm.clientSettings.isDefined;
+          assertion = !cfg.client.enable || options.services.kanidm.client.settings.isDefined;
           message = ''
-            <option>services.kanidm.clientSettings</option> needs to be configured
+            <option>services.kanidm.client.settings</option> needs to be configured
             if the client is enabled.
           '';
         }
         {
-          assertion = !cfg.enablePam || options.services.kanidm.clientSettings.isDefined;
+          assertion = !cfg.unix.enable || options.services.kanidm.client.settings.isDefined;
           message = ''
-            <option>services.kanidm.clientSettings</option> needs to be configured
+            <option>services.kanidm.client.settings</option> needs to be configured
             for the PAM daemon to connect to the Kanidm server.
           '';
         }
         {
           assertion =
-            !cfg.enableServer
+            !cfg.server.enable
             || (
-              cfg.serverSettings.domain == null
-              -> cfg.serverSettings.role == "WriteReplica" || cfg.serverSettings.role == "WriteReplicaNoUI"
+              cfg.server.settings.domain == null
+              -> cfg.server.settings.role == "WriteReplica" || cfg.server.settings.role == "WriteReplicaNoUI"
             );
           message = ''
-            <option>services.kanidm.serverSettings.domain</option> can only be set if this instance
+            <option>services.kanidm.server.settings.domain</option> can only be set if this instance
             is not a ReadOnlyReplica. Otherwise the db would inherit it from
             the instance it follows.
           '';
         }
         {
-          assertion = cfg.provision.enable -> cfg.enableServer;
-          message = "<option>services.kanidm.provision</option> requires <option>services.kanidm.enableServer</option> to be true";
+          assertion = cfg.provision.enable -> cfg.server.enable;
+          message = "<option>services.kanidm.provision</option> requires <option>services.kanidm.server.enable</option> to be true";
         }
         # If any secret is provisioned, the kanidm package must have some required patches applied to it
         {
@@ -736,55 +864,64 @@ in
           }
         )
       ]
-      ++ flip mapAttrsToList (filterPresent cfg.provision.persons) (
-        person: personCfg:
-        assertGroupsKnown "services.kanidm.provision.persons.${person}.groups" personCfg.groups
-      )
-      ++ flip mapAttrsToList (filterPresent cfg.provision.groups) (
-        group: groupCfg:
-        assertEntitiesKnown "services.kanidm.provision.groups.${group}.members" groupCfg.members
-      )
+      ++ (optionals (cfg.provision.extraJsonFile == null) (
+        flip mapAttrsToList (filterPresent cfg.provision.persons) (
+          person: personCfg:
+          assertGroupsKnown "services.kanidm.provision.persons.${person}.groups" personCfg.groups
+        )
+      ))
+      ++ (optionals (cfg.provision.extraJsonFile == null) (
+        flip mapAttrsToList (filterPresent cfg.provision.groups) (
+          group: groupCfg:
+          assertEntitiesKnown "services.kanidm.provision.groups.${group}.members" groupCfg.members
+        )
+      ))
       ++ concatLists (
         flip mapAttrsToList (filterPresent cfg.provision.systems.oauth2) (
           oauth2: oauth2Cfg:
-          [
-            (assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.scopeMaps" (
+          (optional (cfg.provision.extraJsonFile == null) (
+            assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.scopeMaps" (
               attrNames oauth2Cfg.scopeMaps
-            ))
-            (assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.supplementaryScopeMaps" (
+            )
+          ))
+          ++ (optional (cfg.provision.extraJsonFile == null) (
+            assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.supplementaryScopeMaps" (
               attrNames oauth2Cfg.supplementaryScopeMaps
-            ))
-          ]
+            )
+          ))
           ++ concatLists (
             flip mapAttrsToList oauth2Cfg.claimMaps (
               claim: claimCfg: [
-                (assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.claimMaps.${claim}.valuesByGroup" (
-                  attrNames claimCfg.valuesByGroup
+                (mkIf (cfg.provision.extraJsonFile == null) (
+                  assertGroupsKnown "services.kanidm.provision.systems.oauth2.${oauth2}.claimMaps.${claim}.valuesByGroup" (
+                    attrNames claimCfg.valuesByGroup
+                  )
                 ))
                 # At least one group must map to a value in each claim map
-                {
+                (mkIf (cfg.provision.extraJsonFile == null) {
                   assertion =
-                    (cfg.provision.enable && cfg.enableServer)
+                    (cfg.provision.enable && cfg.server.enable)
                     -> any (xs: xs != [ ]) (attrValues claimCfg.valuesByGroup);
                   message = "services.kanidm.provision.systems.oauth2.${oauth2}.claimMaps.${claim} does not specify any values for any group";
-                }
+                })
                 # Public clients cannot define a basic secret
                 {
                   assertion =
-                    (cfg.provision.enable && cfg.enableServer && oauth2Cfg.public) -> oauth2Cfg.basicSecretFile == null;
+                    (cfg.provision.enable && cfg.server.enable && oauth2Cfg.public)
+                    -> oauth2Cfg.basicSecretFile == null;
                   message = "services.kanidm.provision.systems.oauth2.${oauth2} is a public client and thus cannot specify a basic secret";
                 }
                 # Public clients cannot disable PKCE
                 {
                   assertion =
-                    (cfg.provision.enable && cfg.enableServer && oauth2Cfg.public)
+                    (cfg.provision.enable && cfg.server.enable && oauth2Cfg.public)
                     -> !oauth2Cfg.allowInsecureClientDisablePkce;
                   message = "services.kanidm.provision.systems.oauth2.${oauth2} is a public client and thus cannot disable PKCE";
                 }
                 # Non-public clients cannot enable localhost redirects
                 {
                   assertion =
-                    (cfg.provision.enable && cfg.enableServer && !oauth2Cfg.public)
+                    (cfg.provision.enable && cfg.server.enable && !oauth2Cfg.public)
                     -> !oauth2Cfg.enableLocalhostRedirects;
                   message = "services.kanidm.provision.systems.oauth2.${oauth2} is a non-public client and thus cannot enable localhost redirects";
                 }
@@ -794,17 +931,17 @@ in
         )
       );
 
-    environment.systemPackages = mkIf cfg.enableClient [ cfg.package ];
+    environment.systemPackages = mkIf cfg.client.enable [ cfg.package ];
 
-    systemd.tmpfiles.settings."10-kanidm" = {
-      ${cfg.serverSettings.online_backup.path}.d = {
+    systemd.tmpfiles.settings."10-kanidm" = mkIf enableServerBackup {
+      ${cfg.server.settings.online_backup.path}.d = {
         mode = "0700";
         user = "kanidm";
         group = "kanidm";
       };
     };
 
-    systemd.services.kanidm = mkIf cfg.enableServer {
+    systemd.services.kanidm = mkIf cfg.server.enable {
       description = "kanidm identity management daemon";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
@@ -813,24 +950,33 @@ in
         (
           defaultServiceConfig
           // {
-            BindReadOnlyPaths = mergePaths (defaultServiceConfig.BindReadOnlyPaths ++ certPaths);
+            BindReadOnlyPaths = mergePaths (
+              defaultServiceConfig.BindReadOnlyPaths
+              ++ secretPaths
+              ++ (lib.optionals (cfg.provision.enable && !cfg.provision.acceptInvalidCerts) [
+                "-/etc/ssl"
+                "-/etc/static/ssl"
+              ])
+            );
           }
         )
         {
           StateDirectory = "kanidm";
           StateDirectoryMode = "0700";
           RuntimeDirectory = "kanidmd";
+          ExecStartPre = "${cfg.package}/bin/kanidmd domain rename -c ${serverConfigFile}";
           ExecStart = "${cfg.package}/bin/kanidmd server -c ${serverConfigFile}";
           ExecStartPost = mkIf cfg.provision.enable postStartScript;
           User = "kanidm";
           Group = "kanidm";
 
-          BindPaths = [
-            # To create the socket
-            "/run/kanidmd:/run/kanidmd"
+          BindPaths =
+            [ ]
             # To store backups
-            cfg.serverSettings.online_backup.path
-          ];
+            ++ optional enableServerBackup cfg.server.settings.online_backup.path
+            ++ optional (
+              cfg.unix.enable && cfg.unix.settings ? home_mount_prefix
+            ) cfg.unix.settings.home_mount_prefix;
 
           AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
           CapabilityBoundingSet = [ "CAP_NET_BIND_SERVICE" ];
@@ -843,13 +989,11 @@ in
             "AF_INET6"
             "AF_UNIX"
           ];
-          TemporaryFileSystem = "/:ro";
         }
       ];
-      environment.RUST_LOG = "info";
     };
 
-    systemd.services.kanidm-unixd = mkIf cfg.enablePam {
+    systemd.services.kanidm-unixd = mkIf cfg.unix.enable {
       description = "Kanidm PAM daemon";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
@@ -886,13 +1030,12 @@ in
             "AF_INET6"
             "AF_UNIX"
           ];
-          TemporaryFileSystem = "/:ro";
         }
       ];
       environment.RUST_LOG = "info";
     };
 
-    systemd.services.kanidm-unixd-tasks = mkIf cfg.enablePam {
+    systemd.services.kanidm-unixd-tasks = mkIf cfg.unix.enable {
       description = "Kanidm PAM home management daemon";
       wantedBy = [ "multi-user.target" ];
       after = [
@@ -912,6 +1055,9 @@ in
           "-/etc/resolv.conf"
           "-/etc/nsswitch.conf"
           "-/etc/hosts"
+          "-/etc/passwd"
+          "-/etc/group"
+          "-/etc/shadow"
           "-/etc/localtime"
           "-/etc/kanidm"
           "-/etc/static/kanidm"
@@ -935,7 +1081,6 @@ in
         # Need access to home directories
         ProtectHome = false;
         RestrictAddressFamilies = [ "AF_UNIX" ];
-        TemporaryFileSystem = "/:ro";
         Restart = "on-failure";
       };
       environment.RUST_LOG = "info";
@@ -943,24 +1088,26 @@ in
 
     # These paths are hardcoded
     environment.etc = mkMerge [
-      (mkIf cfg.enableServer { "kanidm/server.toml".source = serverConfigFile; })
-      (mkIf options.services.kanidm.clientSettings.isDefined {
+      (mkIf cfg.server.enable { "kanidm/server.toml".source = serverConfigFile; })
+      (mkIf options.services.kanidm.client.settings.isDefined {
         "kanidm/config".source = clientConfigFile;
       })
-      (mkIf cfg.enablePam { "kanidm/unixd".source = unixConfigFile; })
+      (mkIf cfg.unix.enable { "kanidm/unixd".source = unixConfigFile; })
     ];
 
-    system.nssModules = mkIf cfg.enablePam [ cfg.package ];
+    system.nssModules = mkIf cfg.unix.enable [ cfg.package ];
 
-    system.nssDatabases.group = optional cfg.enablePam "kanidm";
-    system.nssDatabases.passwd = optional cfg.enablePam "kanidm";
+    # Needs to be before "files" which is `mkBefore`
+    system.nssDatabases.group = mkOrder 490 (optional cfg.unix.enable "kanidm");
+    system.nssDatabases.passwd = mkOrder 490 (optional cfg.unix.enable "kanidm");
 
     users.groups = mkMerge [
-      (mkIf cfg.enableServer { kanidm = { }; })
-      (mkIf cfg.enablePam { kanidm-unixd = { }; })
+      (mkIf cfg.server.enable { kanidm = { }; })
+      (mkIf cfg.unix.enable { kanidm-unixd = { }; })
+      (mkIf addKaniSshKeys { kanidm-authorized-keys = { }; })
     ];
     users.users = mkMerge [
-      (mkIf cfg.enableServer {
+      (mkIf cfg.server.enable {
         kanidm = {
           description = "Kanidm server";
           isSystemUser = true;
@@ -968,18 +1115,38 @@ in
           packages = [ cfg.package ];
         };
       })
-      (mkIf cfg.enablePam {
+      (mkIf cfg.unix.enable {
         kanidm-unixd = {
           description = "Kanidm PAM daemon";
           isSystemUser = true;
           group = "kanidm-unixd";
         };
       })
+      (mkIf addKaniSshKeys {
+        kanidm-authorized-keys = {
+          description = "Kanidm authorized keys delegate";
+          isSystemUser = true;
+          group = "kanidm-authorized-keys";
+        };
+      })
     ];
+
+    # AuthorizedKeysCommand is displeased with `/nix/store` permissions
+    services.openssh.settings = mkIf addKaniSshKeys {
+      AuthorizedKeysCommand = "${config.security.wrapperDir}/kanidm_ssh_authorizedkeys %u";
+      AuthorizedKeysCommandUser = "kanidm-authorized-keys";
+    };
+
+    security.wrappers.kanidm_ssh_authorizedkeys = mkIf addKaniSshKeys {
+      owner = "root";
+      group = "root";
+      permissions = "a+rx";
+      source = "${cfg.package}/bin/kanidm_ssh_authorizedkeys";
+    };
   };
 
   meta.maintainers = with lib.maintainers; [
-    erictapen
+    adamcstephens
     Flakebi
     oddlama
   ];

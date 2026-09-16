@@ -1,38 +1,37 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, makeWrapper
-, iw
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  makeWrapper,
+  iw,
 }:
-let
+
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "netscanner";
-  version = "0.5.3";
-in
-rustPlatform.buildRustPackage {
-  inherit pname version;
+  version = "0.6.43";
 
   nativeBuildInputs = [ makeWrapper ];
 
   src = fetchFromGitHub {
     owner = "Chleba";
     repo = "netscanner";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-rqUGi7UF9y3VZ0KoctCesQVgJbR1WfqhFA6aYFFimNk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-LLzv8+wAlZgXrj1Ldc+uGDfhvDYDtRU25R7UbmGb+ok=";
   };
 
-  cargoHash = "sha256-VP6L3lXDXadimSWC2L4yfzTRfTcUilJtZ7TeHARAKAY=";
+  cargoHash = "sha256-47bvcj+0ZRcHjyt0cpZ0PT+NRvYdvBQcTTf9tZHci2Q=";
 
   postFixup = ''
     wrapProgram $out/bin/netscanner \
-      --prefix PATH : "${lib.makeBinPath [iw]}"
+      --prefix PATH : "${lib.makeBinPath [ iw ]}"
   '';
 
   meta = {
     description = "Network scanner with features like WiFi scanning, packetdump and more";
     homepage = "https://github.com/Chleba/netscanner";
-    changelog = "https://github.com/Chleba/netscanner/releases/tag/v${version}";
+    changelog = "https://github.com/Chleba/netscanner/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ NotAShelf ];
     mainProgram = "netscanner";
   };
-}
+})

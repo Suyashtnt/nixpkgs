@@ -7,33 +7,35 @@
   manuel,
   pygments,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   zope-testrunner,
 }:
 
 buildPythonPackage rec {
   pname = "zconfig";
-  version = "4.1";
+  version = "4.3";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-tqed2hV/NpjIdo0s7cJjIW6K8kDTz50JoCpkKREU6yA=";
+    hash = "sha256-RyIz5RX6Kb5shz54uKK0UMLNJdATPLRZYIN/M/GrT+M=";
   };
 
   patches = lib.optional stdenv.hostPlatform.isMusl ./remove-setlocale-test.patch;
 
-  nativeBuildInputs = [ setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools >= 78.1.1,< 81" setuptools
+  '';
+
+  build-system = [ setuptools ];
 
   buildInputs = [
     docutils
     manuel
   ];
 
-  propagatedBuildInputs = [ zope-testrunner ];
+  dependencies = [ zope-testrunner ];
 
   nativeCheckInputs = [
     pygments
@@ -42,13 +44,13 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "ZConfig" ];
 
-  pytestFlagsArray = [ "-s" ];
+  pytestFlags = [ "-s" ];
 
-  meta = with lib; {
+  meta = {
     description = "Structured Configuration Library";
     homepage = "https://github.com/zopefoundation/ZConfig";
     changelog = "https://github.com/zopefoundation/ZConfig/blob/${version}/CHANGES.rst";
-    license = licenses.zpl20;
+    license = lib.licenses.zpl21;
     maintainers = [ ];
   };
 }

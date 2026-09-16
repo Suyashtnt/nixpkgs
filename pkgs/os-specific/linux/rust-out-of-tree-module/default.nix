@@ -1,18 +1,26 @@
-{ lib, fetchFromGitHub, kernel, unstableGitUpdater }:
+{
+  lib,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+  unstableGitUpdater,
+}:
 kernel.stdenv.mkDerivation {
   pname = "rust-out-of-tree-module";
-  version = "0-unstable-2024-05-06";
+  version = "0-unstable-2025-11-12";
 
   src = fetchFromGitHub {
     owner = "Rust-for-linux";
     repo = "rust-out-of-tree-module";
 
-    rev = "9872947486bb8f60b0d11db15d546a3d06156ec5";
-    hash = "sha256-TzCySY7uQac98dU+Nu5dC4Usm7oG0iIdZZmZgAOpni4=";
+    rev = "00b5a8ee2bf53532d115004d7636b61a54f49802";
+    hash = "sha256-CZw4OZZVHMnN6eHHwLqbEJKhFd0iNa5bgyYArzLPHuI=";
   };
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
-  makeFlags = kernel.makeFlags ++ [ "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" ];
+  makeFlags = kernelModuleMakeFlags ++ [
+    "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+  ];
 
   installFlags = [ "INSTALL_MOD_PATH=${placeholder "out"}" ];
   installTargets = [ "modules_install" ];
@@ -20,13 +28,12 @@ kernel.stdenv.mkDerivation {
   passthru.updateScript = unstableGitUpdater { };
 
   meta = {
-    broken = !kernel.withRust;
+    broken = kernel.kernelOlder "6.17" || !kernel.withRust;
     description = "Basic template for an out-of-tree Linux kernel module written in Rust";
     homepage = "https://github.com/Rust-for-Linux/rust-out-of-tree-module";
     license = lib.licenses.gpl2Only;
     maintainers = [ lib.maintainers.blitz ];
-    platforms = [ "x86_64-linux" ]
-      ++ lib.optional (kernel.kernelAtLeast "6.9") "aarch64-linux";
+    platforms = [ "x86_64-linux" ] ++ lib.optional (kernel.kernelAtLeast "6.9") "aarch64-linux";
   };
 
 }

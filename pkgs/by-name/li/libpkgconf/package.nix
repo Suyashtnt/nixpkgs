@@ -1,22 +1,40 @@
-{ lib
-, stdenv
-, fetchurl
-, removeReferencesTo
-, gitUpdater
+{
+  lib,
+  stdenv,
+  fetchurl,
+  autoconf,
+  automake,
+  libtool,
+  removeReferencesTo,
+  gitUpdater,
+  autoreconfHook,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "pkgconf";
-  version = "2.3.0";
+  version = "2.5.1";
 
+  # fetchFromGitHub isn't used because it's unavailable during bootstrapping
   src = fetchurl {
-    url = "https://distfiles.dereferenced.org/pkgconf/pkgconf-${finalAttrs.version}.tar.xz";
-    hash = "sha256-OpCArFHQNhXnwZEKCiqN8IQkiStfE7BiiiBNP8zg6os=";
+    url = "https://github.com/pkgconf/pkgconf/archive/refs/tags/pkgconf-${finalAttrs.version}.tar.gz";
+    hash = "sha256-eXIbrcrRmH3q2cNgnrSHerm1iCHAa9rLgk8siJfBHyo=";
   };
 
-  outputs = [ "out" "lib" "dev" "man" "doc" ];
+  outputs = [
+    "out"
+    "lib"
+    "dev"
+    "man"
+    "doc"
+  ];
 
-  nativeBuildInputs = [ removeReferencesTo ];
+  nativeBuildInputs = [
+    automake
+    autoconf
+    libtool
+    removeReferencesTo
+    autoreconfHook
+  ];
 
   enableParallelBuilding = true;
 
@@ -42,7 +60,7 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   passthru.updateScript = gitUpdater {
-    url = "https://github.com/pkgconf/pkgconf.git";
+    url = "https://github.com/pkgconf/pkgconf";
     rev-prefix = "pkgconf-";
   };
 
@@ -61,7 +79,9 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://github.com/pkgconf/pkgconf/blob/pkgconf-${finalAttrs.version}/NEWS";
     license = lib.licenses.isc;
     mainProgram = "pkgconf";
-    maintainers = with lib.maintainers; [ zaninime AndersonTorres ];
+    maintainers = with lib.maintainers; [
+      zaninime
+    ];
     platforms = lib.platforms.all;
   };
 })

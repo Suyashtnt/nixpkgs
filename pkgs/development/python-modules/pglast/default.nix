@@ -1,38 +1,45 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  pythonOlder,
-  setuptools,
-  pytest,
+  cython,
+  fetchFromGitHub,
   pytest-cov-stub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pglast";
-  version = "6.2";
+  version = "7.13";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-mGP7o52Wun6AdE2jMAJBmLR10EmN50qzbMzB06BFXMg=";
+  src = fetchFromGitHub {
+    owner = "lelit";
+    repo = "pglast";
+    tag = "v${version}";
+    fetchSubmodules = true;
+    hash = "sha256-q5QiP8UPQQnG2Ehgj9hngXnhCKvZyCy8mKA0rzWM7EY=";
   };
 
-  build-system = [ setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail cython==3.2.3 cython \
+      --replace-fail setuptools==80.9.0 setuptools
+  '';
 
-  dependencies = [ setuptools ];
+  build-system = [
+    cython
+    setuptools
+  ];
 
   nativeCheckInputs = [
-    pytest
+    pytestCheckHook
     pytest-cov-stub
   ];
 
-  # pytestCheckHook doesn't work
-  # ImportError: cannot import name 'parse_sql' from 'pglast'
-  checkPhase = ''
-    pytest
+  preCheck = ''
+    # import from $out
+    rm -r pglast
   '';
 
   pythonImportsCheck = [
@@ -40,11 +47,11 @@ buildPythonPackage rec {
     "pglast.parser"
   ];
 
-  meta = with lib; {
-    homepage = "https://github.com/lelit/pglast";
+  meta = {
     description = "PostgreSQL Languages AST and statements prettifier";
+    homepage = "https://github.com/lelit/pglast";
     changelog = "https://github.com/lelit/pglast/blob/v${version}/CHANGES.rst";
-    license = licenses.gpl3Plus;
+    license = lib.licenses.gpl3Plus;
     maintainers = [ ];
     mainProgram = "pgpp";
   };

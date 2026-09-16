@@ -1,13 +1,13 @@
-{ stdenv
-, lib
-, rkbin
-, qemu
+{
+  stdenv,
+  lib,
+  rkbin,
+  qemu,
 }:
 
 stdenv.mkDerivation {
-  name = "rkboot";
-
-  src = rkbin.src;
+  pname = "rkboot";
+  inherit (rkbin) src version;
 
   postPatch = ''
     substituteInPlace RKBOOT/*.ini --replace 'PATH=' 'PATH=rkboot/'
@@ -33,11 +33,14 @@ stdenv.mkDerivation {
     fi
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Rockchip proprietary SPL bootloader blobs";
     homepage = "https://github.com/rockchip-linux/rkbin";
-    license = licenses.unfreeRedistributable;
-    maintainers = with maintainers; [ matthewcroughan ];
-    platforms = [ "x86_64-linux" "aarch64-linux" ];
+    license = lib.licenses.unfreeRedistributable;
+    maintainers = with lib.maintainers; [ matthewcroughan ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
   };
 }

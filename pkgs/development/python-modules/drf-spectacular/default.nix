@@ -18,13 +18,11 @@
   drf-nested-routers,
   drf-spectacular-sidecar,
   fetchFromGitHub,
-  fetchpatch,
   inflection,
   jsonschema,
   psycopg2,
   pytest-django,
   pytestCheckHook,
-  pythonOlder,
   pyyaml,
   setuptools,
   uritemplate,
@@ -32,25 +30,15 @@
 
 buildPythonPackage rec {
   pname = "drf-spectacular";
-  version = "0.27.2";
+  version = "0.30.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "tfranzel";
     repo = "drf-spectacular";
-    rev = "refs/tags/${version}";
-    hash = "sha256-lOgFDkAY+PqSeyLSvWFT7KPVicSJZxd6yl17GAGHbRs=";
+    tag = version;
+    hash = "sha256-CuN3ZmFQBLUlRteXVcWF/oE9vvLcaFAoEbkF3hHQLgQ=";
   };
-
-  patches = [
-    (fetchpatch {
-      # https://github.com/tfranzel/drf-spectacular/pull/1090
-      url = "https://github.com/tfranzel/drf-spectacular/commit/8db4c2458f8403c53db0db352dd94057d285814b.patch";
-      hash = "sha256-Ue5y7IB4ie+9CEineMBgMMCLGiF4zqmn60TJvKsV1h0=";
-    })
-  ];
 
   build-system = [ setuptools ];
 
@@ -62,6 +50,8 @@ buildPythonPackage rec {
     pyyaml
     uritemplate
   ];
+
+  optional-dependencies.sidecar = [ drf-spectacular-sidecar ];
 
   nativeCheckInputs = [
     dj-rest-auth
@@ -81,23 +71,27 @@ buildPythonPackage rec {
     psycopg2
     pytest-django
     pytestCheckHook
-  ];
+  ]
+  ++ django-allauth.optional-dependencies.socialaccount;
 
-  disabledTests = [
-    # Test requires django with gdal
-    "test_rest_framework_gis"
+  disabledTestPaths = [
+    # django-oauth-toolkit 3.4.1 added a new error that the example application has
+    "tests/test_command.py::test_command_check"
+    # django-rest-knox is not packaged
+    "tests/contrib/test_knox_auth_token.py"
     # Outdated test artifact
-    "test_pydantic_decoration"
-    "test_knox_auth_token"
+    "tests/contrib/test_pydantic.py"
+    # Test requires django with gdal
+    "tests/contrib/test_rest_framework_gis.py"
   ];
 
   pythonImportsCheck = [ "drf_spectacular" ];
 
-  meta = with lib; {
+  meta = {
     description = "Sane and flexible OpenAPI 3 schema generation for Django REST framework";
     homepage = "https://github.com/tfranzel/drf-spectacular";
     changelog = "https://github.com/tfranzel/drf-spectacular/releases/tag/${version}";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

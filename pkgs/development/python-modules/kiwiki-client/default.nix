@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   python-dateutil,
-  pythonOlder,
   requests,
 }:
 
@@ -12,12 +11,10 @@ buildPythonPackage rec {
   version = "0.1.2";
   format = "setuptools";
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "c7h";
     repo = "kiwiki_client";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-CIBed8HzbUqUIzNy1lHxIgjneA6R8uKtmd43LU92M0Q=";
   };
 
@@ -31,11 +28,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "kiwiki" ];
 
-  meta = with lib; {
+  meta = {
     description = "Module to interact with the KIWI.KI API";
     homepage = "https://github.com/c7h/kiwiki_client";
     changelog = "https://github.com/c7h/kiwiki_client/releases/tag/${version}";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

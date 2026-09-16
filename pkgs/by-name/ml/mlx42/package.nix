@@ -4,47 +4,35 @@
   fetchFromGitHub,
   cmake,
   glfw,
-  darwin,
   enableShared ? !stdenv.hostPlatform.isStatic,
   enableDebug ? false,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "mlx42";
-  version = "2.3.4";
+  version = "2.4.2";
 
   src = fetchFromGitHub {
     owner = "codam-coding-college";
     repo = "MLX42";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-c4LoTePHhQeZTx33V1K3ZyXmT7vjB6NdkGVAiSuJKfI=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-IMwDdWtbu882N43oTr/c6Fq34TduCuUt34Vh2Hx/TJY=";
   };
 
-  postPatch =
-    ''
-      patchShebangs --build ./tools
-    ''
-    + lib.optionalString enableShared ''
-      substituteInPlace CMakeLists.txt \
-          --replace-fail "mlx42 STATIC" "mlx42 SHARED"
-    '';
+  postPatch = ''
+    patchShebangs --build ./tools
+  '';
 
   strictDeps = true;
 
   nativeBuildInputs = [ cmake ];
 
-  buildInputs =
-    [ glfw ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin (
-      with darwin.apple_sdk.frameworks;
-      [
-        OpenGL
-        Cocoa
-        IOKit
-      ]
-    );
+  buildInputs = [ glfw ];
 
-  cmakeFlags = [ (lib.cmakeBool "DEBUG" enableDebug) ];
+  cmakeFlags = [
+    (lib.cmakeBool "BUILD_SHARED_LIBS" enableShared)
+    (lib.cmakeBool "DEBUG" enableDebug)
+  ];
 
   postInstall = ''
     mkdir -p $out/lib/pkgconfig

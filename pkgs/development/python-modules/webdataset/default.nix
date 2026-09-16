@@ -1,35 +1,47 @@
 {
   lib,
-  stdenv,
   buildPythonPackage,
+  fetchFromGitHub,
+  curl,
+
+  # build-system
+  setuptools,
+
+  # dependencies
   braceexpand,
+  numpy,
+  pyyaml,
+
+  # tests
   imageio,
   lmdb,
   msgpack,
-  numpy,
   pytestCheckHook,
-  pyyaml,
-  setuptools,
   torch,
   torchvision,
-  wheel,
-  fetchFromGitHub,
 }:
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "webdataset";
-  version = "0.2.100";
+  version = "1.0.2";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "webdataset";
     repo = "webdataset";
-    rev = "refs/tags/${version}";
-    hash = "sha256-+Rvb4VY4qBcVKM1CUkLZTQdlZklpHcuiMO8r6VNInLc=";
+    # recent versions are not tagged on GitHub
+    rev = "0773837ecd298587fc89c4f944ef346ef1a6b619";
+    hash = "sha256-jFFRp5W9yP1mKi9x43EdOakFAd9ArnDqH3dnvFOeCmc=";
   };
+
+  postPatch = ''
+    substituteInPlace src/webdataset/gopen.py \
+      --replace-fail \
+        '"curl"' \
+        '"${lib.getExe curl}"'
+  '';
 
   build-system = [
     setuptools
-    wheel
   ];
 
   dependencies = [
@@ -39,64 +51,35 @@ buildPythonPackage rec {
   ];
 
   nativeCheckInputs = [
-    pytestCheckHook
     imageio
+    lmdb
+    msgpack
+    pytestCheckHook
     torch
     torchvision
-    msgpack
-    lmdb
   ];
 
   pythonImportsCheck = [ "webdataset" ];
 
-  disabledTests =
-    [
-      # requires network
-      "test_batched"
-      "test_cache_dir"
-      "test_concurrent_download_and_open"
-      "test_dataloader"
-      "test_decode_handlers"
-      "test_decoder"
-      "test_download"
-      "test_handlers"
-      "test_pipe"
-      "test_remote_file"
-      "test_shard_syntax"
-      "test_torchvision"
-      "test_unbatched"
-      "test_yaml3"
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      # pickling error
-      "test_background_download"
-    ]
-    ++ lib.optionals (stdenv.hostPlatform.isx86_64 && stdenv.hostPlatform.isDarwin) [
-      "test_concurrent_access"
-      # fails to patch 'init_process_group' from torch.distributed
-      "TestDistributedChunkedSampler"
-    ]
-    ++ lib.optionals (stdenv.hostPlatform.isAarch64 && stdenv.hostPlatform.isLinux) [
-      # segfaults on aarch64-linux
-      "test_webloader"
-      "test_webloader2"
-      "test_webloader_repeat"
-      "test_webloader_unbatched"
-    ];
-
-  disabledTestPaths = lib.optionals stdenv.hostPlatform.isDarwin [
-    # AttributeError: <module 'torch.distributed' from /nix/store/...
-    "tests/test_wids.py"
-
-    # Issue with creating a temp file in the sandbox
-    "tests/test_wids_mmtar.py"
+  disabledTests = [
+    # Require network
+    "test_batched"
+    "test_cache_dir"
+    "test_dataloader"
+    "test_decode_handlers"
+    "test_decoder"
+    "test_handlers"
+    "test_pipe"
+    "test_remote_file"
+    "test_shard_syntax"
+    "test_torchvision"
+    "test_unbatched"
   ];
 
   meta = {
     description = "High-performance Python-based I/O system for large (and small) deep learning problems, with strong support for PyTorch";
     mainProgram = "widsindex";
     homepage = "https://github.com/webdataset/webdataset";
-    changelog = "https://github.com/webdataset/webdataset/releases/tag/${version}";
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ iynaix ];
   };

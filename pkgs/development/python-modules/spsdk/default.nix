@@ -2,9 +2,16 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
   asn1crypto,
   bincopy,
   bitstring,
+  chardet,
   click,
   click-command-tree,
   click-option-group,
@@ -13,98 +20,147 @@
   cryptography,
   deepmerge,
   fastjsonschema,
+  filelock,
   hexdump,
   libusbsio,
+  libuuu,
   oscrypto,
   packaging,
   platformdirs,
   prettytable,
+  pyasn1,
   pyocd,
   pyserial,
   requests,
   ruamel-yaml,
-  setuptools-scm,
   sly,
-  spsdk,
-  testers,
+  spsdk-mcu-link,
+  spsdk-pyocd,
   typing-extensions,
+  x690,
+
+  # tests
+  cookiecutter,
   ipykernel,
   pytest-notebook,
+  pytest-xdist,
   pytestCheckHook,
+  versionCheckHook,
   voluptuous,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "spsdk";
-  version = "2.2.1";
+  version = "3.11.0";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "nxp-mcuxpresso";
     repo = "spsdk";
-    rev = "refs/tags/${version}";
-    hash = "sha256-qFgG9jdF667EtMqXGGk/oxTEi+6J2s/3gKokP+JaFVw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-BIYCOwXMw0PuZDWj7x4EG+mUBo+7RNJs0hvNVwbxlIg=";
   };
 
-  build-system = [ setuptools-scm ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail \
+        "setuptools_scm<10" \
+        "setuptools_scm"
+  '';
+
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
   pythonRelaxDeps = [
+    "chardet"
     "cryptography"
-    "requests"
+    "deepmerge"
+    "filelock"
+    "importlib-metadata"
     "packaging"
+    "prettytable"
+    "requests"
+    "ruamel.yaml.clib"
+    "setuptools"
+    "setuptools_scm"
     "typing-extensions"
   ];
 
-  # Remove unneeded unfree package. pyocd-pemicro is only used when
-  # generating a pyinstaller package, which we don't do.
-  pythonRemoveDeps = [ "pyocd-pemicro" ];
+  pythonRemoveDeps = [
+    # Remove unneeded unfree package. pyocd-pemicro is only used when
+    # generating a pyinstaller package, which we don't do.
+    "pyocd-pemicro"
+  ];
 
   dependencies = [
     asn1crypto
     bincopy
     bitstring
+    chardet
     click
     click-command-tree
     click-option-group
     colorama
+    cookiecutter
     crcmod
     cryptography
     deepmerge
     fastjsonschema
+    filelock
     hexdump
     libusbsio
+    libuuu
     oscrypto
     packaging
     platformdirs
     prettytable
+    pyasn1
     pyocd
     pyserial
     requests
     ruamel-yaml
     sly
+    spsdk-mcu-link
+    spsdk-pyocd
     typing-extensions
-  ];
-
-  nativeCheckInputs = [
-    ipykernel
-    pytest-notebook
-    pytestCheckHook
-    voluptuous
+    x690
   ];
 
   pythonImportsCheck = [ "spsdk" ];
 
-  passthru.tests.version = testers.testVersion { package = spsdk; };
+  nativeCheckInputs = [
+    cookiecutter
+    ipykernel
+    pytest-notebook
+    pytestCheckHook
+    pytest-xdist
+    versionCheckHook
+    voluptuous
+    writableTmpDirAsHomeHook
+  ];
 
-  meta = with lib; {
-    changelog = "https://github.com/nxp-mcuxpresso/spsdk/blob/${src.rev}/docs/release_notes.rst";
+  disabledTests = [
+    # Missing rotk private key
+    "test_general_notebooks"
+
+    # Attempts to access /run
+    "test_nxpimage_famode_export_cli"
+
+    # spsdk.exceptions.SPSDKValueError: SPSDK: The EC curve with name 'sect163k1' is not supported
+    "test_keys_generation_ec"
+  ];
+
+  meta = {
+    changelog = "https://github.com/nxp-mcuxpresso/spsdk/blob/${finalAttrs.src.tag}/docs/release_notes.rst";
     description = "NXP Secure Provisioning SDK";
     homepage = "https://github.com/nxp-mcuxpresso/spsdk";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [
-      frogamic
-      sbruder
+    license = lib.licenses.bsd3;
+    maintainers = [
     ];
     mainProgram = "spsdk";
   };
-}
+})

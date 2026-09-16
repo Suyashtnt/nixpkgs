@@ -1,30 +1,34 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  nix-update-script,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "templ";
-  version = "0.2.778";
+  version = "0.3.1020";
 
   src = fetchFromGitHub {
     owner = "a-h";
     repo = "templ";
-    rev = "v${version}";
-    hash = "sha256-lU8aVTw73HX0lNGPyD8Xnvtnr2VFTXv/S6xCVn6Lg74=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-wv7qKZfnavz8lxfaOaIJJySNsXsjke1ADJuv2kgQOHE=";
   };
 
-  vendorHash = "sha256-ZWY19f11+UI18jeHYIEZjdb9Ii74mD6w+dYRLPkdfBU=";
+  vendorHash = "sha256-i4uDGZb3VZUvIyO2Tt53VR1Do/3OYtj6JccGoFnnlbs=";
 
   subPackages = [ "cmd/templ" ];
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = 0;
 
   ldflags = [
     "-s"
     "-w"
     "-extldflags -static"
   ];
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Language for writing HTML user interfaces in Go";
@@ -33,4 +37,4 @@ buildGoModule rec {
     mainProgram = "templ";
     maintainers = with lib.maintainers; [ luleyleo ];
   };
-}
+})

@@ -9,7 +9,6 @@
   packaging,
   pyparsing,
   python-dateutil,
-  pythonOlder,
   requests,
   setuptools,
   six,
@@ -21,19 +20,16 @@ buildPythonPackage rec {
   version = "0.5.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "gophish";
     repo = "api-client-python";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-ITwwU/Xixyi9JSWbYf606HB7S5E4jiI0lEYcOdNg3mo=";
   };
 
   pythonRelaxDeps = true;
 
   build-system = [ setuptools ];
-
 
   dependencies = [
     appdirs
@@ -53,11 +49,11 @@ buildPythonPackage rec {
   # Module has no test
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Module to interact with Gophish";
     homepage = "https://github.com/gophish/api-client-python";
     changelog = "https://github.com/gophish/api-client-python/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

@@ -1,11 +1,16 @@
 # GNOME Online Accounts daemon.
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
 
   meta = {
-    maintainers = lib.teams.gnome.members;
+    teams = [ lib.teams.gnome ];
   };
 
   ###### interface
@@ -26,7 +31,6 @@
     };
 
   };
-
 
   ###### implementation
 

@@ -1,36 +1,27 @@
-{ lib
-, fetchgit
-, buildGoModule
-, pigeon
+{
+  lib,
+  fetchFromGitHub,
+  rustPlatform,
 }:
 
-buildGoModule rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "verifpal";
-  version = "0.27.0";
+  version = "0.80.1";
 
-  src = fetchgit {
-    url = "https://source.symbolic.software/verifpal/verifpal.git";
-    rev = "v${version}";
-    hash = "sha256-rihY5p6nJ1PKjI+gn3NNXy+uzeBG2UNyRYy3UjScf2Q=";
+  src = fetchFromGitHub {
+    owner = "symbolicsoft";
+    repo = "verifpal";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-C5k9vXd91m7AZWqSCTw4qxD3onuq/1bMhlIia9XW2II=";
   };
 
-  vendorHash = "sha256-XOCRwh2nEIC+GjGwqd7nhGWQD7vBMLEZZ2FNxs0NX+E=";
-
-  nativeBuildInputs = [ pigeon ];
-
-  subPackages = [ "cmd/verifpal" ];
-
-  # goversioninfo is for Windows only and can be skipped during go generate
-  preBuild = ''
-    substituteInPlace cmd/verifpal/main.go --replace "go:generate goversioninfo" "(disabled goversioninfo)"
-    go generate verifpal.com/cmd/verifpal
-  '';
+  cargoHash = "sha256-7qfKG7iUcoKOcyFfDgaCDiXF3eAOO/wGJgu7XocSXZU=";
 
   meta = {
     homepage = "https://verifpal.com/";
     description = "Cryptographic protocol analysis for students and engineers";
     mainProgram = "verifpal";
     maintainers = with lib.maintainers; [ zimbatm ];
-    license = with lib.licenses; [ gpl3 ];
+    license = lib.licenses.gpl3;
   };
-}
+})

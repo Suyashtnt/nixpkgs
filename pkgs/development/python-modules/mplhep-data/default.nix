@@ -8,13 +8,13 @@
 
 buildPythonPackage rec {
   pname = "mplhep-data";
-  version = "0.0.3";
-  format = "pyproject";
+  version = "0.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "mplhep_data";
     inherit version;
-    hash = "sha256-tU0lfz9TyTpELNp6ZoHOJnJ34JFzwLQf14gg94Mhdy8=";
+    hash = "sha256-v5zcxlw6nOfY8OMHj/ZZ7z/P3hGeYloPcfIbBu2rxMk=";
   };
 
   nativeBuildInputs = [
@@ -24,14 +24,14 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "mplhep_data" ];
 
-  meta = with lib; {
+  meta = {
     description = "Sub-package to hold data (fonts) for mplhep";
     homepage = "https://github.com/scikit-hep/mplhep_data";
-    license = with licenses; [
+    license = with lib.licenses; [
       mit
       gfl
       ofl
     ];
-    maintainers = with maintainers; [ veprbl ];
+    maintainers = with lib.maintainers; [ veprbl ];
   };
 }

@@ -1,14 +1,18 @@
-{ lib , fetchurl , buildDunePackage }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "res";
-  version = "5.0.1";
+  version = "5.0.2";
 
   minimalOCamlVersion = "4.08";
 
   src = fetchurl {
-    url = "https://github.com/mmottl/res/releases/download/${version}/res-${version}.tbz";
-    hash = "sha256-rSrDMQBfnbWAr2LuajP3fveOtOwLyRbKPkaTKsnocQ4=";
+    url = "https://github.com/mmottl/res/releases/download/${finalAttrs.version}/res-${finalAttrs.version}.tbz";
+    hash = "sha256-hQxRETCYxy7ZHah5cg+XHtH3wCj/ofq1VHxsPHu91FU=";
   };
 
   doCheck = true;
@@ -16,9 +20,8 @@ buildDunePackage rec {
   meta = {
     description = "Library for resizable, contiguous datastructures";
     homepage = "https://github.com/mmottl/res";
-    changelog = "https://github.com/mmottl/res/blob/${version}/CHANGES.md";
+    changelog = "https://github.com/mmottl/res/blob/${finalAttrs.version}/CHANGES.md";
     license = lib.licenses.lgpl2Plus;
     maintainers = with lib.maintainers; [ sixstring982 ];
   };
-}
-
+})

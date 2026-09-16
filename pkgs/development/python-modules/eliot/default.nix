@@ -3,17 +3,20 @@
   stdenv,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
-  pythonAtLeast,
 
+  # build-system
   setuptools,
+  setuptools-scm,
+  versioneer,
 
+  # dependencies
   boltons,
   orjson,
   pyrsistent,
   zope-interface,
 
-  daemontools,
+  # tests
+  addBinToPathHook,
   dask,
   distributed,
   hypothesis,
@@ -21,23 +24,27 @@
   pytestCheckHook,
   testtools,
   twisted,
+  daemontools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "eliot";
-  version = "1.15.0";
+  version = "1.18.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8" || pythonAtLeast "3.13";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "itamarst";
     repo = "eliot";
-    rev = "refs/tags/${version}";
-    hash = "sha256-Ur7q7PZ5HH4ttD3b0HyBTe1B7eQ2nEWcTBR/Hjeg9yw=";
+    tag = finalAttrs.version;
+    hash = "sha256-YUvHdnpWtsy2NlrVLaaewcUPKGLfdfX/zvowV0jcXuw=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [
+    setuptools
+    setuptools-scm
+    versioneer
+  ];
 
   dependencies = [
     boltons
@@ -47,6 +54,7 @@ buildPythonPackage rec {
   ];
 
   nativeCheckInputs = [
+    addBinToPathHook
     dask
     distributed
     hypothesis
@@ -54,23 +62,18 @@ buildPythonPackage rec {
     pytestCheckHook
     testtools
     twisted
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [ daemontools ];
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ daemontools ];
 
   __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "eliot" ];
 
-  # Tests run eliot-prettyprint in out/bin.
-  preCheck = ''
-    export PATH=$out/bin:$PATH
-  '';
-
   meta = {
-    homepage = "https://eliot.readthedocs.io";
     description = "Logging library that tells you why it happened";
-    changelog = "https://github.com/itamarst/eliot/blob/${version}/docs/source/news.rst";
+    homepage = "https://eliot.readthedocs.io";
+    changelog = "https://github.com/itamarst/eliot/blob/${finalAttrs.version}/docs/source/news.rst";
     mainProgram = "eliot-prettyprint";
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ dpausp ];
   };
-}
+})

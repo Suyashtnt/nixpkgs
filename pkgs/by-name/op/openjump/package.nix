@@ -14,12 +14,12 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "openjump";
-  version = "2.2.1";
-  revision = "r5222%5B94156e5%5D";
+  version = "2.4.0";
+  revision = "r5303%5B6c9a02d%5D";
 
   src = fetchurl {
     url = "mirror://sourceforge/jump-pilot/OpenJUMP/${finalAttrs.version}/OpenJUMP-Portable-${finalAttrs.version}-${finalAttrs.revision}-PLUS.zip";
-    hash = "sha256-+/AMmD6NDPy+2Gq1Ji5i/QWGU7FOsU+kKsWoNXcx/VI=";
+    hash = "sha256-MBP4zZTKHj3WooQvo6nQzhiAw9nO9gAJybSL2rc1mnc=";
   };
 
   # TODO: build from source
@@ -59,7 +59,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "http://www.openjump.org/";
     license = lib.licenses.gpl2;
     mainProgram = "OpenJump";
-    maintainers = lib.teams.geospatial.members ++ [ lib.maintainers.marcweber ];
+    teams = [ lib.teams.geospatial ];
     platforms = jre.meta.platforms;
     sourceProvenance = [ lib.sourceTypes.binaryBytecode ];
   };

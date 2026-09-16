@@ -2,32 +2,25 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  fetchpatch,
   kernel ? false,
+  kernelModuleMakeFlags ? [ ],
 }:
 
-stdenv.mkDerivation rec {
-  pname = "cryptodev-linux-1.13";
-  name = "${pname}-${kernel.version}";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "cryptodev-linux";
+  version = "1.14-unstable-2025-11-04";
 
   src = fetchFromGitHub {
     owner = "cryptodev-linux";
     repo = "cryptodev-linux";
-    rev = pname;
-    hash = "sha256-EzTPoKYa+XWOAa/Dk7ru02JmlymHeXVX7RMmEoJ1OT0=";
+    rev = "08644db02d43478f802755903212f5ee506af73b";
+    hash = "sha256-tYTiyysofO23ApXQbnJF5muTTLv1kKu/nLggGv3ntr4=";
   };
-
-  patches = [
-    (fetchpatch {
-      url = "https://github.com/cryptodev-linux/cryptodev-linux/compare/cryptodev-linux-1.13...5e7121e45ff283d30097da381fd7e97c4bb61364.patch";
-      hash = "sha256-GLWpiInBrUcVhpvEjTmD5KLCrrFZnlJGnmLU0QYz+4A=";
-    })
-  ];
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
   hardeningDisable = [ "pic" ];
 
-  makeFlags = kernel.makeFlags ++ [
+  makeFlags = kernelModuleMakeFlags ++ [
     "KERNEL_DIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
     "INSTALL_MOD_PATH=$(out)"
     "prefix=$(out)"
@@ -40,4 +33,4 @@ stdenv.mkDerivation rec {
     license = lib.licenses.gpl2Plus;
     platforms = lib.platforms.linux;
   };
-}
+})

@@ -1,62 +1,79 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, pkg-config
-, git
-, qt6Packages
-, openal
-, glew
-, vulkan-headers
-, vulkan-loader
-, libpng
-, libSM
-, ffmpeg
-, libevdev
-, libusb1
-, zlib
-, curl
-, wolfssl
-, python3
-, pugixml
-, flatbuffers
-, llvm_16
-, cubeb
-, enableDiscordRpc ? false
-, faudioSupport ? true
-, faudio
-, SDL2
-, waylandSupport ? true
-, wayland
-, wrapGAppsHook3
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  cmake,
+  pkg-config,
+  git,
+  qt6Packages,
+  openal,
+  glew,
+  vulkan-headers,
+  vulkan-loader,
+  libpng,
+  libsm,
+  ffmpeg,
+  libevdev,
+  libusb1,
+  zlib,
+  curl,
+  python3,
+  pugixml,
+  protobuf_33,
+  llvm,
+  cubeb,
+  opencv,
+  enableDiscordRpc ? false,
+  faudioSupport ? true,
+  faudio,
+  sdl3,
+  waylandSupport ? true,
+  wayland,
+  wrapGAppsHook3,
+  miniupnpc,
+  rtmidi,
+  glslang,
+  zstd,
+  hidapi,
+  vulkan-memory-allocator,
 }:
 
 let
-  # Keep these separate so the update script can regex them
-  rpcs3GitVersion = "16959-60b5adab6";
-  rpcs3Version = "0.0.33-16959-60b5adab6";
-  rpcs3Revision = "60b5adab636f0cef6987165b38b42cbd7b2a9768";
-  rpcs3Hash = "sha256-0/cNiPUnjuik6YyiNeZ5ZAZBExex5WVW56PCzm80Xx8=";
-
-  inherit (qt6Packages) qtbase qtmultimedia wrapQtAppsHook qtwayland;
+  inherit (qt6Packages)
+    qtbase
+    qtmultimedia
+    wrapQtAppsHook
+    qtwayland
+    ;
 in
-stdenv.mkDerivation {
+stdenv.mkDerivation (finalAttrs: {
   pname = "rpcs3";
-  version = rpcs3Version;
+  version = "0.0.42-unstable-2026-08-15";
 
   src = fetchFromGitHub {
     owner = "RPCS3";
     repo = "rpcs3";
-    rev = rpcs3Revision;
-    fetchSubmodules = true;
-    hash = rpcs3Hash;
+    rev = "fc93d932c8560f763f5223c0a4165cc53bceeb3f";
+    postCheckout = ''
+      cd $out/3rdparty
+      git submodule update --init \
+        fusion/fusion asmjit/asmjit yaml-cpp/yaml-cpp SoundTouch/soundtouch stblib/stb \
+        feralinteractive/feralinteractive wolfssl/wolfssl
+    '';
+    hash = "sha256-3sGcpYfaxZNa6/CIRxylSf/EL+ievwIeQzEKYDOUNy8=";
   };
 
-  passthru.updateScript = ./update.sh;
+  passthru.updateScript = nix-update-script {
+    extraArgs = [
+      "--version=branch"
+      "--use-github-releases"
+    ];
+  };
 
   preConfigure = ''
     cat > ./rpcs3/git-version.h <<EOF
-    #define RPCS3_GIT_VERSION "${rpcs3GitVersion}"
+    #define RPCS3_GIT_VERSION "nixpkgs-${lib.sources.shortRev finalAttrs.src.rev}"
     #define RPCS3_GIT_FULL_BRANCH "RPCS3/rpcs3/master"
     #define RPCS3_GIT_BRANCH "HEAD"
     #define RPCS3_GIT_VERSION_NO_UPDATE 1
@@ -64,16 +81,25 @@ stdenv.mkDerivation {
   '';
 
   cmakeFlags = [
+    (lib.cmakeBool "BUILD_SHARED_LIBS" false)
     (lib.cmakeBool "USE_SYSTEM_ZLIB" true)
     (lib.cmakeBool "USE_SYSTEM_LIBUSB" true)
     (lib.cmakeBool "USE_SYSTEM_LIBPNG" true)
     (lib.cmakeBool "USE_SYSTEM_FFMPEG" true)
     (lib.cmakeBool "USE_SYSTEM_CURL" true)
-    (lib.cmakeBool "USE_SYSTEM_WOLFSSL" true)
     (lib.cmakeBool "USE_SYSTEM_FAUDIO" true)
+    (lib.cmakeBool "USE_SYSTEM_OPENAL" true)
     (lib.cmakeBool "USE_SYSTEM_PUGIXML" true)
-    (lib.cmakeBool "USE_SYSTEM_FLATBUFFERS" true)
+    (lib.cmakeBool "USE_SYSTEM_PROTOBUF" true)
     (lib.cmakeBool "USE_SYSTEM_SDL" true)
+    (lib.cmakeBool "USE_SYSTEM_OPENCV" true)
+    (lib.cmakeBool "USE_SYSTEM_CUBEB" true)
+    (lib.cmakeBool "USE_SYSTEM_MINIUPNPC" true)
+    (lib.cmakeBool "USE_SYSTEM_RTMIDI" true)
+    (lib.cmakeBool "USE_SYSTEM_GLSLANG" true)
+    (lib.cmakeBool "USE_SYSTEM_ZSTD" true)
+    (lib.cmakeBool "USE_SYSTEM_HIDAPI" true)
+    (lib.cmakeBool "USE_SYSTEM_VULKAN_MEMORY_ALLOCATOR" true)
     (lib.cmakeBool "USE_SDL" true)
     (lib.cmakeBool "WITH_LLVM" true)
     (lib.cmakeBool "BUILD_LLVM" false)
@@ -84,14 +110,49 @@ stdenv.mkDerivation {
 
   dontWrapGApps = true;
 
-  nativeBuildInputs = [ cmake pkg-config git wrapQtAppsHook wrapGAppsHook3 ];
+  nativeBuildInputs = [
+    cmake
+    pkg-config
+    git
+    wrapQtAppsHook
+    wrapGAppsHook3
+  ];
 
   buildInputs = [
-    qtbase qtmultimedia openal glew vulkan-headers vulkan-loader libpng ffmpeg
-    libevdev zlib libusb1 curl wolfssl python3 pugixml SDL2 flatbuffers llvm_16 libSM
-  ] ++ cubeb.passthru.backendLibs
-    ++ lib.optional faudioSupport faudio
-    ++ lib.optionals waylandSupport [ wayland qtwayland ];
+    qtbase
+    qtmultimedia
+    openal
+    glew
+    vulkan-headers
+    vulkan-loader
+    libpng
+    ffmpeg
+    libevdev
+    zlib
+    libusb1
+    curl
+    python3
+    pugixml
+    sdl3
+    protobuf_33
+    llvm
+    libsm
+    opencv.cxxdev
+    cubeb
+    miniupnpc
+    rtmidi
+    glslang
+    zstd
+    hidapi
+    vulkan-memory-allocator
+  ]
+  ++ lib.optional faudioSupport faudio
+  ++ lib.optionals waylandSupport [
+    wayland
+    qtwayland
+  ];
+
+  doInstallCheck = true;
 
   preFixup = ''
     qtWrapperArgs+=("''${gappsWrapperArgs[@]}")
@@ -104,12 +165,35 @@ stdenv.mkDerivation {
     install -D ${./99-dualsense-controllers.rules} $out/etc/udev/rules.d/99-dualsense-controllers.rules
   '';
 
-  meta = with lib; {
+  meta = {
     description = "PS3 emulator/debugger";
     homepage = "https://rpcs3.net/";
-    maintainers = with maintainers; [ abbradar neonfuz ilian zane ];
-    license = licenses.gpl2Only;
-    platforms = [ "x86_64-linux" "aarch64-linux" ];
+    maintainers = with lib.maintainers; [
+      ilian
+    ];
+    license = [
+      lib.licenses.gpl2Only
+      # Vendors wolfSSL, which changed its licence from
+      # `GPL-2.0-or-later` to `GPL-3.0-or-later`, which is incompatible
+      # with RPCS3’s `GPL-2.0-only`. They have a “GPLv2 exception list”
+      # (<https://github.com/wolfSSL/wolfssl/blob/v5.9.1-stable/LICENSING>),
+      # but this is dubious; either the exception likely negates the
+      # licence change by letting you take wolfSSL out of a
+      # `GPL-2.0-only` combination and redistribute it under those
+      # terms, negating the licence change entirely, or else it doesn’t
+      # allow distribution of the combination under the `GPL-2.0-only`
+      # at all and therefore would still constitute a licence
+      # violation to redistribute.
+      #
+      # We use `lib.licenses.unfree` to represent this awkward
+      # situation and keep Hydra from building the package.
+      lib.licenses.gpl3Plus
+      lib.licenses.unfree
+    ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
     mainProgram = "rpcs3";
   };
-}
+})

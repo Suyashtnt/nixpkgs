@@ -7,33 +7,34 @@
   pkg-config,
   wrapQtAppsHook,
   nix-update-script,
+  grim,
   hyprland,
   hyprland-protocols,
   hyprlang,
   hyprutils,
   hyprwayland-scanner,
   libdrm,
-  mesa,
+  libgbm,
   pipewire,
   qtbase,
   qttools,
   qtwayland,
-  sdbus-cpp,
+  sdbus-cpp_2,
   slurp,
-  systemd,
   wayland,
   wayland-protocols,
   wayland-scanner,
+  debug ? false,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "xdg-desktop-portal-hyprland";
-  version = "1.3.5";
+  version = "1.4.1";
 
   src = fetchFromGitHub {
     owner = "hyprwm";
     repo = "xdg-desktop-portal-hyprland";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-xTqnMoJsEojuvqJLuM+U7EZ7q71efaj3pbvjutq4TXc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-sRAGZVUPgwxpx19uZwaSERa86g1AbsBUQ3SxhaRPgeg=";
   };
 
   depsBuildBuild = [
@@ -53,17 +54,21 @@ stdenv.mkDerivation (finalAttrs: {
     hyprlang
     hyprutils
     libdrm
-    mesa
+    libgbm
     pipewire
     qtbase
     qttools
     qtwayland
-    sdbus-cpp
-    systemd
+    sdbus-cpp_2
     wayland
     wayland-protocols
     wayland-scanner
   ];
+
+  cmakeBuildType = if debug then "Debug" else "RelWithDebInfo";
+
+  dontStrip = debug;
+  separateDebugInfo = !debug;
 
   dontWrapQtApps = true;
 
@@ -78,7 +83,12 @@ stdenv.mkDerivation (finalAttrs: {
       }
 
     wrapProgramShell $out/libexec/xdg-desktop-portal-hyprland \
-      --prefix PATH ":" ${lib.makeBinPath [ (placeholder "out") ]}
+      --prefix PATH ":" ${
+        lib.makeBinPath [
+          (placeholder "out")
+          grim
+        ]
+      }
   '';
 
   passthru = {
@@ -91,7 +101,7 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://github.com/hyprwm/xdg-desktop-portal-hyprland/releases/tag/v${finalAttrs.version}";
     mainProgram = "hyprland-share-picker";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ fufexan ];
+    teams = [ lib.teams.hyprland ];
     platforms = lib.platforms.linux;
   };
 })

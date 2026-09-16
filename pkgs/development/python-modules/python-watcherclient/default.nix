@@ -10,7 +10,6 @@
   oslo-serialization,
   oslo-utils,
   pbr,
-  pythonOlder,
   setuptools,
   sphinxcontrib-apidoc,
   sphinxHook,
@@ -19,16 +18,14 @@
 
 buildPythonPackage rec {
   pname = "python-watcherclient";
-  version = "4.4.0";
+  version = "4.10.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "openstack";
     repo = "python-watcherclient";
-    rev = "refs/tags/${version}";
-    hash = "sha256-lDdiZKaeteKZEyfjpBx8KY+0FLFOYAnQXl0pTbqq0Ss=";
+    tag = version;
+    hash = "sha256-TYMV55uvTCvHKj5w5QA2zRqVr6pXCXh2Oc07Yo7epjs=";
   };
 
   env.PBR_VERSION = version;
@@ -66,10 +63,10 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "watcherclient" ];
 
   meta = {
-    homepage = "https://opendev.org/openstack/python-watcherclient";
+    homepage = "https://github.com/openstack/python-watcherclient";
     description = "Client library for OpenStack Watcher API";
     license = lib.licenses.asl20;
     mainProgram = "watcher";
-    maintainers = lib.teams.openstack.members;
+    teams = [ lib.teams.openstack ];
   };
 }

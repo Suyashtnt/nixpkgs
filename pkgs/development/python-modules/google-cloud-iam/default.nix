@@ -1,33 +1,47 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
+  gitUpdater,
   google-api-core,
+  google-auth,
+  grpc-google-iam-v1,
   libcst,
   mock,
   proto-plus,
+  protobuf,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-iam";
-  version = "2.15.0";
-  format = "setuptools";
+  version = "2.24.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-6TgaGCPlFi9owoBI/xowe6Og5Tja9getfUHP47dWpvA=";
+  src = fetchFromGitHub {
+    owner = "googleapis";
+    repo = "google-cloud-python";
+    tag = "google-cloud-iam-v${version}";
+    hash = "sha256-ywRS1BfK6s+gcU8QRem0cSnfZq4BUQ2ABNcgnOa01LI=";
   };
 
-  propagatedBuildInputs = [
+  sourceRoot = "${src.name}/packages/google-cloud-iam";
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     google-api-core
+    google-auth
+    grpc-google-iam-v1
     libcst
     proto-plus
-  ] ++ google-api-core.optional-dependencies.grpc;
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  pythonRelaxDeps = [ "protobuf" ];
 
   nativeCheckInputs = [
     mock
@@ -45,11 +59,22 @@ buildPythonPackage rec {
     "google.cloud.iam_credentials_v1"
   ];
 
-  meta = with lib; {
+  passthru = {
+    # bulk updater selects wrong tag
+    skipBulkUpdate = true;
+    updateScript = gitUpdater {
+      rev-prefix = "google-cloud-iam-v";
+    };
+  };
+
+  meta = {
     description = "IAM Service Account Credentials API client library";
-    homepage = "https://github.com/googleapis/python-iam";
-    changelog = "https://github.com/googleapis/python-iam/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ austinbutler ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-iam";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/${src.tag}/packages/google-cloud-iam/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      austinbutler
+      sarahec
+    ];
   };
 }

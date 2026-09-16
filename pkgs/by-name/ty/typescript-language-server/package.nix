@@ -1,38 +1,39 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchYarnDeps
-, fixup-yarn-lock
-, makeWrapper
-, nodejs
-, prefetch-yarn-deps
-, substituteAll
-, yarn
-, testers
-, typescript
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  fixup-yarn-lock,
+  makeWrapper,
+  nodejs,
+  prefetch-yarn-deps,
+  replaceVars,
+  yarn,
+  testers,
+  typescript_5,
+  nix-update-script,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "typescript-language-server";
-  version = "4.3.3";
+  version = "5.3.0";
 
   src = fetchFromGitHub {
     owner = "typescript-language-server";
     repo = "typescript-language-server";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-FCv0+tA7AuCdGeG6FEiMyRAHcl0WbezhNYLL7xp5FWU=";
+    hash = "sha256-9xK1maMfWowWlzAtmwoR3CVqQCkUf6i9uBWVsobBQPA=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./default-fallbackTsserverPath.diff;
-      typescript = "${typescript}/lib/node_modules/typescript/lib/tsserver.js";
+    (replaceVars ./default-fallbackTsserverPath.diff {
+      typescript = "${typescript_5}/lib/node_modules/typescript/lib/tsserver.js";
     })
   ];
 
   offlineCache = fetchYarnDeps {
     yarnLock = "${finalAttrs.src}/yarn.lock";
-    hash = "sha256-nSMhPfbWD93sGIKehBBE/bh4RzHXFtGAjeyG20m/LWQ=";
+    hash = "sha256-68aXoafE/wc1iS7HHwF7g/i8ZREoTj4bV/RL3XYc0Rs=";
   };
 
   nativeBuildInputs = [
@@ -77,17 +78,21 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru.tests = {
-    version = testers.testVersion {
+  passthru = {
+    tests.version = testers.testVersion {
       package = finalAttrs.finalPackage;
     };
+    updateScript = nix-update-script { };
   };
 
   meta = {
     changelog = "https://github.com/typescript-language-server/typescript-language-server/releases/tag/v${finalAttrs.version}";
     description = "Language Server Protocol implementation for TypeScript using tsserver";
     homepage = "https://github.com/typescript-language-server/typescript-language-server";
-    license = with lib.licenses; [ asl20 mit ];
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
     mainProgram = "typescript-language-server";
     maintainers = with lib.maintainers; [ marcel ];
   };

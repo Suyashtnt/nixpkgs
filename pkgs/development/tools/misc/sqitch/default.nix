@@ -1,18 +1,22 @@
-{ stdenv
-, lib
-, perlPackages
-, makeWrapper
-, shortenPerlShebang
-, mysqlSupport ? false
-, postgresqlSupport ? false
-, templateToolkitSupport ? false
+{
+  stdenv,
+  lib,
+  perlPackages,
+  makeWrapper,
+  mysqlSupport ? false,
+  postgresqlSupport ? false,
+  sqliteSupport ? false,
+  templateToolkitSupport ? false,
 }:
 
 let
   sqitch = perlPackages.AppSqitch;
-  modules = with perlPackages; [ AlgorithmBackoff ]
+  modules =
+    with perlPackages;
+    [ AlgorithmBackoff ]
     ++ lib.optional mysqlSupport DBDmysql
     ++ lib.optional postgresqlSupport DBDPg
+    ++ lib.optional sqliteSupport DBDSQLite
     ++ lib.optional templateToolkitSupport TemplateToolkit;
 in
 
@@ -20,7 +24,7 @@ stdenv.mkDerivation {
   pname = "sqitch";
   version = sqitch.version;
 
-  nativeBuildInputs = [ makeWrapper ] ++ lib.optional stdenv.hostPlatform.isDarwin shortenPerlShebang;
+  nativeBuildInputs = [ makeWrapper ];
 
   src = sqitch;
   dontBuild = true;
@@ -34,8 +38,6 @@ stdenv.mkDerivation {
         ln -s ${sqitch}/$d $out/$d
       fi
     done
-  '' + lib.optionalString stdenv.hostPlatform.isDarwin ''
-    shortenPerlShebang $out/bin/sqitch
   '';
   dontStrip = true;
   postFixup = ''
@@ -43,7 +45,12 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    inherit (sqitch.meta) description homepage license platforms;
+    inherit (sqitch.meta)
+      description
+      homepage
+      license
+      platforms
+      ;
     mainProgram = "sqitch";
   };
 }

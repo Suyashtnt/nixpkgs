@@ -1,27 +1,35 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, autoconf
-, automake
-, libtool
-, gnutls
-, libmicrohttpd
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  autoconf,
+  automake,
+  libtool,
+  gnutls,
+  libmicrohttpd,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "libhttpserver";
   version = "0.19.0";
 
   src = fetchFromGitHub {
     owner = "etr";
-    repo = pname;
-    rev = version;
+    repo = "libhttpserver";
+    rev = finalAttrs.version;
     hash = "sha256-Pc3Fvd8D4Ymp7dG9YgU58mDceOqNfhWE1JtnpVaNx/Y=";
   };
 
-  nativeBuildInputs = [ autoconf automake libtool ];
+  nativeBuildInputs = [
+    autoconf
+    automake
+    libtool
+  ];
 
-  buildInputs = [ gnutls libmicrohttpd ];
+  buildInputs = [
+    gnutls
+    libmicrohttpd
+  ];
 
   enableParallelBuilding = true;
 
@@ -35,12 +43,12 @@ stdenv.mkDerivation rec {
 
   configureFlags = [ "--enable-same-directory-build" ];
 
-  meta = with lib; {
+  meta = {
     description = "C++ library for creating an embedded Rest HTTP server (and more)";
     homepage = "https://github.com/etr/libhttpserver";
-    license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ pongo1231 ];
-    platforms = platforms.unix;
+    license = lib.licenses.lgpl21Plus;
+    maintainers = with lib.maintainers; [ pongo1231 ];
+    platforms = lib.platforms.unix;
     broken = stdenv.hostPlatform.isDarwin; # configure: error: cannot find required auxiliary files: ltmain.sh
   };
-}
+})

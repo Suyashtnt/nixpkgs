@@ -1,33 +1,31 @@
-{ lib, stdenv, buildNpmPackage, fetchFromGitHub, cacert }:
+{
+  lib,
+  buildNpmPackage,
+  fetchFromGitHub,
+  nodejs_22,
+}:
 
 buildNpmPackage rec {
   pname = "inshellisense";
-  version = "0.0.1-rc.16";
+  version = "0.0.4";
 
   src = fetchFromGitHub {
     owner = "microsoft";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-jqLYN251ZvLOjYsSQJmvQ1TupO4jz3Q23aDpKX+Puvs=";
+    repo = "inshellisense";
+    tag = version;
+    hash = "sha256-5gVFP1AFFP4o9MNUqkRtgrTkKuMb37CU/c8TcrwZkRY=";
   };
 
-  npmDepsHash = "sha256-rGUyA0RLnNZ6ocmHPXfBLJ6ZmeeTN9w+TJTtfTQQ24M=";
+  # Building against nodejs-24 is not yet supported by upstream.
+  # https://github.com/microsoft/inshellisense/issues/369
+  nodejs = nodejs_22;
 
-  # Needed for dependency `@homebridge/node-pty-prebuilt-multiarch`
-  # On Darwin systems the build fails with,
-  #
-  # npm ERR! ../src/unix/pty.cc:413:13: error: use of undeclared identifier 'openpty'
-  # npm ERR!   int ret = openpty(&master, &slave, nullptr, NULL, static_cast<winsi ze*>(&winp));
-  #
-  # when `node-gyp` tries to build the dep. The below allows `npm` to download the prebuilt binary.
-  makeCacheWritable = stdenv.hostPlatform.isDarwin;
-  nativeBuildInputs = lib.optional stdenv.hostPlatform.isDarwin cacert;
+  npmDepsHash = "sha256-JP9m624XxR6M18+jSWEh/E8WxIUjHnPN1eKW4iqUmSc=";
 
-  meta = with lib; {
+  meta = {
     description = "IDE style command line auto complete";
     homepage = "https://github.com/microsoft/inshellisense";
-    license = licenses.mit;
-    maintainers = [ maintainers.malo ];
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.malo ];
   };
 }
-

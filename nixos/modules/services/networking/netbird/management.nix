@@ -48,7 +48,7 @@ let
       Turns = [
         {
           Proto = "udp";
-          URI = "turn:${cfg.turnDomain}:${builtins.toString cfg.turnPort}";
+          URI = "turn:${cfg.turnDomain}:${toString cfg.turnPort}";
           Username = "netbird";
           Password = "netbird";
         }
@@ -79,7 +79,7 @@ let
     };
 
     HttpConfig = {
-      Address = "127.0.0.1:${builtins.toString cfg.port}";
+      Address = "127.0.0.1:${toString cfg.port}";
       IdpSignKeyRefreshEnabled = true;
       OIDCConfigEndpoint = cfg.oidcConfigEndpoint;
     };
@@ -139,7 +139,7 @@ in
   options.services.netbird.server.management = {
     enable = mkEnableOption "Netbird Management Service";
 
-    package = mkPackageOption pkgs "netbird" { };
+    package = mkPackageOption pkgs "netbird-management" { };
 
     domain = mkOption {
       type = str;
@@ -194,6 +194,12 @@ in
       type = port;
       default = 8011;
       description = "Internal port of the management server.";
+    };
+
+    metricsPort = mkOption {
+      type = port;
+      default = 9090;
+      description = "Internal port of the metrics server.";
     };
 
     extraOptions = mkOption {
@@ -257,7 +263,7 @@ in
           StoreConfig = { Engine = "sqlite"; };
 
           HttpConfig = {
-            Address = "127.0.0.1:''${builtins.toString cfg.port}";
+            Address = "127.0.0.1:''${toString cfg.port}";
             IdpSignKeyRefreshEnabled = true;
             OIDCConfigEndpoint = cfg.oidcConfigEndpoint;
           };
@@ -360,6 +366,13 @@ in
           }
         ];
 
+    assertions = [
+      {
+        assertion = cfg.port != cfg.metricsPort;
+        message = "The primary listen port cannot be the same as the listen port for the metrics endpoint";
+      }
+    ];
+
     systemd.services.netbird-management = {
       description = "The management server for Netbird, a wireguard VPN";
       documentation = [ "https://netbird.io/docs/" ];
@@ -387,6 +400,9 @@ in
             # Port to listen on
             "--port"
             cfg.port
+            # Port the internal prometheus server listens on
+            "--metrics-port"
+            cfg.metricsPort
             # Log to stdout
             "--log-file"
             "console"
@@ -409,6 +425,8 @@ in
           "netbird-mgmt"
           "netbird-mgmt/data"
         ];
+        StateDirectoryMode = "0750";
+        RuntimeDirectoryMode = "0750";
         WorkingDirectory = stateDir;
 
         # hardening
@@ -439,7 +457,7 @@ in
 
       virtualHosts.${cfg.domain} = {
         locations = {
-          "/api".proxyPass = "http://localhost:${builtins.toString cfg.port}";
+          "/api".proxyPass = "http://localhost:${toString cfg.port}";
 
           "/management.ManagementService/".extraConfig = ''
             # This is necessary so that grpc connections do not get closed early
@@ -448,7 +466,7 @@ in
 
             grpc_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-            grpc_pass grpc://localhost:${builtins.toString cfg.port};
+            grpc_pass grpc://localhost:${toString cfg.port};
             grpc_read_timeout 1d;
             grpc_send_timeout 1d;
             grpc_socket_keepalive on;

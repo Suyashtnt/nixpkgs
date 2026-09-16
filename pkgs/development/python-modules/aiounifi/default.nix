@@ -5,8 +5,10 @@
   buildPythonPackage,
   fetchFromGitHub,
   orjson,
+  pyotp,
   pytest-aiohttp,
   pytest-asyncio,
+  pytest-cov-stub,
   pytestCheckHook,
   pythonOlder,
   segno,
@@ -14,26 +16,24 @@
   trustme,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiounifi";
-  version = "80";
+  version = "95";
   pyproject = true;
 
-  disabled = pythonOlder "3.11";
+  disabled = pythonOlder "3.13";
 
   src = fetchFromGitHub {
     owner = "Kane610";
     repo = "aiounifi";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-320ptaKT+6mKUj9y+MvGovp4/XVbYIlDTb9lLXY7c1w=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-fnD2y/eG+47o3c8MeCw67qq2/+WCcSmQzprrvenTdGY=";
   };
 
   postPatch = ''
     substituteInPlace pyproject.toml \
-      --replace-fail "setuptools==" "setuptools>=" \
-      --replace-fail "wheel==" "wheel>="
-
-    sed -i '/--cov=/d' pyproject.toml
+      --replace-fail "setuptools==84.0.0" "setuptools" \
+      --replace-fail "wheel==0.48.0" "wheel"
   '';
 
   build-system = [ setuptools ];
@@ -41,6 +41,7 @@ buildPythonPackage rec {
   dependencies = [
     aiohttp
     orjson
+    pyotp
     segno
   ];
 
@@ -48,20 +49,19 @@ buildPythonPackage rec {
     aioresponses
     pytest-aiohttp
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
     trustme
   ];
 
-  pytestFlagsArray = [ "--asyncio-mode=auto" ];
-
   pythonImportsCheck = [ "aiounifi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for communicating with Unifi Controller API";
     homepage = "https://github.com/Kane610/aiounifi";
-    changelog = "https://github.com/Kane610/aiounifi/releases/tag/v${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/Kane610/aiounifi/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
     maintainers = [ ];
     mainProgram = "aiounifi";
   };
-}
+})

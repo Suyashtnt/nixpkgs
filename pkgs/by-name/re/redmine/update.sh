@@ -15,6 +15,10 @@ for file in "gemset.nix" "Gemfile.lock"; do
 done
 
 bundle lock --add-platform ruby
+bundle lock --remove-platform mingw
+bundle lock --remove-platform x64_mingw
+bundle lock --remove-platform mswin
+bundle lock --remove-platform windows
 bundle lock --remove-platform aarch64-linux
 bundle lock --remove-platform aarch64-linux-gnu
 bundle lock --remove-platform aarch64-linux-musl
@@ -26,6 +30,7 @@ bundle lock --remove-platform x86-linux
 bundle lock --remove-platform x86-linux-gnu
 bundle lock --remove-platform x86-linux-musl
 bundle lock --remove-platform x86_64-darwin
+bundle lock --remove-platform x86_64-linux
 bundle lock --remove-platform x86_64-linux-gnu
 bundle lock --remove-platform x86_64-linux-musl
 bundix -l

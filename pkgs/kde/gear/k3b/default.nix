@@ -19,7 +19,6 @@
   libdvdcss,
   normalize,
   sox,
-  transcode,
   vcdimager,
 }:
 mkKdeDerivation {
@@ -43,7 +42,7 @@ mkKdeDerivation {
   ];
 
   qtWrapperArgs = [
-    "--prefix PATH : ${
+    "--prefix PATH : /run/wrappers/bin:${
       lib.makeBinPath [
         cdrdao
         cdrtools
@@ -51,7 +50,6 @@ mkKdeDerivation {
         libburn
         normalize
         sox
-        transcode
         vcdimager
         flac
       ]

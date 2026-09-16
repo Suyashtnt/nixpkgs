@@ -3,40 +3,86 @@
   lib,
   fetchurl,
   unzip,
-  nix-update-script,
+  installShellFiles,
+  versionCheckHook,
+  runCommand,
 }:
-stdenvNoCC.mkDerivation rec {
+let
+  sources = lib.importJSON ./sources.json;
+  platform =
+    sources.platforms.${stdenvNoCC.hostPlatform.system}
+      or (throw "Unsupported platform: ${stdenvNoCC.hostPlatform.system}");
+in
+stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "swiftlint";
-  version = "0.57.0";
+  inherit (sources) version;
 
   src = fetchurl {
-    url = "https://github.com/realm/SwiftLint/releases/download/${version}/portable_swiftlint.zip";
-    hash = "sha256-m1+5hPze016ryyoQrs8CCbcLjWY3ONMn4Zgh6sReuBA=";
+    url = "https://github.com/realm/SwiftLint/releases/download/${finalAttrs.version}/${platform.filename}";
+    inherit (platform) hash;
   };
 
   dontPatch = true;
   dontConfigure = true;
   dontBuild = true;
 
-  nativeBuildInputs = [ unzip ];
+  nativeBuildInputs = [
+    unzip
+    installShellFiles
+  ];
 
   sourceRoot = ".";
 
-  installPhase = ''
-    runHook preInstall
-    install -Dm755 swiftlint $out/bin/swiftlint
-    runHook postInstall
+  installPhase =
+    let
+      binary = if stdenvNoCC.hostPlatform.isLinux then "swiftlint-static" else "swiftlint";
+    in
+    ''
+      runHook preInstall
+      install -Dm755 ${binary} $out/bin/swiftlint
+      runHook postInstall
+    '';
+
+  postInstall = lib.optionalString (stdenvNoCC.buildPlatform.canExecute stdenvNoCC.hostPlatform) ''
+    installShellCompletion --cmd swiftlint \
+      --bash <($out/bin/swiftlint --generate-completion-script bash) \
+      --fish <($out/bin/swiftlint --generate-completion-script fish) \
+      --zsh <($out/bin/swiftlint --generate-completion-script zsh)
   '';
 
-  passthru.updateScript = nix-update-script { };
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
 
-  meta = with lib; {
-    description = "A tool to enforce Swift style and conventions";
-    homepage = "https://realm.github.io/SwiftLint/";
-    license = licenses.mit;
-    mainProgram = "swiftlint";
-    maintainers = with maintainers; [ matteopacini ];
-    platforms = platforms.darwin;
-    sourceProvenance = with sourceTypes; [ binaryNativeCode ];
+  passthru = {
+    updateScript = ./update.sh;
+    tests = {
+      lint =
+        runCommand "swiftlint-test-lint"
+          {
+            nativeBuildInputs = [ finalAttrs.finalPackage ];
+          }
+          ''
+            printf "class test{}\n\nvar a = 1" > test.swift
+            swiftlint lint ${lib.optionalString stdenvNoCC.hostPlatform.isDarwin "--disable-sourcekit"} test.swift > output.txt 2>&1 || true
+            grep -q "identifier_name" output.txt
+            grep -q "opening_brace" output.txt
+            grep -q "trailing_newline" output.txt
+            grep -q "type_name" output.txt
+            touch $out
+          '';
+    };
   };
-}
+
+  meta = {
+    description = "Tool to enforce Swift style and conventions";
+    homepage = "https://realm.github.io/SwiftLint/";
+    license = lib.licenses.mit;
+    mainProgram = "swiftlint";
+    maintainers = with lib.maintainers; [
+      matteopacini
+      DimitarNestorov
+    ];
+    platforms = lib.attrNames sources.platforms;
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+  };
+})

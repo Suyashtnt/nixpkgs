@@ -1,11 +1,11 @@
-{ lib
-, buildPythonPackage
-, django
-, django-redis
-, fetchFromGitHub
-, pymemcache
-, pythonOlder
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  django,
+  django-redis,
+  fetchFromGitHub,
+  pymemcache,
+  setuptools,
 }:
 
 buildPythonPackage rec {
@@ -13,12 +13,10 @@ buildPythonPackage rec {
   version = "4.1.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "jsocol";
     repo = "django-ratelimit";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-ZMtZSKOIIRSqH6eyC7bBeua7YLKyWW6NOXN/MDv9fy4=";
   };
 
@@ -45,12 +43,11 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-
-  meta = with lib; {
+  meta = {
     description = "Cache-based rate-limiting for Django";
     homepage = "https://github.com/jsocol/django-ratelimit";
     changelog = "https://github.com/jsocol/django-ratelimit/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ derdennisop ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ derdennisop ];
   };
 }

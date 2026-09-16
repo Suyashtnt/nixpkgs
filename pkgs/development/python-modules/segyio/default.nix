@@ -11,18 +11,10 @@
 
 buildPythonPackage rec {
   pname = "segyio";
-  version = "1.9.12";
+  version = "1.9.14";
   pyproject = false; # Built with cmake
 
-  patches = [
-    # https://github.com/equinor/segyio/pull/570
-    ./add_missing_cstdint.patch
-  ];
-
   postPatch = ''
-    # Removing unecessary build dependency
-    substituteInPlace python/setup.py --replace "'pytest-runner'," ""
-
     # Fixing bug making one test fail in the python 3.10 build
     substituteInPlace python/segyio/open.py --replace \
     "cube_metrics = f.xfd.cube_metrics(iline, xline)" \
@@ -31,9 +23,9 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     owner = "equinor";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-+N2JvHBxpdbysn4noY/9LZ4npoQ9143iFEzaxoafnms=";
+    repo = "segyio";
+    tag = "v${version}";
+    hash = "sha256-Gprxxz4wUDrThCghW1Z1dHTjeJCrcDxuwguVC+i+ydc=";
   };
 
   nativeBuildInputs = [
@@ -42,7 +34,6 @@ buildPythonPackage rec {
     scikit-build
   ];
 
-  doCheck = true;
   # I'm not modifying the checkPhase nor adding a pytestCheckHook because the pytest is called
   # within the cmake test phase
   nativeCheckInputs = [
@@ -50,10 +41,10 @@ buildPythonPackage rec {
     numpy
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Fast Python library for SEGY files";
     homepage = "https://github.com/equinor/segyio";
-    license = licenses.lgpl3Only;
-    maintainers = with maintainers; [ atila ];
+    license = lib.licenses.lgpl3Only;
+    maintainers = [ ];
   };
 }

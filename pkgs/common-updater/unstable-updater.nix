@@ -1,9 +1,10 @@
-{ lib
-, writeShellApplication
-, coreutils
-, git
-, nix
-, common-updater-scripts
+{
+  lib,
+  writeShellApplication,
+  coreutils,
+  git,
+  nix,
+  common-updater-scripts,
 }:
 
 # This is an updater for unstable packages that should always use the latest
@@ -12,16 +13,19 @@
 # passthru.updateScript = unstableGitUpdater { };
 # relevant attributes can be passed as below:
 
-{ url ? null # The git url, if empty it will be set to src.gitRepoUrl
-, branch ? null
-, hardcodeZeroVersion ? false # Use a made-up version "0" instead of latest tag. Use when the project's tagging system is incompatible with what we expect from versions
-, tagFormat ? "*" # A `git describe --tags --match '<format>'` pattern that tags must match to be considered
-, tagPrefix ? null # strip this prefix from a tag name
-, tagConverter ? null # A command to convert more complex tag formats. It receives the git tag via stdin and should convert it into x.y.z format to stdout
-, shallowClone ? true
+{
+  url ? null, # The git url, if empty it will be set to src.gitRepoUrl
+  branch ? null,
+  hardcodeZeroVersion ? false, # Use a made-up version "0" instead of latest tag. Use when the project's tagging system is incompatible with what we expect from versions
+  tagFormat ? "*", # A `git describe --tags --match '<format>'` pattern that tags must match to be considered
+  tagPrefix ? null, # strip this prefix from a tag name
+  tagConverter ? null, # A command to convert more complex tag formats. It receives the git tag via stdin and should convert it into x.y.z format to stdout
+  shallowClone ? true,
 }:
 
-assert lib.asserts.assertMsg (tagPrefix == null || tagConverter == null) "Can only use either tagPrefix or tagConverter!";
+assert lib.asserts.assertMsg (
+  tagPrefix == null || tagConverter == null
+) "Can only use either tagPrefix or tagConverter!";
 
 let
   updateScript = writeShellApplication {
@@ -103,7 +107,7 @@ let
           git describe --tags --abbrev=0 --match "''${tag_format}" 2> /dev/null || true
       }
 
-      pushd "$tmpdir"
+      pushd "$tmpdir" >&2
       commit_date="$(git show -s --pretty='format:%cs')"
       commit_sha="$(git show -s --pretty='format:%H')"
       last_tag=""
@@ -131,11 +135,11 @@ let
               last_tag="0"
           fi
           if [[ -n "$tag_prefix" ]]; then
-              echo "Stripping prefix '$tag_prefix' from tag '$last_tag'"
+              echo "Stripping prefix '$tag_prefix' from tag '$last_tag'" >&2
               last_tag="''${last_tag#"''${tag_prefix}"}"
           fi
           if [[ -n "$tag_converter" ]]; then
-              echo "Running '$last_tag' through: $tag_converter"
+              echo "Running '$last_tag' through: $tag_converter" >&2
               last_tag="$(echo "''${last_tag}" | ''${tag_converter})"
           fi
       else
@@ -146,30 +150,36 @@ let
           exit 1
       fi
       new_version="$last_tag-unstable-$commit_date"
-      popd
+      popd >&2
       # rm -rf "$tmpdir"
 
       # update the nix expression
       update-source-version \
           "$UPDATE_NIX_ATTR_PATH" \
           "$new_version" \
-          --rev="$commit_sha"
+          --rev="$commit_sha" \
+          --print-changes
     '';
   };
 
 in
 [
   (lib.getExe updateScript)
-  "--url=${builtins.toString url}"
+  "--url=${toString url}"
   "--tag-format=${tagFormat}"
-] ++ lib.optionals (branch != null) [
+]
+++ lib.optionals (branch != null) [
   "--branch=${branch}"
-] ++ lib.optionals (tagPrefix != null) [
+]
+++ lib.optionals (tagPrefix != null) [
   "--tag-prefix=${tagPrefix}"
-] ++ lib.optionals (tagConverter != null) [
+]
+++ lib.optionals (tagConverter != null) [
   "--tag-converter=${tagConverter}"
-] ++ lib.optionals hardcodeZeroVersion [
+]
+++ lib.optionals hardcodeZeroVersion [
   "--hardcode-zero-version"
-] ++ lib.optionals shallowClone [
+]
+++ lib.optionals shallowClone [
   "--shallow-clone"
 ]

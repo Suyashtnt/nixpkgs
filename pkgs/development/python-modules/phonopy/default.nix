@@ -1,42 +1,75 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
+
+  # build-system
+  cmake,
+  nanobind,
+  ninja,
   numpy,
-  pyyaml,
-  matplotlib,
+  scikit-build-core,
+  setuptools-scm,
+
+  # dependencies
   h5py,
+  matplotlib,
+  phonors,
+  pyyaml,
   scipy,
   spglib,
+  symfc,
+
   pytestCheckHook,
-  pythonOlder,
-  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "phonopy";
-  version = "2.24.3";
+  version = "4.4.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-VHtifCC28GKIE+0oz1wMgmZ9G6+rT8nF0PG6tYkhjG8=";
+  src = fetchFromGitHub {
+    owner = "phonopy";
+    repo = "phonopy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-w31B4/o/lo/0LIfrn7DR2cJ2OY6Pfe4zAMgcQfJ2q1g=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "nanobind<2.10.0" "nanobind"
+  '';
 
-  propagatedBuildInputs = [
+  build-system = [
+    cmake
+    nanobind
+    ninja
+    numpy
+    scikit-build-core
+    setuptools-scm
+  ];
+  dontUseCmakeConfigure = true;
+
+  dependencies = [
     h5py
     matplotlib
     numpy
     pyyaml
+    phonors
     scipy
     spglib
+    symfc
   ];
 
   nativeCheckInputs = [ pytestCheckHook ];
+
+  env = lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+    # Prevents 'Fatal Python error: Aborted' on darwin during checkPhase
+    MPLBACKEND = "Agg";
+  };
 
   # prevent pytest from importing local directory
   preCheck = ''
@@ -45,11 +78,14 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "phonopy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Modulefor phonon calculations at harmonic and quasi-harmonic levels";
     homepage = "https://phonopy.github.io/phonopy/";
-    changelog = "https://github.com/phonopy/phonopy/blob/v${version}/doc/changelog.md";
-    license = licenses.bsd0;
-    maintainers = with maintainers; [ psyanticy ];
+    changelog = "http://phonopy.github.io/phonopy/changelog.html";
+    license = lib.licenses.bsd0;
+    maintainers = with lib.maintainers; [
+      psyanticy
+      chn
+    ];
   };
-}
+})

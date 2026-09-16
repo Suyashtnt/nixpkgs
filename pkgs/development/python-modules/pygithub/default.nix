@@ -6,7 +6,6 @@
   pynacl,
   typing-extensions,
   pyjwt,
-  pythonOlder,
   requests,
   setuptools,
   setuptools-scm,
@@ -15,16 +14,14 @@
 
 buildPythonPackage rec {
   pname = "pygithub";
-  version = "2.4.0";
+  version = "2.8.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "PyGithub";
     repo = "PyGithub";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-VM3xxLa4MlR3vTpeOunsq4/bxZhuKXNKFZbFVul1cMw=";
+    tag = "v${version}";
+    hash = "sha256-36taxa95WrpQw0UUlmnWX4XFslAAuuoousxNh5O5uDA=";
   };
 
   build-system = [
@@ -39,18 +36,19 @@ buildPythonPackage rec {
     requests
     typing-extensions
     urllib3
-  ] ++ pyjwt.optional-dependencies.crypto;
+  ]
+  ++ pyjwt.optional-dependencies.crypto;
 
   # Test suite makes REST calls against github.com
   doCheck = false;
 
   pythonImportsCheck = [ "github" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to access the GitHub API v3";
     homepage = "https://github.com/PyGithub/PyGithub";
-    changelog = "https://github.com/PyGithub/PyGithub/raw/v${version}/doc/changes.rst";
-    license = licenses.lgpl3Plus;
+    changelog = "https://github.com/PyGithub/PyGithub/raw/${src.tag}/doc/changes.rst";
+    license = lib.licenses.lgpl3Plus;
     maintainers = [ ];
   };
 }

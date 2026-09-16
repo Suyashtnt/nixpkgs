@@ -1,37 +1,52 @@
 {
   lib,
   buildPythonPackage,
-  fetchFromGitHub,
-  setuptools-scm,
-  pytestCheckHook,
-  typing-extensions,
-  qtpy,
-  pyside2,
-  psygnal,
   docstring-parser,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
   napari, # a reverse-dependency, for tests
+  psygnal,
+  pyside2,
+  pyside6,
+  pyqt6,
+  pyqt5,
+  pytestCheckHook,
+  superqt,
+  typing-extensions,
 }:
+
 buildPythonPackage rec {
   pname = "magicgui";
-  version = "0.5.1";
-
-  format = "pyproject";
+  version = "0.10.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "napari";
+    owner = "pyapp-kit";
     repo = "magicgui";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-fVfBQaaT8/lUGqZRXjOPgvkC01Izb8Sxqn7RCqnW9bo=";
+    tag = "v${version}";
+    hash = "sha256-5etnug947C+Ewk1QLxsxEeaSa9djIlM/PGdNnJZiND8=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  propagatedBuildInputs = [
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
+
+  dependencies = [
     typing-extensions
-    qtpy
-    pyside2
+    superqt
     psygnal
     docstring-parser
   ];
+
+  optional-dependencies = {
+    pyside2 = [ pyside2 ];
+    pyside6 = [ pyside6 ];
+    pyqt6 = [ pyqt6 ];
+    pyqt5 = [ pyqt5 ];
+  };
+
   nativeCheckInputs = [ pytestCheckHook ];
 
   doCheck = false; # Reports "Fatal Python error"
@@ -40,10 +55,11 @@ buildPythonPackage rec {
     inherit napari;
   };
 
-  meta = with lib; {
+  meta = {
     description = "Build GUIs from python functions, using magic.  (napari/magicgui)";
-    homepage = "https://github.com/napari/magicgui";
-    license = licenses.mit;
-    maintainers = with maintainers; [ SomeoneSerge ];
+    homepage = "https://github.com/pyapp-kit/magicgui";
+    changelog = "https://github.com/pyapp-kit/magicgui/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ SomeoneSerge ];
   };
 }

@@ -1,27 +1,28 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, gitUpdater
-, kwindowsystem
-, libXScrnSaver
-, libqtxdg
-, lxqt-build-tools
-, polkit-qt-1
-, qtsvg
-, qttools
-, wrapQtAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  gitUpdater,
+  kwindowsystem,
+  libxscrnsaver,
+  libqtxdg,
+  lxqt-build-tools,
+  polkit-qt-1,
+  qtsvg,
+  qttools,
+  wrapQtAppsHook,
 }:
 
 stdenv.mkDerivation rec {
   pname = "liblxqt";
-  version = "2.0.0";
+  version = "2.4.0";
 
   src = fetchFromGitHub {
     owner = "lxqt";
-    repo = pname;
+    repo = "liblxqt";
     rev = version;
-    hash = "sha256-ClAmREsPBb7i7T2aGgf0h3rk1ohUvWQvmSnrlprHzds=";
+    hash = "sha256-kGKgKpgiK40933O3T/astH0X1Y4oIH6kEKjjMBh43MA=";
   };
 
   nativeBuildInputs = [
@@ -33,7 +34,7 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     kwindowsystem
-    libXScrnSaver
+    libxscrnsaver
     libqtxdg
     polkit-qt-1
     qtsvg
@@ -52,12 +53,12 @@ stdenv.mkDerivation rec {
 
   passthru.updateScript = gitUpdater { };
 
-  meta = with lib; {
+  meta = {
     description = "Core utility library for all LXQt components";
     mainProgram = "lxqt-backlight_backend";
     homepage = "https://github.com/lxqt/liblxqt";
-    license = licenses.lgpl21Plus;
-    platforms = platforms.linux;
-    maintainers = teams.lxqt.members;
+    license = lib.licenses.lgpl21Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.lxqt ];
   };
 }

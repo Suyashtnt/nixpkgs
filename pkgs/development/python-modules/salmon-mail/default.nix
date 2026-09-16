@@ -19,9 +19,14 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "moggers87";
     repo = "salmon";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-ysBO/ridfy7YPoTsVwAxar9UvfM/qxrx2dp0EtDNLvE=";
   };
+
+  patches = [
+    # Fix test_main expecting exit code 0 from click group with no args (click 8.2 returns 2).
+    ./test-main-click-8.2-exit-code.patch
+  ];
 
   nativeCheckInputs = [
     jinja2
@@ -52,12 +57,12 @@ buildPythonPackage rec {
     export PATH=$out/bin:$PATH
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://salmon-mail.readthedocs.org/";
     changelog = "https://github.com/moggers87/salmon/blob/${src.rev}/CHANGELOG.rst";
     description = "Pythonic mail application server";
     mainProgram = "salmon";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ jluttine ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ jluttine ];
   };
 }

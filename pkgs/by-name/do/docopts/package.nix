@@ -1,16 +1,17 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, fetchpatch
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  fetchpatch,
 }:
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "docopts";
   version = "0.6.4-with-no-mangle-double-dash";
 
   src = fetchFromGitHub {
     owner = "docopt";
     repo = "docopts";
-    rev = "refs/tags/v${version}";
+    tag = "v${finalAttrs.version}";
     hash = "sha256-GIBrJ5qexeJ6ul5ek9LJZC4J3cNExsTrnxdzRCfoqn8=";
   };
 
@@ -31,4 +32,4 @@ buildGoModule rec {
     maintainers = [ lib.maintainers.confus ];
     platforms = lib.platforms.unix;
   };
-}
+})

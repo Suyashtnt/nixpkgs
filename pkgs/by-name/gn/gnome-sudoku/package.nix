@@ -10,6 +10,7 @@
   gettext,
   gtk4,
   gnome,
+  blueprint-compiler,
   wrapGAppsHook4,
   libadwaita,
   libgee,
@@ -20,13 +21,13 @@
   desktop-file-utils,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gnome-sudoku";
-  version = "46.4";
+  version = "50.2.1";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/gnome-sudoku/${lib.versions.major version}/gnome-sudoku-${version}.tar.xz";
-    hash = "sha256-SmsMRQbolRIlOxyZO3P2QOjv2awfHrUqAkgZCHYjpKI=";
+    url = "mirror://gnome/sources/gnome-sudoku/${lib.versions.major finalAttrs.version}/gnome-sudoku-${finalAttrs.version}.tar.xz";
+    hash = "sha256-ZKtGEAg+eMiV4T4C/pUHj5f44DwKj6h83EKFv3KzO58=";
   };
 
   nativeBuildInputs = [
@@ -39,6 +40,7 @@ stdenv.mkDerivation rec {
     itstool
     libxml2
     desktop-file-utils
+    blueprint-compiler
     wrapGAppsHook4
   ];
 
@@ -54,12 +56,13 @@ stdenv.mkDerivation rec {
     updateScript = gnome.updateScript { packageName = "gnome-sudoku"; };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://gitlab.gnome.org/GNOME/gnome-sudoku";
+    changelog = "https://gitlab.gnome.org/GNOME/gnome-sudoku/-/blob/${finalAttrs.version}/NEWS?ref_type=tags";
     description = "Test your logic skills in this number grid puzzle";
     mainProgram = "gnome-sudoku";
-    maintainers = teams.gnome.members;
-    license = licenses.gpl3Plus;
-    platforms = platforms.unix;
+    teams = [ lib.teams.gnome ];
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.unix;
   };
-}
+})

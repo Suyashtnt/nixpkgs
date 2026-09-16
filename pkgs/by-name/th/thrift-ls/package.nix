@@ -4,18 +4,18 @@
   fetchFromGitHub,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "thrift-ls";
-  version = "0.2.1";
+  version = "0.2.12";
 
   src = fetchFromGitHub {
     owner = "joyme123";
     repo = "thrift-ls";
-    rev = "v${version}";
-    hash = "sha256-ywrb1pOpqHnVhb9MA2cgkF5croA9iqtvLxvVmeloOpE=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-Ts0zy/wBjZTm71Umk46KBkdbUm/Akf/KXdoKp8G95ks=";
   };
 
-  vendorHash = "sha256-YoZ2dku84065Ygh9XU6dOwmCkuwX0r8a0Oo8c1HPsS4=";
+  vendorHash = "sha256-SGCJ12BxjFUQ7bnaNY0bvrrtm2qNNrwYKKfNEi1lPco=";
 
   postInstall = ''
     mv $out/bin/thrift-ls $out/bin/thriftls
@@ -36,4 +36,4 @@ buildGoModule rec {
     ];
     mainProgram = "thriftls";
   };
-}
+})

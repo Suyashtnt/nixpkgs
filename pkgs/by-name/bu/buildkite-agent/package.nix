@@ -1,28 +1,29 @@
-{ fetchFromGitHub
-, lib
-, buildGoModule
-, makeWrapper
-, coreutils
-, git
-, openssh
-, bash
-, gnused
-, gnugrep
-, gitUpdater
-, nixosTests
+{
+  fetchFromGitHub,
+  lib,
+  buildGoModule,
+  makeWrapper,
+  coreutils,
+  git,
+  openssh,
+  bash,
+  gnused,
+  gnugrep,
+  gitUpdater,
+  nixosTests,
 }:
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "buildkite-agent";
-  version = "3.77.0";
+  version = "3.137.2";
 
   src = fetchFromGitHub {
     owner = "buildkite";
     repo = "agent";
-    rev = "v${version}";
-    hash = "sha256-QsSCIAy0ekkZiqO/cFcPNNkXa3FLL3Z1LJoKsjzB6jw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-lAhWU5Zm8ohrAFudJVJvz24wgM/V6KsknVBg6zU04uY=";
   };
 
-  vendorHash = "sha256-xp836ZT2x20ZbkTEubhiZlLmK9n2F8mCSWZTHmAuu6A=";
+  vendorHash = "sha256-sjLVMMC9INg4R9Yd0hVLkqMUkdQf40O9zRYfJGpcGWw=";
 
   postPatch = ''
     substituteInPlace clicommand/agent_start.go --replace /bin/bash ${bash}/bin/bash
@@ -32,23 +33,35 @@ buildGoModule rec {
 
   doCheck = false;
 
+  # buildkite-agent expects the `buildVersion` variable to be set to something
+  # other than its sentinel, otherwise the agent will not work correctly as of
+  # https://github.com/buildkite/agent/pull/3123
+  ldflags = [
+    "-X github.com/buildkite/agent/v3/version.buildNumber=nix"
+  ];
+
   postInstall = ''
     # Fix binary name
     mv $out/bin/{agent,buildkite-agent}
 
     # These are runtime dependencies
     wrapProgram $out/bin/buildkite-agent \
-      --prefix PATH : '${lib.makeBinPath [ openssh git coreutils gnused gnugrep ]}'
+      --prefix PATH : '${
+        lib.makeBinPath [
+          openssh
+          git
+          coreutils
+          gnused
+          gnugrep
+        ]
+      }'
   '';
 
   passthru = {
     tests.smoke-test = nixosTests.buildkite-agents;
-    updateScript = gitUpdater {
-      rev-prefix = "v";
-    };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Build runner for buildkite.com";
     longDescription = ''
       The buildkite-agent is a small, reliable, and cross-platform build runner
@@ -58,8 +71,14 @@ buildGoModule rec {
       and uploading the job's artifacts.
     '';
     homepage = "https://buildkite.com/docs/agent";
-    license = licenses.mit;
-    maintainers = with maintainers; [ pawelpacana zimbatm jsoo1 techknowlogick ];
-    platforms = with platforms; unix ++ darwin;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      pawelpacana
+      zimbatm
+      jsoo1
+      techknowlogick
+      cbrxyz
+    ];
+    platforms = with lib.platforms; unix ++ darwin;
   };
-}
+})

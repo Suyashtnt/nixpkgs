@@ -1,26 +1,30 @@
-{ lib, buildGoModule, fetchFromGitHub }:
-let
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
+buildGoModule (finalAttrs: {
   pname = "e1s";
-  version = "1.0.39";
-in
-buildGoModule {
-  inherit pname version;
+  version = "2.0.0";
 
   src = fetchFromGitHub {
     owner = "keidarcy";
     repo = "e1s";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-kfG9Nkt5L2YokTLPzPuIAmjCHlZvr3FqZiYLr8bU+K4=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-bOG6txoreiP/buYO3rvcxhL1yAxlECkbwf9FqvWLz9k=";
   };
 
-  vendorHash = "sha256-u6h/sqI0Rqs3ZmVXtMNVuL3h9Cj15+mM+QnIaylzlHI=";
+  vendorHash = "sha256-vVUuoAsoxVKDGxLOQBjOx56IiPWBbtYBJbJNq+kPV7A=";
 
-  meta = with lib; {
-    description = "Easily Manage AWS ECS Resources in Terminal 🐱";
+  meta = {
+    description = "Easily Manage AWS ECS Resources in Terminal";
     homepage = "https://github.com/keidarcy/e1s";
-    changelog = "https://github.com/derailed/e1s/releases/tag/v${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/keidarcy/e1s/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
     mainProgram = "e1s";
-    maintainers = with maintainers; [ zelkourban ];
+    maintainers = with lib.maintainers; [
+      zelkourban
+      carlossless
+    ];
   };
-}
+})

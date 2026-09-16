@@ -6,13 +6,13 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "byedpi";
-  version = "0.14.1";
+  version = "0.17.3";
 
   src = fetchFromGitHub {
     owner = "hufrea";
     repo = "byedpi";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-JdL+3ETNxaEtOLUhgLSABL9C8w/EM4Ay37OXU5jLCFA=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-dDUmCIWy4uHIBmbonrpkrBnurYHfZAdz/jd3l0228Ec=";
   };
 
   installPhase = ''
@@ -30,8 +30,11 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://github.com/hufrea/byedpi";
     changelog = "https://github.com/hufrea/byedpi/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ averyanalex ];
-    platforms = with lib.platforms; linux ++ windows;
+    maintainers = with lib.maintainers; [
+      averyanalex
+      hadal84
+    ];
+    platforms = with lib.platforms; linux ++ windows ++ darwin;
     mainProgram = "ciadpi";
   };
 })

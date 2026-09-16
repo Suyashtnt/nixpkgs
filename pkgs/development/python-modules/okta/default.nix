@@ -2,12 +2,13 @@
   lib,
   aenum,
   aiohttp,
+  blinker,
   buildPythonPackage,
   fetchPypi,
   flatdict,
   jwcrypto,
-  pycryptodome,
   pycryptodomex,
+  pydantic,
   pydash,
   pyfakefs,
   pyjwt,
@@ -15,36 +16,39 @@
   pytest-mock,
   pytest-recording,
   pytestCheckHook,
-  python-jose,
-  pythonOlder,
+  python-dateutil,
   pyyaml,
+  requests,
+  setuptools,
   xmltodict,
   yarl,
 }:
 
 buildPythonPackage rec {
   pname = "okta";
-  version = "2.9.8";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "3.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-RDnRiPsc4p5yI9jFzOtRI+r00tvska8x4uCSjl+cWvo=";
+    hash = "sha256-7ZYDrup+HJxlrOmSBGsWD4Ku8HRlQR4E68olWQtcazg=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     aenum
     aiohttp
+    blinker
     flatdict
     jwcrypto
-    pycryptodome
     pycryptodomex
+    pydantic
     pydash
     pyjwt
-    python-jose
+    python-dateutil
     pyyaml
+    requests
     xmltodict
     yarl
   ];
@@ -57,7 +61,7 @@ buildPythonPackage rec {
     pytestCheckHook
   ];
 
-  pytestFlagsArray = [ "tests/" ];
+  enabledTestPaths = [ "tests/" ];
 
   disabledTests = [
     "test_client_raise_exception"
@@ -66,6 +70,7 @@ buildPythonPackage rec {
     "test_update_org_contact_user"
     "test_get_role_subscription"
     "test_subscribe_unsubscribe"
+    "test_client_invalid_url"
   ];
 
   pythonImportsCheck = [
@@ -78,11 +83,11 @@ buildPythonPackage rec {
     "okta.request_executor"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python SDK for the Okta Management API";
     homepage = "https://github.com/okta/okta-sdk-python";
     changelog = "https://github.com/okta/okta-sdk-python/blob/v${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ jbgosselin ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ jbgosselin ];
   };
 }

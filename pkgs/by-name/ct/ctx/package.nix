@@ -1,21 +1,22 @@
-{ lib
-, stdenv
-, fetchgit
-, SDL2
-, alsa-lib
-, babl
-, bash
-, curl
-, libdrm # Not documented
-, pkg-config
-, xxd
-, enableFb ? false
-, nixosTests
+{
+  lib,
+  stdenv,
+  fetchgit,
+  SDL2,
+  alsa-lib,
+  babl,
+  bash,
+  curl,
+  libdrm, # Not documented
+  pkg-config,
+  xxd,
+  enableFb ? false,
+  nixosTests,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "ctx";
-  version = "unstable-2023-09-03";
+  version = "0-unstable-2023-09-03";
 
   src = fetchgit {
     name = "ctx-source"; # because of a dash starting the directory
@@ -53,11 +54,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   strictDeps = true;
 
-  env.ARCH = stdenv.hostPlatform.parsed.cpu.arch;
+  env.ARCH = stdenv.hostPlatform.parsed.cpu.arch or stdenv.hostPlatform.parsed.cpu.name;
 
   configureScript = "./configure.sh";
   configureFlags = lib.optional enableFb "--enable-fb";
-  configurePlatforms = [];
+  configurePlatforms = [ ];
   dontAddPrefix = true;
   dontDisableStatic = true;
 
@@ -76,7 +77,7 @@ stdenv.mkDerivation (finalAttrs: {
       a vector graphics protocol.
     '';
     license = lib.licenses.gpl3Plus;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
   };
 })

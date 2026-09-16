@@ -1,26 +1,29 @@
-{ symlinkJoin
-, lib
-, makeWrapper
-, folder-color-switcher
-, nemo
-, nemo-emblems
-, nemo-fileroller
-, nemo-python
-, python3
-, extensions ? [ ]
-, useDefaultExtensions ? true
+{
+  symlinkJoin,
+  lib,
+  makeWrapper,
+  folder-color-switcher,
+  nemo,
+  nemo-emblems,
+  nemo-fileroller,
+  nemo-python,
+  python3,
+  extensions ? [ ],
+  useDefaultExtensions ? true,
 }:
 
 let
-  selectedExtensions = extensions ++ lib.optionals useDefaultExtensions [
-    # We keep this in sync with a default Mint installation
-    # Right now (only) nemo-share is missing
-    folder-color-switcher
-    nemo-emblems
-    nemo-fileroller
-    nemo-python
-  ];
-  nemoPythonExtensionsDeps = lib.concatMap (x: x.nemoPythonExtensionDeps or []) selectedExtensions;
+  selectedExtensions =
+    extensions
+    ++ lib.optionals useDefaultExtensions [
+      # We keep this in sync with a default Mint installation
+      # Right now (only) nemo-share is missing
+      folder-color-switcher
+      nemo-emblems
+      nemo-fileroller
+      nemo-python
+    ];
+  nemoPythonExtensionsDeps = lib.concatMap (x: x.nemoPythonExtensionDeps or [ ]) selectedExtensions;
 in
 symlinkJoin {
   name = "nemo-with-extensions-${nemo.version}";
@@ -43,7 +46,8 @@ symlinkJoin {
 
     # Point to wrapped binary in all service files
     for file in "share/dbus-1/services/nemo.FileManager1.service" \
-      "share/dbus-1/services/nemo.service"
+      "share/dbus-1/services/nemo.service" \
+      "share/polkit-1/actions/org.nemo.root.policy"
     do
       rm "$out/$file"
       substitute "${nemo}/$file" "$out/$file" \
@@ -51,5 +55,9 @@ symlinkJoin {
     done
   '';
 
-  meta = builtins.removeAttrs nemo.meta [ "name" "outputsToInstall" "position" ];
+  meta = removeAttrs nemo.meta [
+    "name"
+    "outputsToInstall"
+    "position"
+  ];
 }

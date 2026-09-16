@@ -3,95 +3,75 @@
   stdenv,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
-  isPyPy,
 
   # build-system
-  poetry-core,
   rustPlatform,
 
-  # native dependencies
-  iconv,
-
   # dependencies
-  backports-zoneinfo,
-  importlib-resources,
   python-dateutil,
-  time-machine,
   tzdata,
 
   # tests
   pytestCheckHook,
-  pytz,
+  time-machine,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pendulum";
-  version = "3.0.0";
+  version = "3.2.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sdispater";
     repo = "pendulum";
-    rev = "refs/tags/${version}";
-    hash = "sha256-v0kp8dklvDeC7zdTDOpIbpuj13aGub+oCaYz2ytkEpI=";
+    tag = finalAttrs.version;
+    hash = "sha256-zpBymeYhCy+yu6RPhOuN5xOVk6928hd3+oRsfiBPPuY=";
   };
 
-  postPatch = ''
-    substituteInPlace rust/Cargo.lock \
-      --replace "3.0.0-beta-1" "3.0.0"
-  '';
+  patches = [
+    # Fix the build on Darwin.
+    #
+    # <https://github.com/python-pendulum/pendulum/pull/979>
+    ./delete-obsolete-cargo-toml.patch
+  ];
 
   cargoRoot = "rust";
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit src;
-    sourceRoot = "${src.name}/rust";
-    name = "${pname}-${version}";
-    hash = "sha256-6fw0KgnPIMfdseWcunsGjvjVB+lJNoG3pLDqkORPJ0I=";
-    postPatch = ''
-      substituteInPlace Cargo.lock \
-        --replace "3.0.0-beta-1" "3.0.0"
-    '';
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    sourceRoot = "${finalAttrs.src.name}/rust";
+    hash = "sha256-tC65lxI561ygOhBFujWzGk32XiQH6QB42nqboWSfQrg=";
   };
 
   nativeBuildInputs = [
-    poetry-core
     rustPlatform.maturinBuildHook
     rustPlatform.cargoSetupHook
   ];
 
-  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [ iconv ];
-
-  propagatedBuildInputs =
-    [
-      python-dateutil
-      tzdata
-    ]
-    ++ lib.optional (!isPyPy) [ time-machine ]
-    ++ lib.optionals (pythonOlder "3.9") [
-      backports-zoneinfo
-      importlib-resources
-    ];
+  dependencies = [
+    python-dateutil
+    tzdata
+  ];
 
   pythonImportsCheck = [ "pendulum" ];
 
   nativeCheckInputs = [
     pytestCheckHook
-    pytz
+    time-machine
   ];
 
-  disabledTestPaths =
-    [ "tests/benchmarks" ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      # PermissionError: [Errno 1] Operation not permitted: '/etc/localtime'
-      "tests/testing/test_time_travel.py"
-    ];
+  disabledTestPaths = [
+    "tests/benchmarks"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # PermissionError: [Errno 1] Operation not permitted: '/etc/localtime'
+    "tests/testing/test_time_travel.py"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Python datetimes made easy";
     homepage = "https://github.com/sdispater/pendulum";
-    changelog = "https://github.com/sdispater/pendulum/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.mit;
+    changelog = "https://github.com/sdispater/pendulum/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
-}
+})

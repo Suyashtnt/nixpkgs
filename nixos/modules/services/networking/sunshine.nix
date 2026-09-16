@@ -1,10 +1,26 @@
-{ config, lib, pkgs, utils, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  utils,
+  ...
+}:
 let
-  inherit (lib) mkEnableOption mkPackageOption mkOption literalExpression mkIf mkDefault types optionals getExe;
+  inherit (lib)
+    mkEnableOption
+    mkPackageOption
+    mkOption
+    literalExpression
+    mkIf
+    mkDefault
+    types
+    optionals
+    getExe
+    ;
   inherit (utils) escapeSystemdExecArgs;
   cfg = config.services.sunshine;
 
-  # ports used are offset from a single base port, see https://docs.lizardbyte.dev/projects/sunshine/en/latest/about/advanced_usage.html#port
+  # ports used are offset from a single base port, see https://docs.lizardbyte.dev/projects/sunshine/latest/md_docs_2configuration.html#port
   generatePorts = port: offsets: map (offset: port + offset) offsets;
   defaultPort = 47989;
 
@@ -44,7 +60,7 @@ in
       description = ''
         Settings to be rendered into the configuration file. If this is set, no configuration is possible from the web UI.
 
-        See https://docs.lizardbyte.dev/projects/sunshine/en/latest/about/advanced_usage.html#configuration for syntax.
+        See <https://docs.lizardbyte.dev/projects/sunshine/latest/md_docs_2configuration.html> for syntax.
       '';
       example = literalExpression ''
         {
@@ -57,7 +73,7 @@ in
           type = port;
           default = defaultPort;
           description = ''
-            Base port -- others used are offset from this one, see https://docs.lizardbyte.dev/projects/sunshine/en/latest/about/advanced_usage.html#port for details.
+            Base port -- others used are offset from this one, see <https://docs.lizardbyte.dev/projects/sunshine/latest/md_docs_2configuration.html#port> for details.
           '';
         };
       });
@@ -116,11 +132,22 @@ in
     ];
 
     networking.firewall = mkIf cfg.openFirewall {
-      allowedTCPPorts = generatePorts cfg.settings.port [ (-5) 0 1 21 ];
-      allowedUDPPorts = generatePorts cfg.settings.port [ 9 10 11 13 21 ];
+      allowedTCPPorts = generatePorts cfg.settings.port [
+        (-5)
+        0
+        1
+        21
+      ];
+      allowedUDPPorts = generatePorts cfg.settings.port [
+        9
+        10
+        11
+        13
+        21
+      ];
     };
 
-    boot.kernelModules = [ "uinput" ];
+    hardware.uinput.enable = true;
 
     services.udev.packages = [ cfg.package ];
 
@@ -150,11 +177,19 @@ in
       startLimitIntervalSec = 500;
       startLimitBurst = 5;
 
+      environment.PATH = lib.mkForce null; # don't use default PATH, needed for tray icon menu links to work
+
       serviceConfig = {
         # only add configFile if an application or a setting other than the default port is set to allow configuration from web UI
-        ExecStart = escapeSystemdExecArgs ([
-          (if cfg.capSysAdmin then "${config.security.wrapperDir}/sunshine" else "${getExe cfg.package}")
-        ] ++ optionals (cfg.applications.apps != [ ] || (builtins.length (builtins.attrNames cfg.settings) > 1 || cfg.settings.port != defaultPort)) [ "${configFile}" ]);
+        ExecStart = escapeSystemdExecArgs (
+          [
+            (if cfg.capSysAdmin then "${config.security.wrapperDir}/sunshine" else "${getExe cfg.package}")
+          ]
+          ++ optionals (
+            cfg.applications.apps != [ ]
+            || (builtins.length (builtins.attrNames cfg.settings) > 1 || cfg.settings.port != defaultPort)
+          ) [ "${configFile}" ]
+        );
         Restart = "on-failure";
         RestartSec = "5s";
       };

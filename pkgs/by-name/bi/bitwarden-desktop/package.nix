@@ -1,74 +1,90 @@
-{ lib
-, buildNpmPackage
-, cargo
-, copyDesktopItems
-, dbus
-, electron_32
-, fetchFromGitHub
-, glib
-, gnome-keyring
-, gtk3
-, jq
-, libsecret
-, makeDesktopItem
-, makeWrapper
-, napi-rs-cli
-, nix-update-script
-, nodejs_20
-, patchutils_0_4_2
-, pkg-config
-, python3
-, runCommand
-, rustc
-, rustPlatform
+{
+  lib,
+  buildNpmPackage,
+  cargo,
+  copyDesktopItems,
+  dart-sass,
+  darwin,
+  electron_43,
+  fetchFromGitHub,
+  gnome-keyring,
+  jq,
+  makeDesktopItem,
+  makeWrapper,
+  nix-update-script,
+  nodejs_24,
+  pkg-config,
+  rustc,
+  rustPlatform,
+  stdenv,
+  xcbuild,
 }:
 
 let
-  description = "Secure and free password manager for all of your devices";
   icon = "bitwarden";
-  electron = electron_32;
-in buildNpmPackage rec {
+  electron = electron_43;
+in
+buildNpmPackage (finalAttrs: {
   pname = "bitwarden-desktop";
-  version = "2024.9.0";
+  version = "2026.8.0";
 
   src = fetchFromGitHub {
     owner = "bitwarden";
     repo = "clients";
-    rev = "desktop-v${version}";
-    hash = "sha256-o5nRG2j73qheDOyeFfSga64D8HbTn1EUrCiN0W+Xn0w=";
+    tag = "desktop-v${finalAttrs.version}";
+    hash = "sha256-6rtOJfSTJuxFR7ahTdjGKnes6qV+WS/5bIfx+dkgT7o=";
   };
 
   patches = [
     ./electron-builder-package-lock.patch
+    ./dont-auto-setup-biometrics.patch
+
+    # ensures `app.getPath("exe")` returns our wrapper, not ${electron}/bin/electron
+    ./set-exe-path.patch
+    # ensure that the desktop proxy is correctly located in libexec
+    ./set-desktop-proxy-path.patch
+    # on linux: don't flip fuses, don't create wrapper script, on darwin: don't try copying safari extensions, don't try re-signing app
+    ./skip-afterpack-and-aftersign.patch
   ];
 
   postPatch = ''
     # remove code under unfree license
     rm -r bitwarden_license
+
+    substituteInPlace apps/desktop/src/main.ts --replace-fail '%%exePath%%' "$out/bin/bitwarden"
+    substituteInPlace apps/desktop/src/main/native-messaging.main.ts \
+      --replace-fail '%%desktopProxyPath%%' "$out/libexec/desktop_proxy"
+
+    # force canUpdate to false
+    # will open releases page instead of trying to update files
+    substituteInPlace apps/desktop/src/main/updater.main.ts \
+      --replace-fail 'this.canUpdate =' 'this.canUpdate = false; let _dummy ='
+
+    # unneeded for desktop, and causes errors
+    rm -r apps/cli
   '';
 
-  nodejs = nodejs_20;
+  nodejs = nodejs_24;
 
   makeCacheWritable = true;
-  npmFlags = [ "--engine-strict" "--legacy-peer-deps" ];
-  npmWorkspace = "apps/desktop";
-  npmDepsHash = "sha256-L7/frKCNlq0xr6T+aSqyEQ44yrIXwcpdU/djrhCJNNk=";
+  npmFlags = [
+    "--engine-strict"
+    "--legacy-peer-deps"
+  ];
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    name = "${pname}-${version}";
-    inherit src;
-    patches = map
-      (patch: runCommand
-        (builtins.baseNameOf patch)
-        { nativeBuildInputs = [ patchutils_0_4_2 ]; }
-        ''
-          < ${patch} filterdiff -p1 --include=${lib.escapeShellArg cargoRoot}'/*' > $out
-        ''
-      )
-      patches;
-    patchFlags = [ "-p4" ];
-    sourceRoot = "${src.name}/${cargoRoot}";
-    hash = "sha256-y+6vaESiOeVrFJpZoOJ75onOpldqSsT2kqkMMzTDUmM=";
+  npmWorkspace = "apps/desktop";
+  npmDepsFetcherVersion = 2;
+  npmDepsHash = "sha256-5i6/TlqBhPLv00tN0sxFA/iRQ8QRyUxhCqYkhVBLz3w=";
+
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs)
+      pname
+      version
+      src
+      cargoRoot
+      patches
+      ;
+    hash = "sha256-OtdwNqZzoMt47O353IKr7FA7DF/tN0MYNK6Eg6skez8=";
   };
   cargoRoot = "apps/desktop/desktop_native";
 
@@ -76,36 +92,21 @@ in buildNpmPackage rec {
 
   nativeBuildInputs = [
     cargo
-    copyDesktopItems
+    dart-sass
     jq
     makeWrapper
-    napi-rs-cli
     pkg-config
-    (python3.withPackages (ps: with ps; [ setuptools ]))
     rustc
     rustPlatform.cargoCheckHook
     rustPlatform.cargoSetupHook
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    copyDesktopItems
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    xcbuild
+    darwin.autoSignDarwinBinariesHook
   ];
-
-  buildInputs = [
-    glib
-    gtk3
-    libsecret
-  ];
-
-  # node-argon2 builds with LTO, but that causes missing symbols. So disable it
-  # and rebuild. Then we need to copy it into the build output for
-  # electron-builder, as `apps/desktop/src/package.json` specifies `argon2` as
-  # a dependency and electron-builder will otherwise install a fresh (and
-  # broken) argon2. See https://github.com/ranisalt/node-argon2/pull/415
-  preConfigure = ''
-    pushd node_modules/argon2
-    substituteInPlace binding.gyp --replace-fail '"-flto", ' ""
-    "$npm_config_node_gyp" rebuild
-    popd
-    mkdir -p apps/desktop/build/node_modules
-    cp -r ./{,apps/desktop/build/}node_modules/argon2
-  '';
 
   preBuild = ''
     if [[ $(jq --raw-output '.devDependencies.electron' < package.json | grep -E --only-matching '^[0-9]+') != ${lib.escapeShellArg (lib.versions.major electron.version)} ]]; then
@@ -113,66 +114,92 @@ in buildNpmPackage rec {
       exit 1
     fi
 
+    # force our dart-sass executable
+    echo "export const compilerCommand = ['dart-sass'];" > node_modules/sass-embedded/dist/lib/src/compiler-path.js
+
+    # needed so that the napi executable actually is usable
+    patchShebangs apps/desktop/node_modules
+
     pushd apps/desktop/desktop_native/napi
-    npm run build
+    npm run build -- --release
+    popd
+
+    pushd apps/desktop/desktop_native/proxy
+    cargo build --bin desktop_proxy --release -j $NIX_BUILD_CORES --offline
     popd
   '';
 
   postBuild = ''
     pushd apps/desktop
 
-    # desktop_native/index.js loads a file of that name regarldess of the libc being used
-    mv desktop_native/napi/desktop_napi.* desktop_native/napi/desktop_napi.linux-x64-musl.node
+    # electron-dist needs to be writable on darwin or when using fuses
+    cp -r ${electron.dist} electron-dist
+    chmod -R u+w electron-dist
 
     npm exec electron-builder -- \
       --dir \
-      -c.electronDist=${electron.dist} \
-      -c.electronVersion=${electron.version}
+      -c.electronDist=electron-dist \
+      -c.electronVersion=${electron.version} \
+      ${lib.optionalString stdenv.hostPlatform.isDarwin "-c.mac.identity=null"}
 
     popd
   '';
 
-  doCheck = true;
+  # there seem to be issues with missing libs on darwin when running tests
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
-  nativeCheckInputs = [
-    dbus
+  nativeCheckInputs = lib.optionals stdenv.hostPlatform.isLinux [
     (gnome-keyring.override { useWrappedDaemon = false; })
   ];
 
   checkFlags = [
+    # fails in zbus
     "--skip=password::password::tests::test"
+    # requires some debug feature to be enabled
+    "--skip=storage::serialization::tests::test_keydata_from_corrupted_bytes"
+    "--skip=storage::serialization::tests::test_keydata_from_empty_bytes"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    "--skip=clipboard::tests::test_write_read"
   ];
 
-  checkPhase = ''
-    runHook preCheck
+  preCheck = ''
+    pushd ${finalAttrs.cargoRoot}
+    cargoCheckType=release
+    HOME=$(mktemp -d)
+  '';
 
-    pushd ${cargoRoot}
-    export HOME=$(mktemp -d)
-    export -f cargoCheckHook runHook _eval _callImplicitHook _logHook
-    export cargoCheckType=release
-    dbus-run-session \
-      --config-file=${dbus}/share/dbus-1/session.conf \
-      -- bash -e -c cargoCheckHook
+  postCheck = ''
     popd
-
-    runHook postCheck
   '';
 
   installPhase = ''
     runHook preInstall
 
-    mkdir $out
-
-    pushd apps/desktop/dist/linux-unpacked
+    install -Dm755 -t $out/libexec apps/desktop/desktop_native/target/release/desktop_proxy
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    mkdir -p $out/Applications
+    cp -r apps/desktop/dist/mac*/Bitwarden.app $out/Applications
+    makeWrapper $out/Applications/Bitwarden.app/Contents/MacOS/Bitwarden $out/bin/bitwarden
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     mkdir -p $out/opt/Bitwarden
-    cp -r locales resources{,.pak} $out/opt/Bitwarden
-    popd
+    cp -r apps/desktop/dist/linux-*unpacked/{locales,resources{,.pak}} $out/opt/Bitwarden
 
     makeWrapper '${lib.getExe electron}' "$out/bin/bitwarden" \
+      --run "ulimit -c 0" \
       --add-flags $out/opt/Bitwarden/resources/app.asar \
-      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations}}" \
+      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}" \
       --set-default ELECTRON_IS_DEV 0 \
       --inherit-argv0
+
+    # Extract the polkit policy file from the multiline string in the source code.
+    # This may break in the future but its better than copy-pasting it manually.
+    mkdir -p $out/share/polkit-1/actions/
+    pushd apps/desktop/src/key-management/biometrics/native-v2
+    awk '/const polkitPolicy = `/{gsub(/^.*`/, ""); print; str=1; next} str{if (/`;/) str=0; gsub(/`;/, ""); print}' os-biometrics-linux.service.ts > $out/share/polkit-1/actions/com.bitwarden.Bitwarden.policy
+    popd
 
     pushd apps/desktop/resources/icons
     for icon in *.png; do
@@ -181,7 +208,8 @@ in buildNpmPackage rec {
       cp "$icon" "$dir"/${icon}.png
     done
     popd
-
+  ''
+  + ''
     runHook postInstall
   '';
 
@@ -190,25 +218,36 @@ in buildNpmPackage rec {
       name = "bitwarden";
       exec = "bitwarden %U";
       inherit icon;
-      comment = description;
+      comment = finalAttrs.meta.description;
       desktopName = "Bitwarden";
       categories = [ "Utility" ];
+      mimeTypes = [ "x-scheme-handler/bitwarden" ];
     })
   ];
 
   passthru = {
     updateScript = nix-update-script {
-      extraArgs = [ "--commit" "--version=stable" "--version-regex=^desktop-v(.*)$" ];
+      extraArgs = [
+        "--version=stable"
+        "--version-regex=^desktop-v(.*)$"
+      ];
     };
   };
 
   meta = {
-    changelog = "https://github.com/bitwarden/clients/releases/tag/${src.rev}";
-    inherit description;
+    changelog = "https://github.com/bitwarden/clients/releases/tag/${finalAttrs.src.tag}";
+    description = "Secure and free password manager for all of your devices";
     homepage = "https://bitwarden.com";
     license = lib.licenses.gpl3;
-    maintainers = with lib.maintainers; [ amarshall ];
-    platforms = [ "x86_64-linux" ];
+    maintainers = with lib.maintainers; [
+      tree-sapii
+      amarshall
+    ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+      "aarch64-darwin"
+    ];
     mainProgram = "bitwarden";
   };
-}
+})

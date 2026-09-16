@@ -6,27 +6,20 @@
   pytest-asyncio,
   pytest-timeout,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pypck";
-  version = "0.7.24";
+  version = "0.9.15a3";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "alengwenus";
     repo = "pypck";
-    rev = "refs/tags/${version}";
-    hash = "sha256-DWdQUnURL3WBi916vOTawtBqq+SHTu4iLViGczwAWQE=";
+    tag = finalAttrs.version;
+    hash = "sha256-ep/D0MWHnmoorCYhWxlyd/iEBiSIrWL4aEPPn4uRgDI=";
   };
-
-  postPatch = ''
-    echo "${version}" > VERSION
-  '';
 
   build-system = [ setuptools ];
 
@@ -36,19 +29,17 @@ buildPythonPackage rec {
     pytestCheckHook
   ];
 
-  pytestFlagsArray = [ "--asyncio-mode=auto" ];
-
   disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [ "test_connection_lost" ];
 
   __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "pypck" ];
 
-  meta = with lib; {
+  meta = {
     description = "LCN-PCK library written in Python";
     homepage = "https://github.com/alengwenus/pypck";
-    changelog = "https://github.com/alengwenus/pypck/releases/tag/${version}";
-    license = with licenses; [ epl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/alengwenus/pypck/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.epl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

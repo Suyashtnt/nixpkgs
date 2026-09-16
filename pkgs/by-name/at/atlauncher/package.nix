@@ -1,6 +1,7 @@
 {
   fetchFromGitHub,
-  gradle,
+  gradle_8,
+  jdk17_headless,
   jre,
   lib,
   makeWrapper,
@@ -16,24 +17,30 @@
   libglvnd,
   libpulseaudio,
   udev,
-  xorg,
+  libxxf86vm,
+  libxcursor,
+  libx11,
 }:
-
+let
+  # "Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0."
+  gradle = gradle_8;
+in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "atlauncher";
-  version = "3.4.37.3";
+  version = "3.4.41.2";
 
   src = fetchFromGitHub {
     owner = "ATLauncher";
     repo = "ATLauncher";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-XdTbrM7FPR0o0d+p4ko48UonMsY+nLfiXj5fP2a3/zI=";
+    hash = "sha256-BI4kANjw9kQF4mnkDWKfyrVkXVmgqJZWr4ODkUMwR9w=";
   };
 
-  postPatch = ''
-    # exclude UI tests
-    sed -i "/test {/a\    exclude '**/BasicLauncherUiTest.class'" build.gradle
-  '';
+  patches = [
+    # Launch4j does not publish the Linux workdir artifact selected on aarch64.
+    # Nixpkgs only needs the cross-platform jar, so remove the Windows exe task.
+    ./remove-launch4j.patch
+  ];
 
   nativeBuildInputs = [
     gradle
@@ -50,24 +57,22 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   gradleBuildTask = "shadowJar";
 
   gradleFlags = [
-    "--exclude-task"
-    "createExe"
+    "-Dorg.gradle.java.home=${jdk17_headless.home}"
   ];
 
   installPhase =
     let
-      runtimeLibraries =
-        [
-          libglvnd
-          libpulseaudio
-          udev
-          xorg.libX11
-          xorg.libXcursor
-          xorg.libXxf86vm
-        ]
-        ++ lib.optional gamemodeSupport gamemode.lib
-        ++ lib.optional textToSpeechSupport flite
-        ++ additionalLibs;
+      runtimeLibraries = [
+        libglvnd
+        libpulseaudio
+        udev
+        libx11
+        libxcursor
+        libxxf86vm
+      ]
+      ++ lib.optional gamemodeSupport gamemode.lib
+      ++ lib.optional textToSpeechSupport flite
+      ++ additionalLibs;
     in
     ''
       runHook preInstall
@@ -91,11 +96,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     ''
       install -D -m444 ${packagingDir}/atlauncher.desktop -t $out/share/applications
       install -D -m444 ${packagingDir}/atlauncher.metainfo.xml -t $out/share/metainfo
-      install -D -m444 ${packagingDir}/atlauncher.png -t $out/share/pixmaps
+      install -D -m444 ${packagingDir}/atlauncher.png -t $out/share/icons/hicolor/128x128/apps
       install -D -m444 ${packagingDir}/atlauncher.svg -t $out/share/icons/hicolor/scalable/apps
     '';
 
   meta = {
+    broken = stdenvNoCC.hostPlatform.isDarwin; # https://github.com/NixOS/nixpkgs/issues/356259
     changelog = "https://github.com/ATLauncher/ATLauncher/blob/v${finalAttrs.version}/CHANGELOG.md";
     description = "Simple and easy to use Minecraft launcher which contains many different modpacks for you to choose from and play";
     downloadPage = "https://atlauncher.com/downloads";

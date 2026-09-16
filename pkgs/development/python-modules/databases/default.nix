@@ -8,7 +8,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   sqlalchemy,
 }:
@@ -18,12 +17,10 @@ buildPythonPackage rec {
   version = "0.9.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "encode";
     repo = "databases";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-Zf9QqBgDhWAnHdNvzjXtri5rdT00BOjc4YTNzJALldM=";
   };
 
@@ -31,7 +28,7 @@ buildPythonPackage rec {
 
   propagatedBuildInputs = [ sqlalchemy ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     postgresql = [ asyncpg ];
     asyncpg = [ asyncpg ];
     aiopg = [ aiopg ];
@@ -54,11 +51,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "databases" ];
 
-  meta = with lib; {
+  meta = {
     description = "Async database support for Python";
     homepage = "https://github.com/encode/databases";
     changelog = "https://github.com/encode/databases/releases/tag/${version}";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

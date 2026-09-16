@@ -1,16 +1,17 @@
-{ lib
-, buildDunePackage
-, fetchurl
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "binning";
   version = "0.0.0";
 
   minimalOCamlVersion = "4.08";
 
   src = fetchurl {
-    url = "https://github.com/pveber/binning/releases/download/v${version}/binning-v${version}.tbz";
+    url = "https://github.com/pveber/binning/releases/download/v${finalAttrs.version}/binning-v${finalAttrs.version}.tbz";
     hash = "sha256-eG+xctsbc7lQ5pFOUtJ8rjNW/06gygwLADq7yc8Yf/c=";
   };
 
@@ -20,4 +21,4 @@ buildDunePackage rec {
     homepage = "https://github.com/pveber/binning/";
     maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

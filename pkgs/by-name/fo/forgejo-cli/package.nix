@@ -1,62 +1,73 @@
 {
   lib,
+  stdenv,
   rustPlatform,
-  fetchFromGitea,
+  fetchFromCodeberg,
   pkg-config,
+  installShellFiles,
+  writableTmpDirAsHomeHook,
   libgit2,
   oniguruma,
   openssl,
   zlib,
-  stdenv,
-  darwin,
+  versionCheckHook,
 }:
-let
-  version = "0.1.1";
-in
-rustPlatform.buildRustPackage {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "forgejo-cli";
-  inherit version;
+  version = "0.6.0";
 
-  src = fetchFromGitea {
-    domain = "codeberg.org";
-    owner = "Cyborus";
+  __structuredAttrs = true;
+
+  src = fetchFromCodeberg {
+    owner = "forgejo-contrib";
     repo = "forgejo-cli";
-    rev = "v${version}";
-    hash = "sha256-367O4SpGA0gWM/IIJjIbCoi4+N/Vl58T5Jw/NVsE+7o=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-XG7IPfl5yLToDQ+P0JkMxhfqsGd3cGWYCNrmlFf9j2Y=";
   };
 
-  cargoHash = "sha256-F7UBLqMXYS8heJs1mdmiFTHUfgoMKEb+KV4tiDsIRDY=";
+  cargoHash = "sha256-+7WiOmYBjTMEsIGaqnMVTIHhzTpm8ObnljNXFnDazhI=";
 
-  nativeBuildInputs = [ pkg-config ];
+  nativeBuildInputs = [
+    pkg-config
+    installShellFiles
+    writableTmpDirAsHomeHook # Needed for shell completions
+  ];
 
-  buildInputs =
-    [
-      libgit2
-      oniguruma
-      openssl
-      zlib
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin (
-      with darwin.apple_sdk.frameworks;
-      [
-        Security
-        SystemConfiguration
-      ]
-    );
+  buildInputs = [
+    libgit2
+    oniguruma
+    openssl
+    zlib
+  ];
 
   env = {
     RUSTONIG_SYSTEM_LIBONIG = true;
+    BUILD_TYPE = "nixpkgs";
   };
+
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd fj \
+      --bash <($out/bin/fj completion bash) \
+      --fish <($out/bin/fj completion fish) \
+      --zsh <($out/bin/fj completion zsh)
+  '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "version";
+  doInstallCheck = true;
 
   meta = {
     description = "CLI application for interacting with Forgejo";
-    homepage = "https://codeberg.org/Cyborus/forgejo-cli";
-    changelog = "https://codeberg.org/Cyborus/forgejo-cli/releases/tag/v${version}";
+    homepage = "https://codeberg.org/forgejo-contrib/forgejo-cli";
+    changelog = "https://codeberg.org/forgejo-contrib/forgejo-cli/releases/tag/v${finalAttrs.version}";
     license = with lib.licenses; [
       asl20
       mit
     ];
-    maintainers = with lib.maintainers; [ isabelroses ];
+    maintainers = with lib.maintainers; [
+      da157
+      isabelroses
+    ];
     mainProgram = "fj";
   };
-}
+})

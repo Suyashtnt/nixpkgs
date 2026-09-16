@@ -1,28 +1,29 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, wrapGAppsHook4
-, appstream-glib
-, blueprint-compiler
-, desktop-file-utils
-, meson
-, ninja
-, pkg-config
-, glib
-, gjs
-, libadwaita
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  wrapGAppsHook4,
+  appstream-glib,
+  blueprint-compiler,
+  desktop-file-utils,
+  meson,
+  ninja,
+  pkg-config,
+  glib,
+  gjs,
+  libadwaita,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "design";
-  version = "46-alpha1";
+  version = "48-alpha1";
 
   src = fetchFromGitHub {
     owner = "dubstar-04";
     repo = "Design";
-    rev = "v${version}";
+    tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
-    hash = "sha256-Q4R/Ztu4w8IRvq15xNXN/iP/6hIHe/W+me1jROGpYc8=";
+    hash = "sha256-xLARmvqJUxVjHHeak/BrpfIe18KCy9++8HRjOFjwE7I=";
   };
 
   nativeBuildInputs = [
@@ -55,4 +56,4 @@ stdenv.mkDerivation rec {
     platforms = lib.platforms.linux;
     mainProgram = "io.github.dubstar_04.design";
   };
-}
+})

@@ -1,9 +1,24 @@
-{ stdenv, ghdl-llvm, ghdl-mcode, ghdl-gcc, backend }:
+{
+  stdenvNoCC,
+  ghdl-llvm,
+  ghdl-llvm-jit,
+  ghdl-mcode,
+  ghdl-gcc,
+  backend,
+}:
 
 let
-  ghdl = if backend == "llvm" then ghdl-llvm else if backend == "gcc" then ghdl-gcc else ghdl-mcode;
+  ghdl =
+    if backend == "llvm" then
+      ghdl-llvm
+    else if backend == "llvm-jit" then
+      ghdl-llvm-jit
+    else if backend == "gcc" then
+      ghdl-gcc
+    else
+      ghdl-mcode;
 in
-stdenv.mkDerivation {
+stdenvNoCC.mkDerivation {
   name = "ghdl-test-simple";
   meta.timeout = 300;
   nativeBuildInputs = [ ghdl ];
@@ -13,11 +28,18 @@ stdenv.mkDerivation {
     mkdir -p ghdlwork
     ghdl -a --workdir=ghdlwork --ieee=synopsys simple.vhd simple-tb.vhd
     ghdl -e --workdir=ghdlwork --ieee=synopsys -o sim-simple tb
-  '' + (if backend == "llvm" || backend == "gcc" then ''
-    ./sim-simple --assert-level=warning > output.txt
-  '' else ''
-    ghdl -r --workdir=ghdlwork --ieee=synopsys tb > output.txt
-  '') + ''
+  ''
+  + (
+    if backend == "llvm" || backend == "gcc" then
+      ''
+        ./sim-simple --assert-level=warning > output.txt
+      ''
+    else
+      ''
+        ghdl -r --workdir=ghdlwork --ieee=synopsys tb > output.txt
+      ''
+  )
+  + ''
     diff output.txt ${./expected-output.txt} && touch $out
   '';
 }

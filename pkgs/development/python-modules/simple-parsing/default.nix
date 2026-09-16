@@ -1,11 +1,13 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
   fetchFromGitHub,
+  pythonAtLeast,
 
   # build-system
-  poetry-core,
-  poetry-dynamic-versioning,
+  hatchling,
+  uv-dynamic-versioning,
 
   # dependencies
   docstring-parser,
@@ -19,27 +21,27 @@
   # tests
   matplotlib,
   numpy,
-  orion,
   pytest-benchmark,
   pytest-regressions,
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "simple-parsing";
-  version = "0.1.6";
+  version = "0.1.9";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "lebrice";
     repo = "SimpleParsing";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-RDS1sWzaQqXp/0a7dXlUHnd6z+GTIpUN1MnUCTI9LGw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-tSQgyxJ0INGQkmqRmzVgKwBd/JXr3OTecdNSfc9Nf94=";
   };
 
   build-system = [
-    poetry-core
-    poetry-dynamic-versioning
+    hatchling
+    uv-dynamic-versioning
   ];
 
   dependencies = [
@@ -60,24 +62,48 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     matplotlib
     numpy
-    orion
     pytest-benchmark
     pytest-regressions
     pytestCheckHook
   ];
 
+  pytestFlags = [ "--benchmark-disable" ];
+
+  preCheck =
+    # Prevents 'Fatal Python error: Aborted' on darwin during checkPhase
+    lib.optionalString stdenv.hostPlatform.isDarwin ''
+      export MPLBACKEND="Agg"
+    '';
+
   disabledTests = [
-    # Expected: OrderedDict([('a', 1), ('b', 2), ('c', 5), ('d', 6), ('e', 7)])
-    # Got: OrderedDict({'a': 1, 'b': 2, 'c': 5, 'd': 6, 'e': 7})
-    # https://github.com/lebrice/SimpleParsing/issues/326
-    "simple_parsing.utils.dict_union"
+    # AssertionError
+    # https://github.com/lebrice/SimpleParsing/issues/338
+    "test_bool_args_in_help"
+    "test_desc_from_cls_docstring"
+    "test_docstring_builds_upon_bases"
+    "test_help_string"
+    "test_help_string_displays_default_factory_arguments"
+    "test_help_takes_value_from_docstring"
+    "test_issue_48"
+    "test_running_example_outputs_expected_without_arg"
+    "test_subgroup_partial_with_nested_field"
+    "test_weird_docstring_with_field_like"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.14") [
+    # AssertionError ("usagepython314mpytesthmixed..." != "usagepython314mpytesthmixed")
+    "test_each_type_is_used_correctly"
+    "test_issue_46"
+    "test_issue_46_solution2"
+
+    # TypeError: dest= is required for options like '---------'
+    "test_pass_invalid_value_to_add_config_path_arg"
   ];
 
   meta = {
     description = "Simple, Elegant, Typed Argument Parsing with argparse";
-    changelog = "https://github.com/lebrice/SimpleParsing/releases/tag/v${version}";
+    changelog = "https://github.com/lebrice/SimpleParsing/releases/tag/${finalAttrs.src.tag}";
     homepage = "https://github.com/lebrice/SimpleParsing";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

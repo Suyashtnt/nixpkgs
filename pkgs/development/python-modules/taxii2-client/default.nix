@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   pytz,
   requests,
   setuptools,
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "2.3.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.9";
-
   src = fetchFromGitHub {
     owner = "oasis-open";
     repo = "cti-taxii-client";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-e22bJdLAlm30vv/xIgLSjcwmzfN0Pwt2JydLgEbA+Is=";
   };
 

@@ -6,30 +6,28 @@
   pydantic,
   pytest-examples,
   pytestCheckHook,
-  pythonOlder,
   pytz,
 }:
 
 let
   dirty-equals = buildPythonPackage rec {
     pname = "dirty-equals";
-    version = "0.7.1-post0";
-    format = "pyproject";
-
-    disabled = pythonOlder "3.8";
+    version = "0.11.0";
+    pyproject = true;
 
     src = fetchFromGitHub {
       owner = "samuelcolvin";
-      repo = pname;
-      rev = "refs/tags/v${version}";
-      hash = "sha256-U6DNluthDgxzh6IOaKrN/JhX4u+ztY/jVp9IKh0iP34=";
+      repo = "dirty-equals";
+      tag = "v${version}";
+      hash = "sha256-JFKWrbMdxhvSBbjQ+S9HPW87CK+5ZZiXHg8Wltlv2YY=";
     };
 
-    nativeBuildInputs = [ hatchling ];
+    build-system = [ hatchling ];
 
-    propagatedBuildInputs = [ pytz ];
+    dependencies = [ pytz ];
 
     doCheck = false;
+
     passthru.tests.pytest = dirty-equals.overrideAttrs { doCheck = true; };
 
     nativeCheckInputs = [
@@ -40,12 +38,12 @@ let
 
     pythonImportsCheck = [ "dirty_equals" ];
 
-    meta = with lib; {
+    meta = {
       description = "Module for doing dirty (but extremely useful) things with equals";
       homepage = "https://github.com/samuelcolvin/dirty-equals";
-      changelog = "https://github.com/samuelcolvin/dirty-equals/releases/tag/v${version}";
-      license = with licenses; [ mit ];
-      maintainers = with maintainers; [ fab ];
+      changelog = "https://github.com/samuelcolvin/dirty-equals/releases/tag/${src.tag}";
+      license = lib.licenses.mit;
+      maintainers = with lib.maintainers; [ fab ];
     };
   };
 in

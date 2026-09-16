@@ -1,10 +1,14 @@
-import ../make-test-python.nix {
+{
   name = "lorri";
 
-  nodes.machine = { pkgs, ... }: {
-    imports = [ ../../modules/profiles/minimal.nix ];
-    environment.systemPackages = [ pkgs.lorri ];
-  };
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      imports = [ ../../modules/profiles/minimal.nix ];
+      environment.systemPackages = [ pkgs.lorri ];
+
+      nix.enable = true; # disabled by default. See all-tests.nix / tag(no-nix-by-default)
+    };
 
   testScript = ''
     # Copy files over

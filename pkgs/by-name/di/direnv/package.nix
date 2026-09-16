@@ -1,22 +1,39 @@
-{ lib, stdenv, fetchFromGitHub, buildGoModule, bash, fish, zsh }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  buildGoModule,
+  bash,
+  fish,
+  zsh,
+  writableTmpDirAsHomeHook,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "direnv";
-  version = "2.34.0";
+  version = "2.37.1";
 
   src = fetchFromGitHub {
     owner = "direnv";
     repo = "direnv";
-    rev = "v${version}";
-    hash = "sha256-EvzqLS/FiWrbIXDkp0L/T8QNKnRGuQkbMWajI3X3BDw=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-92xjoCjH5O7wx8U7OFG8Lw9eDOAdeVKNvxBHW+TiniM=";
   };
 
-  vendorHash = "sha256-FfKvLPv+jUT5s2qQ7QlzBMArI+acj7nhpE8FGMPpp5E=";
+  vendorHash = "sha256-SAIGFQGACTB3Q0KnIdiKKNYY6fVjf/09wGqNr0Hkg+M=";
 
   # we have no bash at the moment for windows
-  BASH_PATH =
-    lib.optionalString (!stdenv.hostPlatform.isWindows)
-    "${bash}/bin/bash";
+  env.BASH_PATH = lib.optionalString (!stdenv.hostPlatform.isWindows) "${bash}/bin/bash";
+
+  # Build a static executable to avoid environment runtime impurities
+  env.CGO_ENABLED = 0;
+
+  # With CGO disabled the internal linker is used by default; remove the
+  # explicit -linkmode=external flag from the Makefile which is incompatible
+  # with CGO_ENABLED=0 (see https://github.com/NixOS/nixpkgs/pull/486452)
+  postPatch = ''
+    substituteInPlace GNUmakefile --replace-fail " -linkmode=external" ""
+  '';
 
   # replace the build phase to use the GNUMakefile instead
   buildPhase = ''
@@ -27,14 +44,25 @@ buildGoModule rec {
     make install PREFIX=$out
   '';
 
-  nativeCheckInputs = [ fish zsh ];
+  nativeCheckInputs = [
+    fish
+    zsh
+    writableTmpDirAsHomeHook
+  ];
 
   checkPhase = ''
-    export HOME=$(mktemp -d)
+    runHook preCheck
+
     make test-go test-bash test-fish test-zsh
+
+    runHook postCheck
   '';
 
-  meta = with lib; {
+  postInstall = ''
+    rm -rf "$out/share/fish"
+  '';
+
+  meta = {
     description = "Shell extension that manages your environment";
     longDescription = ''
       Once hooked into your shell direnv is looking for an .envrc file in your
@@ -48,8 +76,8 @@ buildGoModule rec {
       environment variables.
     '';
     homepage = "https://direnv.net";
-    license = licenses.mit;
-    maintainers = [ maintainers.zimbatm ];
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.zimbatm ];
     mainProgram = "direnv";
   };
-}
+})

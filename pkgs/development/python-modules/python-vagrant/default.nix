@@ -10,12 +10,12 @@
 buildPythonPackage rec {
   version = "1.1.0";
   pname = "python-vagrant";
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pycontribs";
     repo = "python-vagrant";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-apvYzH0IY6ZyUP/FiOVbGN3dXejgN7gn7Mq2tlEaTww=";
   };
 

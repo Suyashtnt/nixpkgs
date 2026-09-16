@@ -1,119 +1,344 @@
-{ lib
-, python3
-, fetchFromGitHub
-, ffmpeg-headless
-, nixosTests
-, substituteAll
-, providers ? [ ]
+{
+  lib,
+  stdenv,
+  airplay-cli,
+  python3Packages,
+  fetchFromGitHub,
+  ffmpeg_7-headless,
+  nixosTests,
+  openssl,
+  replaceVars,
+  writableTmpDirAsHomeHook,
+  providers ? [ ],
 }:
 
 let
-  python = python3.override {
-    self = python;
-    packageOverrides = self: super: {
-      music-assistant-frontend = self.callPackage ./frontend.nix { };
-    };
-  };
+  pythonPackages = python3Packages.overrideScope (
+    final: prev: {
+      # TODO: package properly when no longer using a fork
+      aiolibdatachannel = final.callPackage ./aiolibdatachannel.nix { };
 
-  providerPackages = (import ./providers.nix).providers;
+      music-assistant-frontend = final.callPackage ./frontend.nix { };
+
+      music-assistant-models = prev.music-assistant-models.overridePythonAttrs (oldAttrs: {
+        version = "1.1.205";
+
+        src = oldAttrs.src.override {
+          hash = "sha256-4pUBsUrH4mzsOvjOMHwEkfnhMfLweb+JK/v4mAimA+0=";
+        };
+      });
+    }
+  );
+
+  # 6.0.0.post1 causes 10+ tests to fail with encoding errors
+  # Overwriting chardet for the package set causes many rebuilds and failures in other packages,
+  # but luckily nothing is propagating it, so we can get away with only overlaying it for music-assistant
+  chardet = pythonPackages.chardet.overridePythonAttrs (
+    { src, meta, ... }:
+    let
+      version = "7.6.0";
+    in
+    {
+      inherit version;
+      src = src.override {
+        hash = "sha256-7xloMYaoAB1uwj4/5KK8PFd/mjXTgMFjS0SGW7Rrynw=";
+      };
+
+      nativeCheckInputs = with pythonPackages; [
+        pytestCheckHook
+      ];
+
+      preCheck = ''
+        ln -s ${
+          fetchFromGitHub {
+            owner = "chardet";
+            repo = "test-data";
+            tag = version;
+            hash = "sha256-kgD/fCxVuxgn6x2JVf4ij8ptzRi7AfqswccQ0akWL0s=";
+          }
+        } tests/data
+      '';
+
+      meta = meta // {
+        license = lib.licenses.bsd0;
+      };
+    }
+  );
+
+  providersMeta = import ./providers.nix;
+  providerPackages = providersMeta.providers;
   providerNames = lib.attrNames providerPackages;
-  providerDependencies = lib.concatMap (provider: (providerPackages.${provider} python.pkgs)) providers;
-
-  pythonPath = python.pkgs.makePythonPath providerDependencies;
+  providerDependencies = lib.concatMap (
+    provider: (providerPackages.${provider} pythonPackages)
+  ) providers;
 in
 
-python.pkgs.buildPythonApplication rec {
+assert
+  (lib.elem "ariacast" providers) -> throw "music-assistant: ariacast has not been packaged, yet.";
+
+pythonPackages.buildPythonApplication (finalAttrs: {
   pname = "music-assistant";
-  version = "2.2.6";
+  version = "2.10.3";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "music-assistant";
     repo = "server";
-    rev = "refs/tags/${version}";
-    hash = "sha256-BEbcIq+qtJ1OffT2we6qajzvDYDu09rMcmJF1F06xZQ=";
+    tag = finalAttrs.version;
+    hash = "sha256-5YfXmk4GE1BNdWLFbAvBo1s6SlD3Mo38Oa6zgehTJTs=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./ffmpeg.patch;
-      ffmpeg = "${lib.getBin ffmpeg-headless}/bin/ffmpeg";
-      ffprobe = "${lib.getBin ffmpeg-headless}/bin/ffprobe";
+    (replaceVars ./ffmpeg.patch {
+      ffmpeg = lib.getExe' ffmpeg_7-headless "ffmpeg";
+      ffprobe = lib.getExe' ffmpeg_7-headless "ffprobe";
     })
+
+    # Look up librespot from PATH at runtime
+    ./librespot.patch
+
+    # Look up shairport-sync from PATH at runtime
+    ./shairport-sync.patch
+
+    # Look up cliairplay from PATH at runtime
+    ./cliairplay.patch
+
+    # Disable interactive dependency resolution, which clashes with the immutable Python environment
+    ./dont-install-deps.patch
+
+    # Fix running the built-in snapcast server
+    ./builtin-snapcast-server.patch
+
+    # Fix running the webserver pytests in our nix sandbox, which only has a loopback interface,
+    # by not skipping over its loopback IPv4 address:
+    #
+    #     """Return all Config Entries for this core module (if any)."""
+    #     ip_addresses = await get_ip_addresses()
+    # >   default_publish_ip = ip_addresses[0]
+    #                          ^^^^^^^^^^^^^^^
+    # E   IndexError: tuple index out of range
+    ./fix-webserver-tests-in-sandbox.patch
+
+    # As providers must be configured through the nixos module, there is no gain
+    # if Music Assistant tries to enable some of them without the proper dependencies.
+    ./disable-default-provider.diff
+
+    # Fixes this warning on startup:
+    #  On-device ML inference capability probe was inconclusive (exit code 1); assuming this CPU is capable
+    # Music-Assistant's site-packages is injected via passthru.pythonPath, because $out cannot be used with replaceVars
+    ./inherit-env-for-avx2-check.diff
   ];
 
   postPatch = ''
     substituteInPlace pyproject.toml \
-      --replace-fail "0.0.0" "${version}"
+      --replace-fail "0.0.0" "${finalAttrs.version}" \
+      --replace-fail "==" ">="
+
+    rm -rv \
+      music_assistant/providers/airplay_receiver/bin/{build_binaries.sh,shairport-sync-*} \
+      music_assistant/providers/spotify/bin/librespot-*
+
+    found_bins=$(find music_assistant/ -wholename '*/bin/*' -type f -executable -print0 | tr '\0' ' ')
+    if [[ -n $found_bins ]]; then
+      echo "Found binaries that should be replaced with packages built from source: $found_bins"
+      exit 2
+    fi
+
+    airplay_cli_version=$(grep -oP 'CLIAIRPLAY_VERSION=v\K[0-9]+\.[0-9]+\.[0-9]+' Dockerfile)
+    if [[ $airplay_cli_version != ${airplay-cli.version} ]]; then
+      echo "Our airplay-cli version ${airplay-cli.version} is not matching upstream $airplay_cli_version, please update it!"
+      exit 5
+    fi
   '';
 
-  build-system = with python.pkgs; [
+  build-system = with pythonPackages; [
     setuptools
   ];
 
-  dependencies = with python.pkgs; [
-    aiohttp
-    mashumaro
-    orjson
-  ] ++ optional-dependencies.server;
+  pythonRelaxDeps = [
+    "aiosqlite"
+    "cryptography"
+    "torch"
+  ];
 
-  optional-dependencies = with python.pkgs; {
-    server = [
+  pythonRemoveDeps = [
+    # no runtime dependency resolution
+    "uv"
+  ];
+
+  dependencies =
+    with pythonPackages;
+    [
+      # Only packages required in pyproject.toml
       aiodns
       aiofiles
       aiohttp
-      aiorun
+      aiohttp-asyncmdnsresolver
+      aiohttp-fast-zlib
+      aiohttp-socks
+      aiolibdatachannel
       aiosqlite
-      asyncio-throttle
+      awesomeversion
       brotli
       certifi
+      chardet
       colorlog
       cryptography
-      eyed3
-      faust-cchardet
+      getmac
+      gql
       ifaddr
+      librosa
+      markdownify
       mashumaro
-      memory-tempfile
+      modern-colorthief
       music-assistant-frontend
+      music-assistant-models
+      mutagen
+      numpy
       orjson
       pillow
+      podcastparser
+      propcache
+      pyjwt
       python-slugify
       shortuuid
+      torch
+      torchaudio
       unidecode
       xmltodict
       zeroconf
+
+      # Used in music_assistant/controllers/webserver/helpers/auth_providers.py
+      # but somehow not part of pyproject.toml
+      hass-client
+    ]
+    ++ gql.optional-dependencies.all
+    ++ pyjwt.optional-dependencies.crypto;
+
+  optional-dependencies = with pythonPackages; {
+    # Required subset of optional-dependencies in pyproject.toml
+    test = [
+      pytest-aiohttp
+      pytest-cov-stub
+      pytest-timeout
+      pytest-xdist
+      syrupy
     ];
   };
 
-  nativeCheckInputs = with python.pkgs; [
-    aiojellyfin
-    pytest-aiohttp
-    pytest-cov-stub
-    pytestCheckHook
-    syrupy
-    pytest-timeout
-  ]
-  ++ lib.flatten (lib.attrValues optional-dependencies);
+  nativeCheckInputs =
+    with pythonPackages;
+    [
+      openssl
+      pytest9_0CheckHook
+      writableTmpDirAsHomeHook
+    ]
+    ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies
+    ++ (lib.concatMap (provider: providerPackages.${provider} pythonPackages) [
+      "acoustid_lookup"
+      "airplay"
+      "apple_music"
+      "audible"
+      "audiobookshelf"
+      "bluesound"
+      "chromecast"
+      "dlna"
+      "fastmcp_server"
+      "filesystem_google_drive"
+      "filesystem_onedrive"
+      "fully_kiosk"
+      "heos"
+      "jellyfin"
+      "local_audio"
+      "mpd"
+      "msx_bridge"
+      "opensubsonic"
+      "plex"
+      "plex_connect"
+      "profiler"
+      "sendspin"
+      "sendspin"
+      "smart_fades"
+      "snapcast"
+      "sonic_analysis"
+      "sonic_similarity"
+      "sonos"
+      "sonos_s1"
+      "soundcloud"
+      "spotify"
+      "squeezelite"
+      "tidal"
+      "vban_receiver"
+      "ytmusic"
+    ]);
 
-  pytestFlagsArray = [
-    # blocks in setup
-    "--deselect=tests/server/providers/jellyfin/test_init.py::test_initial_sync"
+  preCheck = ''
+    export NUMBA_CACHE_DIR=$(mktemp -d)
+
+    # required for smart_fades tests
+    mkdir -p $HOME/.cache/torch/hub/checkpoints/
+    cp ${pythonPackages.beat-this.passthru.small0Ckpt} $HOME/.cache/torch/hub/checkpoints/beat_this-small0.ckpt
+  '';
+
+  disabledTestPaths = [
+    # provider is missing dependencies
+    "tests/providers/amplipi"
+    "tests/providers/bandcamp"
+    "tests/providers/bbc_sounds"
+    "tests/providers/deezer"
+    "tests/providers/hue_entertainment"
+    "tests/providers/kion_music"
+    "tests/providers/nicovideo"
+    "tests/providers/qqmusic"
+    "tests/providers/siriusxm"
+    "tests/providers/stream_limits"
+    "tests/providers/wiim"
+    "tests/providers/yandex_music"
+    "tests/providers/yandex_smarthome"
+    "tests/providers/yandex_station"
+    "tests/providers/yandex_ynison"
+    "tests/providers/zvuk_music"
+    # hue_entertainment is not packaged
+    "tests/controllers/config/test_setup_flows.py::test_hue_pairing_flow_retry_then_success"
+    # Our patches break this test
+    "tests/helpers/test_util.py::TestLoadProviderModule"
+    "tests/providers/airplay/test_helpers.py::test_get_cli_binary_uses_release_asset_name"
+    # We do not have a full git repo to work with
+    "tests/scripts/test_release_workflow.py"
+    # save compute
+    "tests/benchmarks/test_bench_helpers.py"
+    # timing sensitive
+    "tests/controllers/music/test_music_migrations.py::test_migrate_database_backfills_external_id_lookup"
+  ];
+
+  disabledTests = lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    # RuntimeError: failed to initialize QNNPACK
+    "test_beat_detection"
+    "test_digital_silence_yields_finite_spectral_centroid"
+    "test_extended_analysis_fields"
+    "test_finalize_returns_audio_analysis_data"
+    "test_finalize_returns_none_on_early_exit"
   ];
 
   pythonImportsCheck = [ "music_assistant" ];
 
   passthru = {
     inherit
-      python
-      pythonPath
+      pythonPackages
       providerPackages
       providerNames
-    ;
+      ;
+    providersBuiltins = providersMeta.builtins;
+    pythonPath =
+      pythonPackages.makePythonPath providerDependencies
+      + ":${finalAttrs.finalPackage}/${pythonPackages.python.sitePackages}";
     tests = nixosTests.music-assistant;
   };
 
-  meta = with lib; {
-    changelog = "https://github.com/music-assistant/server/releases/tag/${version}";
+  meta = {
+    broken = stdenv.hostPlatform.isDarwin;
+    changelog = "https://github.com/music-assistant/server/releases/tag/${finalAttrs.src.tag}";
     description = "Music Assistant is a music library manager for various music sources which can easily stream to a wide range of supported players";
     longDescription = ''
       Music Assistant is a free, opensource Media library manager that connects to your streaming services and a wide
@@ -121,8 +346,11 @@ python.pkgs.buildPythonApplication rec {
       always-on device like a Raspberry Pi, a NAS or an Intel NUC or alike.
     '';
     homepage = "https://github.com/music-assistant/server";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      hexa
+      emilylange
+    ];
     mainProgram = "mass";
   };
-}
+})

@@ -1,25 +1,26 @@
-{ lib
-, stdenv
-, fetchurl
-, pkg-config
-, meson
-, ninja
-, gettext
-, gnome
-, packagekit
-, polkit
-, gtk3
-, systemd
-, wrapGAppsHook3
-, desktop-file-utils
+{
+  lib,
+  stdenv,
+  fetchurl,
+  pkg-config,
+  meson,
+  ninja,
+  gettext,
+  gnome,
+  packagekit,
+  polkit,
+  gtk3,
+  systemd,
+  wrapGAppsHook3,
+  desktop-file-utils,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gnome-packagekit";
   version = "43.0";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/gnome-packagekit/${lib.versions.major version}/gnome-packagekit-${version}.tar.xz";
+    url = "mirror://gnome/sources/gnome-packagekit/${lib.versions.major finalAttrs.version}/gnome-packagekit-${finalAttrs.version}.tar.xz";
     hash = "sha256-zaRVplKpI7LqL3Axa9D92Clve2Lu8/r9nOUMjmbF8ZU=";
   };
 
@@ -49,11 +50,11 @@ stdenv.mkDerivation rec {
     };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://www.freedesktop.org/software/PackageKit/";
-    platforms = platforms.linux;
-    maintainers = teams.gnome.members;
-    license = licenses.gpl2;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.gnome ];
+    license = lib.licenses.gpl2;
     description = "Tools for installing software on the GNOME desktop using PackageKit";
   };
-}
+})

@@ -1,12 +1,16 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
+
+  # build-system
   setuptools,
-  wheel,
+
+  # dependencies
   gymnasium,
   numpy,
+
+  # tests
   ale-py,
   bsuite,
   dm-control,
@@ -16,23 +20,20 @@
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "shimmy";
-  version = "1.3.0";
+  version = "2.0.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "Farama-Foundation";
     repo = "Shimmy";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-rYBbGyMSFF/iIGruKn2JXKAVIZIfJDEHUEZUESiUg/k=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-vMVvD/UNzGs6igYskQ/L+yt0v5kdjOVal0sfaTkirsU=";
   };
 
   build-system = [
     setuptools
-    wheel
   ];
 
   dependencies = [
@@ -58,15 +59,7 @@ buildPythonPackage rec {
 
     # Requires unpackaged pyspiel
     "tests/test_openspiel.py"
-
-    # Broken since ale-py v0.9.0 due to API change
-    # https://github.com/Farama-Foundation/Shimmy/issues/120
-    "tests/test_atari.py"
   ];
-
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
 
   disabledTests = [
     # Require network access
@@ -91,10 +84,10 @@ buildPythonPackage rec {
   ];
 
   meta = {
-    changelog = "https://github.com/Farama-Foundation/Shimmy/releases/tag/v${version}";
+    changelog = "https://github.com/Farama-Foundation/Shimmy/releases/tag/${finalAttrs.src.tag}";
     description = "API conversion tool for popular external reinforcement learning environments";
     homepage = "https://github.com/Farama-Foundation/Shimmy";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

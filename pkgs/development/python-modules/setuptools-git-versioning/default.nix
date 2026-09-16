@@ -2,60 +2,56 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+  addBinToPathHook,
   build,
   coverage,
   git,
   packaging,
+  pyprojectVersionPatchHook,
   pytestCheckHook,
   pytest-rerunfailures,
-  pythonOlder,
+  pytest-xdist,
+  scikit-build-core,
   setuptools,
-  toml,
-  wheel,
+  tomli-w,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "setuptools-git-versioning";
-  version = "2.0.0";
-  format = "pyproject";
+  version = "3.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dolfinus";
     repo = "setuptools-git-versioning";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-xugK/JOVA53nCK8bB0gPkhIREmy0+/OthsydfYRCYno=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-d6d8taSSAjvirivf1WaEICq0XbrYQzC2LB//LpGpHhI=";
   };
 
-  nativeBuildInputs = [
-    setuptools
-    wheel
-  ];
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
 
-  propagatedBuildInputs = [
+  build-system = [
     packaging
     setuptools
-  ] ++ lib.optionals (pythonOlder "3.11") [ toml ];
+  ];
+
+  dependencies = [
+    packaging
+    setuptools
+  ];
 
   pythonImportsCheck = [ "setuptools_git_versioning" ];
 
   nativeCheckInputs = [
+    addBinToPathHook
     build
     coverage
     git
     pytestCheckHook
     pytest-rerunfailures
-    toml
-  ];
-
-  preCheck = ''
-    # so that its built binary is accessible by tests
-    export PATH="$out/bin:$PATH"
-  '';
-
-  # limit tests because the full suite takes several minutes to run
-  pytestFlagsArray = [
-    "-m"
-    "important"
+    pytest-xdist
+    scikit-build-core
+    tomli-w
   ];
 
   disabledTests = [
@@ -63,12 +59,11 @@ buildPythonPackage rec {
     "test_config_not_used"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Use git repo data (latest tag, current commit hash, etc) for building a version number according PEP-440";
     mainProgram = "setuptools-git-versioning";
     homepage = "https://github.com/dolfinus/setuptools-git-versioning";
-    changelog = "https://github.com/dolfinus/setuptools-git-versioning/blob/${src.rev}/CHANGELOG.rst";
-    license = licenses.mit;
-    maintainers = with maintainers; [ tjni ];
+    changelog = "https://setuptools-git-versioning.readthedocs.io/en/${finalAttrs.src.tag}/changelog.html";
+    license = lib.licenses.mit;
   };
-}
+})

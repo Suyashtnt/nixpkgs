@@ -1,37 +1,59 @@
-{ stdenv
-, lib
-, requireFile
-, runCommand
-, rcu
-, testers
-, copyDesktopItems
-, desktopToDarwinBundle
-, libsForQt5
-, makeDesktopItem
-, python3Packages
-, system-config-printer
+{
+  stdenv,
+  lib,
+  requireFile,
+  runCommand,
+  rcu,
+  testers,
+  copyDesktopItems,
+  coreutils,
+  desktopToDarwinBundle,
+  gnutar,
+  qt6,
+  makeDesktopItem,
+  net-tools,
+  protobuf,
+  python3Packages,
+  system-config-printer,
+  wget,
 }:
-
 python3Packages.buildPythonApplication rec {
   pname = "rcu";
-  version = "2024.001q";
+  version = "5.1.1";
 
-  format = "other";
+  pyproject = false;
 
-  src = let
-    src-tarball = requireFile {
-      name = "rcu-d${version}-source.tar.gz";
-      hash = "sha256-Ywk28gJBMSSQL6jEcHE8h253KOsXIGwVOag6PBWs8kg=";
-      url = "http://www.davisr.me/projects/rcu/";
-    };
-  in runCommand "${src-tarball.name}-unpacked" {} ''
-    gunzip -ck ${src-tarball} | tar -xvf-
-    mv rcu $out
-    ln -s ${src-tarball} $out/src
-  '';
+  src =
+    let
+      src-tarball = requireFile {
+        name = "rcu-${version}-source.tar.gz";
+        hash = "sha256-6O2WULD4QAq20ax67gcr8DoNWehoIoFc1LGXFxROTLA=";
+        url = "https://www.davisr.me/projects/rcu/";
+        meta = {
+          # `requireFile` sets `lib.licenses.unfree` by default
+          inherit (meta) license;
+        };
+      };
+    in
+    runCommand "${src-tarball.name}-unpacked" { } ''
+      gunzip -ck ${src-tarball} | tar -xvf-
+      mv rcu $out
+      ln -s ${src-tarball} $out/src
+    '';
 
+  # RCU officially targets older dependency versions. We apply these patches to
+  # keep the application working securely with the modern nixpkgs environment.
+  # These compatibility patches have been submitted upstream to the RCU developer via email.
+  #
+  # - Port-to-paramiko-5.x.patch: RCU vendors an old `transport.py` from paramiko.
+  #   This patch removes references to GSSAPI and SHA-1 Key Exchanges that were dropped in paramiko 5.0.0.
+  # - Fix-urllib-cafile.patch: Replaces the `cafile` kwarg in urllib (removed in Python 3.10) with an ssl context to fix the updater.
+  # - Fix-Python-SyntaxWarnings.patch: Converts regex strings with invalid escapes to raw strings to fix Python 3.12+ warnings.
+  #   Without this patch, these invalid escape sequences will become hard SyntaxErrors in Python 3.16.
   patches = [
-    ./Port-to-paramiko-3.x.patch
+    ./Port-to-paramiko-5.x.patch
+    ./Fix-urllib-cafile.patch
+    ./Fix-Python-SyntaxWarnings.patch
   ];
 
   postPatch = ''
@@ -40,18 +62,29 @@ python3Packages.buildPythonApplication rec {
 
     substituteInPlace package_support/gnulinux/50-remarkable.rules \
       --replace-fail 'GROUP="yourgroup"' 'GROUP="users"'
+
+    # This must match the protobuf version imported at runtime, regenerate it
+    rm src/model/update_metadata_pb2.py
+    protoc --proto_path src/model src/model/update_metadata.proto --python_out=src/model
+
+    # We don't make it available at this location, wrapping adds it to PATH instead
+    substituteInPlace src/model/document.py \
+      --replace-fail '/sbin/ifconfig' 'ifconfig'
   '';
 
   nativeBuildInputs = [
     copyDesktopItems
-    libsForQt5.wrapQtAppsHook
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    protobuf
+    qt6.wrapQtAppsHook
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
     desktopToDarwinBundle
   ];
 
   buildInputs = [
-    libsForQt5.qtbase
-    libsForQt5.qtwayland
+    qt6.qtbase
+    qt6.qtwayland
+    qt6.qtsvg
   ];
 
   propagatedBuildInputs = with python3Packages; [
@@ -61,8 +94,8 @@ python3Packages.buildPythonApplication rec {
     pdfminer-six
     pikepdf
     pillow
-    protobuf
-    pyside2
+    python3Packages.protobuf # otherwise it picks up protobuf from function args
+    pyside6
   ];
 
   desktopItems = [
@@ -87,9 +120,11 @@ python3Packages.buildPythonApplication rec {
     mkdir -p $out/{bin,share}
     cp -r src $out/share/rcu
 
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     install -Dm644 package_support/gnulinux/50-remarkable.rules $out/etc/udev/rules.d/50-remarkable.rules
-  '' + ''
+  ''
+  + ''
 
     # Keep source from being GC'd by linking into it
 
@@ -119,35 +154,52 @@ python3Packages.buildPythonApplication rec {
   preFixup = ''
     makeWrapperArgs+=(
       "''${qtWrapperArgs[@]}"
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
-      --prefix PATH : ${lib.makeBinPath [ system-config-printer ]}
-  '' + ''
+      --prefix PATH : ${
+        lib.makeBinPath [
+          coreutils
+          gnutar
+          wget
+        ]
+      }
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
+    --prefix PATH : ${
+      lib.makeBinPath [
+        net-tools
+        system-config-printer
+      ]
+    }
+  ''
+  + ''
     )
   '';
 
   postFixup = ''
     makeWrapper ${lib.getExe python3Packages.python} $out/bin/rcu \
       ''${makeWrapperArgs[@]} \
-      --prefix PYTHONPATH : ${python3Packages.makePythonPath (propagatedBuildInputs ++ [(placeholder "out")])} \
+      --prefix PYTHONPATH : ${
+        python3Packages.makePythonPath (propagatedBuildInputs ++ [ (placeholder "out") ])
+      } \
       --add-flags $out/share/rcu/main.py
   '';
 
   passthru = {
     tests.version = testers.testVersion {
       package = rcu;
-      version = let
-        versionSuffixPos = (lib.strings.stringLength rcu.version) - 1;
-      in
-        "d${lib.strings.substring 0 versionSuffixPos rcu.version}(${lib.strings.substring versionSuffixPos 1 rcu.version})";
     };
+
+    # Python stuff automatically adds an updateScript that just fails
+    updateScript = null;
   };
 
-  meta = with lib; {
+  meta = {
     mainProgram = "rcu";
     description = "All-in-one offline/local management software for reMarkable e-paper tablets";
     homepage = "http://www.davisr.me/projects/rcu/";
-    license = licenses.agpl3Plus;
-    maintainers = with maintainers; [ OPNA2608 ];
+    license = lib.licenses.agpl3Plus;
+    maintainers = with lib.maintainers; [
+      m0streng0
+    ];
     hydraPlatforms = [ ]; # requireFile used as src
   };
 }

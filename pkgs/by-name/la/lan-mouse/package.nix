@@ -1,30 +1,29 @@
-{ stdenv
-, rustPlatform
-, fetchFromGitHub
-, lib
-, darwin
-, glib
-, gtk4
-, libadwaita
-, libX11
-, libXtst
-, pkg-config
-, wrapGAppsHook4
+{
+  stdenv,
+  rustPlatform,
+  fetchFromGitHub,
+  lib,
+  glib,
+  gtk4,
+  libadwaita,
+  libx11,
+  libxtst,
+  pkg-config,
+  wrapGAppsHook4,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "lan-mouse";
-  version = "0.9.1";
+  version = "0.11.0";
 
   src = fetchFromGitHub {
     owner = "feschber";
     repo = "lan-mouse";
     rev = "v${version}";
-    hash = "sha256-BadpYZnZJcifhe916/X+OGvTQ4FQeTLnoy0gP/i5cLA=";
+    hash = "sha256-6EqA9WfiukOymUT4FkNdMvzmFKByW0LLoI/9sv4TzBU=";
   };
 
   nativeBuildInputs = [
-    glib # needed in both {b,nativeB}uildInptus
     pkg-config
     wrapGAppsHook4
   ];
@@ -33,12 +32,16 @@ rustPlatform.buildRustPackage rec {
     glib
     gtk4
     libadwaita
-    libX11
-    libXtst
-  ]
-  ++ lib.optional stdenv.hostPlatform.isDarwin darwin.apple_sdk.frameworks.CoreGraphics;
+    libx11
+    libxtst
+  ];
 
-  cargoHash = "sha256-pDdpmZPaClU8KjFHO7v3FDQp9D83GQN+SnFg53q2fjs=";
+  cargoHash = "sha256-Lxs0qWvNAv4KCeJ+cDBYBzwlbJfQJshcxPRdg9w0szc=";
+
+  postInstall = ''
+    install -Dm444 de.feschber.LanMouse.desktop -t $out/share/applications
+    install -Dm444 lan-mouse-gtk/resources/de.feschber.LanMouse.svg -t $out/share/icons/hicolor/scalable/apps
+  '';
 
   meta = {
     description = "Software KVM switch for sharing a mouse and keyboard with multiple hosts through the network";

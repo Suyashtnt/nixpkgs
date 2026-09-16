@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.dnscache;
 
@@ -9,11 +14,13 @@ let
       touch "$out/ip/"${lib.escapeShellArg ip}
     '') cfg.clientIps}
 
-    ${lib.concatStrings (lib.mapAttrsToList (host: ips: ''
-      ${lib.concatMapStrings (ip: ''
-        echo ${lib.escapeShellArg ip} >> "$out/servers/"${lib.escapeShellArg host}
-      '') ips}
-    '') cfg.domainServers)}
+    ${lib.concatStrings (
+      lib.mapAttrsToList (host: ips: ''
+        ${lib.concatMapStrings (ip: ''
+          echo ${lib.escapeShellArg ip} >> "$out/servers/"${lib.escapeShellArg host}
+        '') ips}
+      '') cfg.domainServers
+    )}
 
     # if a list of root servers was not provided in config, copy it
     # over. (this is also done by dnscache-conf, but we 'rm -rf
@@ -25,7 +32,8 @@ let
     fi
   '';
 
-in {
+in
+{
 
   ###### interface
 
@@ -48,7 +56,10 @@ in {
         default = [ "127.0.0.1" ];
         type = lib.types.listOf lib.types.str;
         description = "Client IP addresses (or prefixes) from which to accept connections.";
-        example = ["192.168" "172.23.75.82"];
+        example = [
+          "192.168"
+          "172.23.75.82"
+        ];
       };
 
       domainServers = lib.mkOption {
@@ -84,26 +95,29 @@ in {
   config = lib.mkIf config.services.dnscache.enable {
     environment.systemPackages = [ pkgs.djbdns ];
     users.users.dnscache = {
-        isSystemUser = true;
-        group = "dnscache";
+      isSystemUser = true;
+      group = "dnscache";
     };
-    users.groups.dnscache = {};
+    users.groups.dnscache = { };
 
     systemd.services.dnscache = {
       description = "djbdns dnscache server";
       wantedBy = [ "multi-user.target" ];
-      path = with pkgs; [ bash daemontools djbdns ];
-      preStart = ''
-        rm -rf /var/lib/dnscache
-        dnscache-conf dnscache dnscache /var/lib/dnscache ${config.services.dnscache.ip}
-        rm -rf /var/lib/dnscache/root
-        ln -sf ${dnscache-root} /var/lib/dnscache/root
-      '';
-      script = ''
-        cd /var/lib/dnscache/
-        ${lib.optionalString cfg.forwardOnly "export FORWARDONLY=1"}
-        exec ./run
-      '';
+      path = with pkgs; [
+        bash
+        daemontools
+        djbdns
+      ];
+      environment.FORWARDONLY = lib.mkIf cfg.forwardOnly "1";
+      serviceConfig.StateDirectory = "dnscache";
+      serviceConfig.WorkingDirectory = "/var/lib/dnscache";
+      serviceConfig.ExecStartPre = [
+        "${lib.getExe' pkgs.coreutils "rm"} -rf /var/lib/dnscache"
+        "${lib.getExe' pkgs.djbdns "dnscache-conf"} dnscache dnscache /var/lib/dnscache ${config.services.dnscache.ip}"
+        "${lib.getExe' pkgs.coreutils "rm"} -rf /var/lib/dnscache/root"
+        "${lib.getExe' pkgs.coreutils "ln"} -sf ${dnscache-root} /var/lib/dnscache/root"
+      ];
+      serviceConfig.ExecStart = "/var/lib/dnscache/run";
     };
   };
 }

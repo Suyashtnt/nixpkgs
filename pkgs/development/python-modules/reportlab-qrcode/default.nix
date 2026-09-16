@@ -31,7 +31,7 @@ buildPythonPackage rec {
     reportlab
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     testing = [
       pillow
       pytest
@@ -41,10 +41,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "reportlab_qrcode" ];
 
-  meta = with lib; {
+  meta = {
     description = "Allows to create QR codes for use with the ReportLab PDF library";
     homepage = "https://pypi.org/project/reportlab-qrcode/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ xanderio ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ xanderio ];
   };
 }

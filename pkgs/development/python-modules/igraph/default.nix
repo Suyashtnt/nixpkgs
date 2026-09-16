@@ -1,9 +1,9 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   pkg-config,
+  cmake,
   setuptools,
   igraph,
   texttable,
@@ -15,21 +15,19 @@
 
 buildPythonPackage rec {
   pname = "igraph";
-  version = "0.11.6";
-
-  disabled = pythonOlder "3.8";
+  version = "1.0.0";
 
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "igraph";
     repo = "python-igraph";
-    rev = "refs/tags/${version}";
+    tag = version;
     postFetch = ''
       # export-subst prevents reproducability
       rm $out/.git_archival.json
     '';
-    hash = "sha256-DXYNFSvmKiulMnWL8w5l9lWGtS9Sff/Hn4x538nrvzo=";
+    hash = "sha256-Y7ZQ1yNoD8A5b6c92OGz9Unietdg1uNt/Za6nxdCSP0=";
   };
 
   postPatch = ''
@@ -38,13 +36,18 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [ pkg-config ];
 
-  build-system = [ setuptools ];
+  build-system = [
+    cmake
+    setuptools
+  ];
+
+  dontUseCmakeConfigure = true;
 
   buildInputs = [ igraph ];
 
   dependencies = [ texttable ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     cairo = [ cairocffi ];
     matplotlib = [ matplotlib ];
     plotly = [ plotly ];
@@ -58,7 +61,8 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [
     pytestCheckHook
-  ] ++ lib.flatten (lib.attrValues passthru.optional-dependencies);
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   disabledTests = [
     "testAuthorityScore"
@@ -67,13 +71,13 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "igraph" ];
 
-  meta = with lib; {
+  meta = {
     description = "High performance graph data structures and algorithms";
     mainProgram = "igraph";
     homepage = "https://igraph.org/python/";
     changelog = "https://github.com/igraph/python-igraph/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [
       MostAwesomeDude
       dotlambda
     ];

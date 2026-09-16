@@ -1,9 +1,13 @@
-{ buildDunePackage
-, pbrt
-, stdlib-shims
+{
+  lib,
+  ocaml,
+  buildDunePackage,
+  pbrt,
+  stdlib-shims,
+  pbrt_services,
 }:
 
-buildDunePackage rec {
+buildDunePackage {
   pname = "ocaml-protoc";
 
   inherit (pbrt) version src;
@@ -11,7 +15,8 @@ buildDunePackage rec {
   buildInputs = [ stdlib-shims ];
   propagatedBuildInputs = [ pbrt ];
 
-  doCheck = true;
+  doCheck = lib.versionAtLeast ocaml.version "5.1";
+  checkInputs = [ pbrt_services ];
 
   meta = pbrt.meta // {
     description = "Protobuf Compiler for OCaml";

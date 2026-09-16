@@ -1,35 +1,37 @@
-{ lib
-, cargo
-, desktop-file-utils
-, fetchFromGitLab
-, glib
-, gtk4
-, libadwaita
-, meson
-, ninja
-, pkg-config
-, rustPlatform
-, rustc
-, stdenv
-, wrapGAppsHook4
+{
+  lib,
+  cargo,
+  desktop-file-utils,
+  fetchFromGitLab,
+  glib,
+  gtk4,
+  libadwaita,
+  meson,
+  ninja,
+  nix-update-script,
+  pkg-config,
+  rustPlatform,
+  rustc,
+  stdenv,
+  wrapGAppsHook4,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lorem";
-  version = "1.4";
+  version = "1.6";
 
   src = fetchFromGitLab {
     domain = "gitlab.gnome.org";
-    owner = "World/design";
+    group = "World";
+    owner = "design";
     repo = "lorem";
     rev = finalAttrs.version;
-    hash = "sha256-6+kDKKK1bkIOZlqzKWpzpjAS5o7bkbVFITMZVmJijuU=";
+    hash = "sha256-DY2UVB6N3vQehDm1s3KIjodUfyWu3QBo6NxWlPswDN4=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    src = finalAttrs.src;
-    name = "${finalAttrs.pname}-${finalAttrs.version}";
-    hash = "sha256-nzP2Jp9l1QgL7Wk9SWlsSVNaeVe3t48MmeX7Xuz+PKM=";
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-DE0jzI9Tmusm6VT19PsmJoTYHQ4fjrg3ik6tAWhMVSA=";
   };
 
   nativeBuildInputs = [
@@ -49,13 +51,17 @@ stdenv.mkDerivation (finalAttrs: {
     libadwaita
   ];
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     changelog = "https://gitlab.gnome.org/World/design/lorem/-/releases/${finalAttrs.version}";
     description = "Generate placeholder text";
     homepage = "https://apps.gnome.org/Lorem/";
-    license = licenses.gpl3Plus;
+    license = lib.licenses.gpl3Plus;
     mainProgram = "lorem";
-    maintainers = with maintainers; [ michaelgrahamevans ];
-    platforms = platforms.linux;
+    teams = [ lib.teams.gnome-circle ];
+    platforms = lib.platforms.linux;
   };
 })

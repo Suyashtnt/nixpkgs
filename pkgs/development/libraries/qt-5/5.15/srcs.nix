@@ -1,19 +1,22 @@
-{ lib, fetchgit, fetchFromGitHub }:
+{
+  lib,
+  fetchgit,
+  fetchFromGitHub,
+}:
 
 let
-  version = "5.15.14";
+  version = "5.15.19";
 
-  mk = name: args:
-    {
-      inherit version;
-      src = fetchgit {
-        inherit (args) url rev sha256;
-        fetchLFS = false;
-        fetchSubmodules = true;
-        deepClone = false;
-        leaveDotGit = false;
-      };
+  mk = name: args: {
+    inherit version;
+    src = fetchgit {
+      inherit (args) url rev sha256;
+      fetchLFS = false;
+      fetchSubmodules = true;
+      deepClone = false;
+      leaveDotGit = false;
     };
+  };
 in
 lib.mapAttrs mk (lib.importJSON ./srcs-generated.json)
 // {
@@ -40,18 +43,6 @@ lib.mapAttrs mk (lib.importJSON ./srcs-generated.json)
     };
   };
 
-  # qtwebkit does not have an official release tarball on the qt mirror and is
-  # mostly maintained by the community.
-  qtwebkit = rec {
-    src = fetchFromGitHub {
-      owner = "qt";
-      repo = "qtwebkit";
-      rev = "v${version}";
-      sha256 = "0x8rng96h19xirn7qkz3lydal6v4vn00bcl0s3brz36dfs0z8wpg";
-    };
-    version = "5.212.0-alpha4";
-  };
-
   # qtsystems has no official releases
   qtsystems = {
     version = "unstable-2019-01-03";
@@ -64,24 +55,24 @@ lib.mapAttrs mk (lib.importJSON ./srcs-generated.json)
   };
 
   qtscript = rec {
-    version = "5.15.17";
+    version = "5.15.19";
 
     src = fetchFromGitHub {
       owner = "qt";
       repo = "qtscript";
       rev = "v${version}-lts";
-      hash = "sha256-wXEKdu2gdlkVsWr3nb/tCBwyo9H8GPHWTUele1cP0ks=";
+      hash = "sha256-kUY8uSEoHqQVPd4s5BoAW6n1hGXQOQcberqWF6rK60w=";
     };
   };
 
   qtwebengine = rec {
-    version = "5.15.17";
+    version = "5.15.19";
 
     src = fetchFromGitHub {
       owner = "qt";
       repo = "qtwebengine";
       rev = "v${version}-lts";
-      hash = "sha256-1be8Y96yHYBCxQsRC/PD2X0TVWpA2/r1hvi8sBKOais=";
+      hash = "sha256-/R4dF1nu40uH8POmx+7xnwaLNZZVgOSY3mSZLMbtvF4=";
       fetchSubmodules = true;
     };
   };

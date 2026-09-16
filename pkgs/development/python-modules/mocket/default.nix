@@ -1,17 +1,17 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  pythonOlder,
   stdenv,
+  fetchPypi,
 
   # build-system
   hatchling,
 
   # dependencies
   decorator,
-  httptools,
-  python-magic,
+  h11,
+  puremagic,
+  typing-extensions,
   urllib3,
 
   # optional-dependencies
@@ -26,9 +26,10 @@
   httpx,
   psutil,
   pytest-asyncio,
+  pytest-cov-stub,
   pytestCheckHook,
   redis,
-  redis-server,
+  redisTestHook,
   requests,
   sure,
 
@@ -36,57 +37,50 @@
 
 buildPythonPackage rec {
   pname = "mocket";
-  version = "3.12.8";
+  version = "3.14.3";
   pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-++zGXLtQ01srmF0EqUFqaxh+mnNzW8IzYG1RzNGTXkw=";
+    hash = "sha256-lDDPfk8a1/HPxIzgCKv4eq+asnJkFsWBCUROnF6g+wg=";
   };
 
-  nativeBuildInputs = [ hatchling ];
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     decorator
-    httptools
-    python-magic
+    h11
+    puremagic
+    typing-extensions
     urllib3
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     pook = [ pook ];
     speedups = [ xxhash ];
   };
 
-  nativeCheckInputs =
-    [
-      asgiref
-      fastapi
-      gevent
-      httpx
-      psutil
-      pytest-asyncio
-      pytestCheckHook
-      redis
-      requests
-      sure
-    ]
-    ++ lib.optionals (pythonOlder "3.12") [ aiohttp ]
-    ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
-
-  preCheck = lib.optionalString stdenv.hostPlatform.isLinux ''
-    ${redis-server}/bin/redis-server &
-    REDIS_PID=$!
-  '';
-
-  postCheck = lib.optionalString stdenv.hostPlatform.isLinux ''
-    kill $REDIS_PID
-  '';
+  nativeCheckInputs = [
+    aiohttp
+    asgiref
+    fastapi
+    gevent
+    httpx
+    psutil
+    pytest-asyncio
+    pytest-cov-stub
+    pytestCheckHook
+    redis
+    redisTestHook
+    requests
+    sure
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   # Skip http tests, they require network access
   env.SKIP_TRUE_HTTP = true;
 
-  _darwinAllowLocalNetworking = true;
+  __darwinAllowLocalNetworking = true;
 
   disabledTests = [
     # tests that require network access (like DNS lookups)
@@ -96,17 +90,21 @@ buildPythonPackage rec {
     "test_gethostbyname"
     # httpx read failure
     "test_no_dangling_fds"
+    # redis-py response mismatch
+    "test_hgetall"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # fails on darwin due to upstream bug: https://github.com/mindflayer/python-mocket/issues/287
+    "test_httprettish_httpx_session"
   ];
-
-  disabledTestPaths = lib.optionals stdenv.hostPlatform.isDarwin [ "tests/main/test_redis.py" ];
 
   pythonImportsCheck = [ "mocket" ];
 
-  meta = with lib; {
+  meta = {
     changelog = "https://github.com/mindflayer/python-mocket/releases/tag/${version}";
     description = "Socket mock framework for all kinds of sockets including web-clients";
     homepage = "https://github.com/mindflayer/python-mocket";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

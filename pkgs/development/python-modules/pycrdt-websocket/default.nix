@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
@@ -10,6 +9,7 @@
   # dependencies
   anyio,
   pycrdt,
+  pycrdt-store,
   sqlite-anyio,
 
   # optional-dependencies
@@ -25,18 +25,17 @@
   websockets,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pycrdt-websocket";
-  version = "0.14.2";
+  version = "0.16.4";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
-    owner = "jupyter-server";
+    owner = "y-crdt";
     repo = "pycrdt-websocket";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-YsAeEUFxCwu7KA2d83J/rb1IlZTQZZecHJAewh+TqWs=";
+    tag = finalAttrs.version;
+    hash = "sha256-H9QxMxNCIvykGpdxNAtAbVpaJlpnq9O76nTh1raVfJU=";
   };
 
   build-system = [ hatchling ];
@@ -44,6 +43,7 @@ buildPythonPackage rec {
   dependencies = [
     anyio
     pycrdt
+    pycrdt-store
     sqlite-anyio
   ];
 
@@ -51,7 +51,7 @@ buildPythonPackage rec {
     django = [ channels ];
   };
 
-  pythonImportsCheck = [ "pycrdt_websocket" ];
+  pythonImportsCheck = [ "pycrdt.websocket" ];
 
   nativeCheckInputs = [
     httpx-ws
@@ -61,6 +61,13 @@ buildPythonPackage rec {
     trio
     uvicorn
     websockets
+  ];
+
+  disabledTests = [
+    # Looking for a certfile
+    # FileNotFoundError: [Errno 2] No such file or directory
+    "test_asgi"
+    "test_yroom_restart"
   ];
 
   disabledTestPaths = [
@@ -73,8 +80,8 @@ buildPythonPackage rec {
   meta = {
     description = "WebSocket Connector for pycrdt";
     homepage = "https://github.com/jupyter-server/pycrdt-websocket";
-    changelog = "https://github.com/jupyter-server/pycrdt-websocket/blob/${src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/jupyter-server/pycrdt-websocket/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.mit;
-    maintainers = lib.teams.jupyter.members;
+    teams = [ lib.teams.jupyter ];
   };
-}
+})

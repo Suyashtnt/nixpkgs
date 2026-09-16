@@ -1,100 +1,113 @@
 {
-  fetchFromGitHub,
-  fetchPypi,
+  fetchFromCodeberg,
+  fetchNpmDeps,
   lib,
   stdenv,
+  nodejs_24,
+  npmHooks,
   postgresql,
   postgresqlTestHook,
-  python3,
+  python3Packages,
 }:
-let
-  python = python3.override {
-    self = python;
-    packageOverrides = self: super: {
-      sqlalchemy = super.sqlalchemy_1_4;
-
-      flask-sqlalchemy = super.flask-sqlalchemy.overridePythonAttrs (oldAttrs: rec {
-        version = "3.0.5";
-
-        src = fetchPypi {
-          pname = "flask_sqlalchemy";
-          inherit version;
-          hash = "sha256-xXZeWMoUVAG1IQbA9GF4VpJDxdolVWviwjHsxghnxbE=";
-        };
-      });
-    };
-  };
-
-in
-python.pkgs.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "fittrackee";
-  version = "0.8.9";
+  version = "1.3.5";
   pyproject = true;
 
-  src = fetchFromGitHub {
-    owner = "SamR1";
+  src = fetchFromCodeberg {
+    owner = "FitTrackee";
     repo = "FitTrackee";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-raN6Ef/Z/JbdJDMKBIaBL8nmvFwvuZFX4rfC0ZgWgKI=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-IJ/Y1y94esoJtGNJBUbwQo5H0s6hGcUDCIfI1RUht1c=";
   };
 
-  build-system = [
-    python.pkgs.poetry-core
+  makeCacheWritable = true;
+  npmRoot = "fittrackee_client";
+
+  npmDeps = fetchNpmDeps {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-zIqkJdXeQjvXW9TSKZ2Qs9YwiSdRb7HNhZB9Roauu9Y=";
+    sourceRoot = "${finalAttrs.src.name}/fittrackee_client";
+  };
+
+  nativeBuildInputs = [
+    nodejs_24
+    npmHooks.npmConfigHook
   ];
 
-  pythonRelaxDeps = [
-    "authlib"
-    "flask-limiter"
-    "gunicorn"
-    "pyjwt"
-    "pyopenssl"
-    "pytz"
-    "sqlalchemy"
+  preBuild = ''
+    pushd fittrackee_client
+    npm run build-only
+    popd
+  '';
+
+  build-system = [
+    python3Packages.poetry-core
   ];
+
+  pythonRelaxDeps = true;
 
   dependencies =
-    with python.pkgs;
+    with python3Packages;
     [
       authlib
       babel
       click
       dramatiq
+      dramatiq-abort
+      feedgenerator
+      fitdecode
       flask
+      flask-babel
       flask-bcrypt
       flask-dramatiq
       flask-limiter
       flask-migrate
       flask-sqlalchemy
+      geoalchemy2
+      geopandas
       gpxpy
       gunicorn
       humanize
+      jsonschema
+      lxml
+      mistune
+      nh3
+      numpy
+      pandas
       psycopg2-binary
       pyjwt
       pyopenssl
+      pyproj
+      python-magic
       pytz
       shortuuid
       sqlalchemy
-      staticmap
+      staticmap3
       ua-parser
+      xmltodict
     ]
     ++ dramatiq.optional-dependencies.redis
-    ++ flask-limiter.optional-dependencies.redis;
+    ++ flask-limiter.optional-dependencies.redis
+    ++ geoalchemy2.optional-dependencies.shapely
+    ++ staticmap3.optional-dependencies.filecache;
 
   pythonImportsCheck = [ "fittrackee" ];
 
-  nativeCheckInputs = with python.pkgs; [
+  nativeCheckInputs = with python3Packages; [
     pytestCheckHook
     freezegun
     postgresqlTestHook
-    postgresql
+    (postgresql.withPackages (ps: with ps; [ postgis ]))
     time-machine
   ];
 
-  pytestFlagsArray = [
+  enabledTestPaths = [
     "fittrackee"
   ];
 
   postgresqlTestSetupPost = ''
+    echo "CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;" | PGUSER=postgres psql test_db
     export DATABASE_TEST_URL=postgresql://$PGUSER/$PGDATABASE?host=$PGHOST
   '';
 
@@ -102,13 +115,17 @@ python.pkgs.buildPythonApplication rec {
 
   preCheck = ''
     export TMP=$TMPDIR
+    export UI_URL=http://0.0.0.0:5000
   '';
 
   meta = {
     description = "Self-hosted outdoor activity tracker";
-    homepage = "https://github.com/SamR1/FitTrackee";
-    changelog = "https://github.com/SamR1/FitTrackee/blob/${src.rev}/CHANGELOG.md";
+    homepage = "https://docs.fittrackee.org/";
+    changelog = "https://codeberg.org/FitTrackee/FitTrackee/src/tag/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.agpl3Only;
-    maintainers = with lib.maintainers; [ traxys ];
+    maintainers = with lib.maintainers; [
+      tebriel
+      traxys
+    ];
   };
-}
+})

@@ -1,11 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
 
   cfg = config.services.go-autoconfig;
   format = pkgs.formats.yaml { };
   configFile = format.generate "config.yml" cfg.settings;
 
-in {
+in
+{
   options = {
     services.go-autoconfig = {
 
@@ -50,7 +56,7 @@ in {
         serviceConfig = {
           ExecStart = "${pkgs.go-autoconfig}/bin/go-autoconfig -config ${configFile}";
           Restart = "on-failure";
-          WorkingDirectory = ''${pkgs.go-autoconfig}/'';
+          WorkingDirectory = "${pkgs.go-autoconfig}/";
           DynamicUser = true;
         };
       };

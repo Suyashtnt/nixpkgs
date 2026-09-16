@@ -4,18 +4,18 @@
   fetchFromGitHub,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "octoscan";
-  version = "0.1.1";
+  version = "0.1.7";
 
   src = fetchFromGitHub {
     owner = "synacktiv";
     repo = "octoscan";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-KoNM+Wqv+NmlXHYUn5YIXrG4rHkccVk2QWsNd0iK8YI=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-wdxuFYdM/0oEPQzr4EZ8fqNGo5CZrpz014kaVQXB3Bs=";
   };
 
-  vendorHash = "sha256-9IT8qTFzn8otWGTBP7ODcT8iBckIJ/3+jkbF1dq6aDw=";
+  vendorHash = "sha256-+TQDZXqWNBFAPES0qsrpBdl/jQZAfHXBcav2HcS0d7o=";
 
   ldflags = [
     "-s"
@@ -25,9 +25,9 @@ buildGoModule rec {
   meta = {
     description = "Static vulnerability scanner for GitHub action workflows";
     homepage = "https://github.com/synacktiv/octoscan";
-    changelog = "https://github.com/synacktiv/octoscan/releases/tag/v${version}";
+    changelog = "https://github.com/synacktiv/octoscan/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [ fab ];
     mainProgram = "octoscan";
   };
-}
+})

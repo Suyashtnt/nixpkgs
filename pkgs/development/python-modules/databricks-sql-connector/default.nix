@@ -10,46 +10,38 @@
   pandas,
   poetry-core,
   pyarrow,
+  pybreaker,
+  pyjwt,
   pytestCheckHook,
-  pythonOlder,
   sqlalchemy,
   thrift,
   requests,
   urllib3,
-  fetchpatch,
 }:
 
 buildPythonPackage rec {
   pname = "databricks-sql-connector";
-  version = "3.3.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "4.2.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "databricks";
     repo = "databricks-sql-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-a3OeKJ3c2UCClsPMah7iJY2YvIVLfHmmBuHAx8vdXZs=";
+    tag = "v${version}";
+    hash = "sha256-QoauhA2Zx2UvlCuKe9mxaOFJKpglVHQmPVVS56np4A0=";
   };
 
-  patches = [
-    (fetchpatch {
-      name = "fix-pandas.patch";
-      url = "https://patch-diff.githubusercontent.com/raw/databricks/databricks-sql-python/pull/416.patch";
-      sha256 = "sha256-sNCp8xSSmKP2yNzDK4wyWC5Hoe574AeHnKTeNcIxaek=";
-    })
-  ];
-
   pythonRelaxDeps = [
+    "pandas"
     "pyarrow"
+    "thrift"
   ];
 
-  nativeBuildInputs = [
+  build-system = [
     poetry-core
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     alembic
     lz4
     numpy
@@ -57,6 +49,8 @@ buildPythonPackage rec {
     openpyxl
     pandas
     pyarrow
+    pybreaker
+    pyjwt
     sqlalchemy
     thrift
     requests
@@ -65,15 +59,15 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [ "tests/unit" ];
+  enabledTestPaths = [ "tests/unit" ];
 
   pythonImportsCheck = [ "databricks" ];
 
-  meta = with lib; {
+  meta = {
     description = "Databricks SQL Connector for Python";
     homepage = "https://docs.databricks.com/dev-tools/python-sql-connector.html";
-    changelog = "https://github.com/databricks/databricks-sql-python/blob/v${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ harvidsen ];
+    changelog = "https://github.com/databricks/databricks-sql-python/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ harvidsen ];
   };
 }

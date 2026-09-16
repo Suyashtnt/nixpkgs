@@ -5,7 +5,6 @@
   sip,
   pyqt-builder,
   qt6Packages,
-  pythonOlder,
   pyqt6,
   python,
   mesa,
@@ -13,15 +12,13 @@
 
 buildPythonPackage rec {
   pname = "pyqt6-charts";
-  version = "6.7.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "6.11.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "PyQt6_Charts";
+    pname = "pyqt6_charts";
     inherit version;
-    hash = "sha256-xPfPNpko978DLk4z9xjTuP5m2hdtSVn+MHNalw2G81w=";
+    hash = "sha256-EJHNkZgGo84F0idnKfeb5Oy9CpOVAKiJkCbD71dpxlA=";
   };
 
   # fix include path and increase verbosity
@@ -34,7 +31,7 @@ buildPythonPackage rec {
   '';
 
   enableParallelBuilding = true;
-  # HACK: paralellize compilation of make calls within pyqt's setup.py
+  # HACK: parallelize compilation of make calls within pyqt's setup.py
   # pkgs/stdenv/generic/setup.sh doesn't set this for us because
   # make gets called by python code and not its build phase
   # format=pyproject means the pip-build-hook hook gets used to build this project
@@ -46,16 +43,21 @@ buildPythonPackage rec {
 
   dontWrapQtApps = true;
 
-  nativeBuildInputs = with qt6Packages; [
-    qtcharts
+  build-system = [
     sip
-    qmake
     pyqt-builder
   ];
 
-  buildInputs = with qt6Packages; [ qtcharts ];
+  dependencies = [
+    pyqt6
+  ];
 
-  propagatedBuildInputs = [ pyqt6 ];
+  nativeBuildInputs = with qt6Packages; [
+    qtcharts
+    qmake
+  ];
+
+  buildInputs = with qt6Packages; [ qtcharts ];
 
   dontConfigure = true;
 
@@ -64,11 +66,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "PyQt6.QtCharts" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for Qt6 QtCharts";
     homepage = "https://riverbankcomputing.com/";
-    license = licenses.gpl3Only;
+    license = lib.licenses.gpl3Only;
     inherit (mesa.meta) platforms;
-    maintainers = with maintainers; [ dandellion ];
+    maintainers = with lib.maintainers; [ dandellion ];
   };
 }

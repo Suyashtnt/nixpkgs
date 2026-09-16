@@ -1,70 +1,82 @@
 {
-  rustPlatform,
   lib,
-  callPackage,
-  pkg-config,
-  openssl,
-  libsoup,
-  webkitgtk,
+  rustPlatform,
   fetchFromGitHub,
-  libayatana-appindicator,
-}:
 
-rustPlatform.buildRustPackage rec {
+  cargo-tauri,
+  jq,
+  moreutils,
+  nodejs,
+  pkg-config,
+  pnpm_10,
+  fetchPnpmDeps,
+  pnpmConfigHook,
+
+  libayatana-appindicator,
+  libsoup_3,
+  openssl,
+  webkitgtk_4_1,
+}:
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "overlayed";
-  version = "0.5.0";
+  version = "0.6.2";
 
   src = fetchFromGitHub {
     owner = "overlayeddev";
     repo = "overlayed";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-yS1u7pp7SfmqzoH0QOAH060uo3nFb/N9VIng0T21tVw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-3GFg8czBf1csojXUNC51xFXJnGuXltP6D46fCt6q24I=";
   };
 
-  sourceRoot = "${src.name}/apps/desktop/src-tauri";
+  cargoRoot = "apps/desktop/src-tauri";
+  buildAndTestSubdir = "apps/desktop/src-tauri";
 
-  webui = callPackage ./webui.nix {
-    inherit meta src version;
+  cargoHash = "sha256-6wN4nZQWrY0J5E+auj17B3iJ/84hzBXYA/bJsX/N5pk=";
+
+  pnpmDeps = fetchPnpmDeps {
+    inherit (finalAttrs) pname version src;
+    pnpm = pnpm_10;
+    fetcherVersion = 4;
+    hash = "sha256-DkVV5Dz5UV/xMuteSXWgSko3e8t8u1Saq1X1UxaaZFA=";
   };
 
   nativeBuildInputs = [
+    cargo-tauri.hook
+    jq
+    moreutils
+    nodejs
     pkg-config
+    pnpmConfigHook
+    pnpm_10
   ];
 
   buildInputs = [
+    libayatana-appindicator
+    libsoup_3
     openssl
-    webkitgtk
-    libsoup
+    webkitgtk_4_1
   ];
 
   env = {
     OPENSSL_NO_VENDOR = 1;
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "tauri-plugin-window-state-0.1.1" = "sha256-2cdO+5YAP7MOK0/YKclQemK4N9ci2JX3AfmMaeauwNI=";
-      "tauri-nspanel-0.0.0" = "sha256-tQHY0OX37b4dqhs89phYIzw7JzEPmMJo5e/jlyzxdMg=";
-      "tauri-plugin-single-instance-0.0.0" = "sha256-S1nsT/Dr0aIJdiPnW1FGamCth7CDMNAp4v34tpWqjHg=";
-    };
-  };
-
   postPatch = ''
-    substituteInPlace $cargoDepsCopy/libappindicator-sys-*/src/lib.rs \
+    substituteInPlace $cargoDepsCopy/*/libappindicator-sys-*/src/lib.rs \
       --replace-fail "libayatana-appindicator3.so.1" "${libayatana-appindicator}/lib/libayatana-appindicator3.so.1"
-    substituteInPlace ./tauri.conf.json \
-      --replace-fail '"distDir": "../dist",' '"distDir": "${webui}",' \
-      --replace-fail '"beforeBuildCommand": "pnpm build"' '"beforeBuildCommand": ""'
+
+    # disable updater
+    jq '.plugins.updater.endpoints = [ ] | .bundle.createUpdaterArtifacts = false' \
+      apps/desktop/src-tauri/tauri.conf.json | sponge apps/desktop/src-tauri/tauri.conf.json
   '';
 
   meta = {
     description = "Modern discord voice chat overlay";
     homepage = "https://github.com/overlayeddev/overlayed";
-    changelog = "https://github.com/overlayeddev/overlayed/releases/tag/v${version}";
+    changelog = "https://github.com/overlayeddev/overlayed/releases/tag/v${finalAttrs.version}";
     platforms = lib.platforms.linux;
     maintainers = with lib.maintainers; [ bot-wxt1221 ];
     license = lib.licenses.agpl3Plus;
     mainProgram = "overlayed";
   };
-}
+})

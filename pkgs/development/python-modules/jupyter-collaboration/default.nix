@@ -1,84 +1,87 @@
 {
   lib,
   buildPythonPackage,
+  fetchFromGitHub,
   pythonOlder,
-  fetchPypi,
-  hatch-jupyter-builder,
-  hatch-nodejs-version,
+
+  # build-system
   hatchling,
-  jsonschema,
-  jupyter-events,
-  jupyter-server,
-  jupyter-server-fileid,
-  jupyter-ydoc,
+
+  # dependencies
+  jupyter-collaboration-ui,
+  jupyter-docprovider,
+  jupyter-server-ydoc,
   jupyterlab,
-  pycrdt-websocket,
+
+  # tests
+  dirty-equals,
+  httpx-ws,
   pytest-jupyter,
+  pytest-timeout,
   pytestCheckHook,
-  websockets,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "jupyter-collaboration";
-  version = "2.1.2";
+  version = "5.0.2";
   pyproject = true;
+  __structuredAttrs = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    pname = "jupyter_collaboration";
-    inherit version;
-    hash = "sha256-uLbNYzszaSLnU4VcaDr5KBcRN+Xm/B471s+W9qJibsk=";
+  src = fetchFromGitHub {
+    owner = "jupyterlab";
+    repo = "jupyter-collaboration";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-cGCM4kkBwOaXcGWuihOglLsjTKpTrejhwzYVE1g9jBI=";
   };
 
-  postPatch = ''
-    sed -i "/^timeout/d" pyproject.toml
-  '';
+  sourceRoot = "${finalAttrs.src.name}/projects/jupyter-collaboration";
 
-  build-system = [
-    hatch-jupyter-builder
-    hatch-nodejs-version
-    hatchling
-    jupyterlab
-  ];
+  build-system = [ hatchling ];
 
   dependencies = [
-    jsonschema
-    jupyter-events
-    jupyter-server
-    jupyter-server-fileid
-    jupyter-ydoc
-    pycrdt-websocket
-  ];
-
-  nativeCheckInputs = [
-    pytest-jupyter
-    pytestCheckHook
-    websockets
+    jupyter-collaboration-ui
+    jupyter-docprovider
+    jupyter-server-ydoc
+    jupyterlab
   ];
 
   pythonImportsCheck = [ "jupyter_collaboration" ];
 
-  preCheck = ''
-    export HOME=$TEMP
-  '';
+  nativeCheckInputs = [
+    dirty-equals
+    httpx-ws
+    pytest-jupyter
+    pytest-timeout
+    pytestCheckHook
+    writableTmpDirAsHomeHook
+  ];
 
-  pytestFlagsArray = [ "-Wignore::DeprecationWarning" ];
+  pytestFlags = [
+    # pytest.PytestCacheWarning: could not create cache path /build/source/.pytest_cache/v/cache/nodeids: [Errno 13] Permission denied: '/build/source/pytest-cache-files-plraagdr'
+    "-pno:cacheprovider"
+  ];
+
+  enabledTestPaths = [
+    "../../tests"
+  ];
 
   disabledTests = [
-    # ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+    # Failed: Timeout (>300.0s) from pytest-timeout
+    "test_document_ttl_from_settings"
+  ]
+  ++ lib.optionals (pythonOlder "3.14") [
+    # pytest.PytestUnraisableExceptionWarning: Exception ignored in: None
     "test_dirty"
-    # causes a hang
-    "test_rooms"
   ];
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  meta = {
     description = "JupyterLab Extension enabling Real-Time Collaboration";
     homepage = "https://github.com/jupyterlab/jupyter_collaboration";
-    changelog = "https://github.com/jupyterlab/jupyter_collaboration/blob/v${version}/CHANGELOG.md";
-    license = licenses.bsd3;
-    maintainers = teams.jupyter.members;
+    changelog = "https://github.com/jupyterlab/jupyter_collaboration/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.jupyter ];
   };
-}
+})

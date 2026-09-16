@@ -1,49 +1,31 @@
 {
   lib,
+  stdenv,
   buildGoModule,
-  buildNpmPackage,
   fetchFromGitHub,
-  cacert,
-  unzip,
+  nix-update-script,
   pkg-config,
   libGL,
-  libX11,
-  libXcursor,
-  libXrandr,
-  libXinerama,
-  libXi,
-  libXxf86vm,
+  libx11,
+  libxcursor,
+  libxrandr,
+  libxinerama,
+  libxi,
+  libxxf86vm,
   mupdf,
   fontconfig,
   freetype,
-  stdenv,
-  darwin,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "gcs";
-  version = "5.27.0";
+  version = "5.42.0";
 
   src = fetchFromGitHub {
     owner = "richardwilkes";
     repo = "gcs";
-    rev = "refs/tags/v${version}";
-
-    nativeBuildInputs = [
-      cacert
-      unzip
-    ];
-
-    # also fetch pdf.js files
-    # note: the version is locked in the file
-    postFetch = ''
-      cd $out/server/pdf
-      substituteInPlace refresh-pdf.js.sh \
-          --replace-fail '/bin/rm' 'rm'
-      . refresh-pdf.js.sh
-    '';
-
-    hash = "sha256-QVkyemBQ7RrV3dpP3n7Pg0XljdxWtCphZIj2T77nKtU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-eCWMaO1iv917aHcdln2B10oCSbmzpXvQIF/luztHwRc=";
   };
 
   modPostBuild = ''
@@ -51,54 +33,31 @@ buildGoModule rec {
     sed -i 's|-lmupdf[^ ]* |-lmupdf |g' vendor/github.com/richardwilkes/pdf/pdf.go
   '';
 
-  vendorHash = "sha256-+vCc1g5noAl/iwEYhNZJYPiScKqKGKlsuruoUO/4tiU=";
-
-  frontend = buildNpmPackage {
-    name = "${pname}-${version}-frontend";
-
-    inherit src;
-    sourceRoot = "${src.name}/server/frontend";
-    npmDepsHash = "sha256-VWTJg/pluRYVVBDiJ+t2uhyodRuIFfHpzCZMte1krDM=";
-
-    installPhase = ''
-      runHook preInstall
-      mkdir -p $out
-      cp -r dist $out/dist
-      runHook postInstall
-    '';
-  };
-
-  postPatch = ''
-    cp -r ${frontend}/dist server/frontend/dist
-  '';
+  vendorHash = "sha256-pbt4zNbFYTXKVe9D70Lg3XVsjadnUIuPwbbV1CJNLc8=";
 
   nativeBuildInputs = [ pkg-config ];
 
-  buildInputs =
-    [
-      libGL
-      libX11
-      libXcursor
-      libXrandr
-      libXinerama
-      libXi
-      libXxf86vm
-      mupdf
-      fontconfig
-      freetype
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk_11_0.frameworks.Carbon
-      darwin.apple_sdk_11_0.frameworks.Cocoa
-      darwin.apple_sdk_11_0.frameworks.Kernel
-    ];
+  buildInputs = [
+    mupdf
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    libGL
+    libx11
+    libxcursor
+    libxrandr
+    libxinerama
+    libxi
+    libxxf86vm
+    fontconfig
+    freetype
+  ];
 
   # flags are based on https://github.com/richardwilkes/gcs/blob/master/build.sh
   flags = [ "-a" ];
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/richardwilkes/toolbox/cmdline.AppVersion=${version}"
+    "-X github.com/richardwilkes/toolbox/cmdline.AppVersion=${finalAttrs.version}"
   ];
 
   installPhase = ''
@@ -107,8 +66,10 @@ buildGoModule rec {
     runHook postInstall
   '';
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
-    changelog = "https://github.com/richardwilkes/gcs/releases/tag/v${version}";
+    changelog = "https://github.com/richardwilkes/gcs/releases/tag/v${finalAttrs.version}";
     description = "Stand-alone, interactive, character sheet editor for the GURPS 4th Edition roleplaying game system";
     homepage = "https://gurpscharactersheet.com/";
     license = lib.licenses.mpl20;
@@ -118,4 +79,4 @@ buildGoModule rec {
     # incompatible vendor/github.com/richardwilkes/unison/internal/skia/libskia_linux.a
     broken = stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64;
   };
-}
+})

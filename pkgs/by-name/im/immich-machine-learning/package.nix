@@ -1,34 +1,13 @@
 {
   lib,
-  fetchFromGitHub,
   immich,
   python3,
   nixosTests,
+  stdenv,
 }:
 let
   python = python3.override {
     self = python;
-
-    packageOverrides = self: super: {
-      pydantic = super.pydantic_1;
-
-      versioningit = super.versioningit.overridePythonAttrs (_: {
-        doCheck = false;
-      });
-
-      albumentations = super.albumentations.overridePythonAttrs (old: rec {
-        version = "1.4.3";
-        src = fetchFromGitHub {
-          owner = "albumentations-team";
-          repo = "albumentations";
-          rev = version;
-          hash = "sha256-JIBwjYaUP4Sc1bVM/zlj45cz9OWpb/LOBsIqk1m+sQA=";
-        };
-        dependencies = old.dependencies ++ [
-          self.scikit-learn
-        ];
-      });
-    };
   };
 in
 python.pkgs.buildPythonApplication rec {
@@ -37,41 +16,39 @@ python.pkgs.buildPythonApplication rec {
   src = "${immich.src}/machine-learning";
   pyproject = true;
 
-  postPatch = ''
-    substituteInPlace pyproject.toml --replace-fail 'fastapi-slim' 'fastapi'
-
-    # AttributeError: module 'cv2' has no attribute 'Mat'
-    substituteInPlace app/test_main.py --replace-fail ": cv2.Mat" ""
-  '';
-
-  pythonRelaxDeps = [ "setuptools" ];
-  pythonRemoveDeps = [ "opencv-python-headless" ];
+  pythonRelaxDeps = [
+    "onnx"
+  ];
 
   build-system = with python.pkgs; [
-    poetry-core
-    cython
+    hatchling
   ];
 
   dependencies =
     with python.pkgs;
     [
-      insightface
-      opencv4
-      pillow
-      fastapi
-      uvicorn
       aiocache
-      rich
-      ftfy
-      setuptools
-      python-multipart
-      orjson
+      fastapi
       gunicorn
       huggingface-hub
-      tokenizers
+      numpy
+      onnx
+      opencv-python-headless
+      orjson
+      pillow
       pydantic
+      pydantic-settings
+      python-multipart
+      rich
+      tokenizers
+      uvicorn
+      rapidocr
     ]
     ++ uvicorn.optional-dependencies.standard;
+
+  # aarch64-linux tries to get cpu information from /sys, which isn't available
+  # inside the nix build sandbox.
+  doCheck = stdenv.buildPlatform.system != "aarch64-linux";
 
   nativeCheckInputs = with python.pkgs; [
     httpx
@@ -82,7 +59,7 @@ python.pkgs.buildPythonApplication rec {
 
   postInstall = ''
     mkdir -p $out/share/immich
-    cp log_conf.json $out/share/immich
+    cp immich_ml/log_conf.json $out/share/immich
 
     cp -r ann $out/${python.sitePackages}/
 
@@ -93,7 +70,7 @@ python.pkgs.buildPythonApplication rec {
       --set-default MACHINE_LEARNING_CACHE_FOLDER /var/cache/immich \
       --set-default IMMICH_HOST "[::]" \
       --set-default IMMICH_PORT 3003 \
-      --add-flags "app.main:app -k app.config.CustomUvicornWorker \
+      --add-flags "immich_ml.main:app -k immich_ml.config.CustomUvicornWorker \
         -w \"\$MACHINE_LEARNING_WORKERS\" \
         -b \"\$IMMICH_HOST:\$IMMICH_PORT\" \
         -t \"\$MACHINE_LEARNING_WORKER_TIMEOUT\"
@@ -105,11 +82,9 @@ python.pkgs.buildPythonApplication rec {
   };
 
   meta = {
-    description = "Self-hosted photo and video backup solution (machine learning component)";
-    homepage = "https://immich.app/";
-    license = lib.licenses.agpl3Only;
-    maintainers = with lib.maintainers; [ jvanbruegge ];
+    description = "${immich.meta.description} (machine learning component)";
+    homepage = "https://github.com/immich-app/immich/tree/main/machine-learning";
     mainProgram = "machine-learning";
-    inherit (immich.meta) platforms;
+    inherit (immich.meta) license maintainers platforms;
   };
 }

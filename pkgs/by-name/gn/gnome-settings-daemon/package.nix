@@ -1,102 +1,115 @@
 {
-  stdenv,
-  lib,
-  substituteAll,
-  fetchurl,
-  meson,
-  ninja,
-  pkg-config,
-  gnome,
-  perl,
-  gettext,
-  gtk3,
-  glib,
-  libnotify,
-  libgnomekbd,
-  libpulseaudio,
   alsa-lib,
-  libcanberra-gtk3,
-  upower,
+  bashNonInteractive,
+  buildPackages,
   colord,
-  libgweather,
-  polkit,
-  gsettings-desktop-schemas,
+  cups,
+  fetchurl,
+  fontconfig,
+  gcr_4,
   geoclue2,
-  systemd,
+  geocode-glib_2,
+  gettext,
+  glib,
+  gnome,
+  gnome-desktop,
+  gnome-session-ctl,
+  gsettings-desktop-schemas,
+  lib,
+  libcanberra,
   libgudev,
-  libwacom,
-  libxslt,
-  libxml2,
+  libgweather,
+  libnotify,
+  libpulseaudio,
+  libx11,
+  libxfixes,
+  meson,
   modemmanager,
   networkmanager,
-  gnome-desktop,
-  geocode-glib_2,
-  docbook_xsl,
-  wrapGAppsHook3,
-  python3,
+  ninja,
+  perl,
+  pkg-config,
+  polkit,
+  replaceVars,
+  stdenv,
+  systemd,
   tzdata,
-  gcr_4,
-  gnome-session-ctl,
+  udevCheckHook,
+  upower,
+  wrapGAppsNoGuiHook,
+  withSystemd ? lib.meta.availableOn stdenv.hostPlatform systemd,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "gnome-settings-daemon";
-  version = "46.0";
+  version = "50.1";
+
+  __structuredAttrs = true;
+  strictDeps = true;
 
   src = fetchurl {
     url = "mirror://gnome/sources/gnome-settings-daemon/${lib.versions.major finalAttrs.version}/gnome-settings-daemon-${finalAttrs.version}.tar.xz";
-    hash = "sha256-C5oPZPoYqOfgm0yVo/dU+gM8LNvS3DVwHwYYVywcs9c=";
+    hash = "sha256-3SyXMJFPDs7KAindiowpQKV93rCAJDRVjUsWTXnP4Fw=";
   };
 
   patches = [
     # https://gitlab.gnome.org/GNOME/gnome-settings-daemon/-/merge_requests/202
     ./add-gnome-session-ctl-option.patch
 
-    (substituteAll {
-      src = ./fix-paths.patch;
+    (replaceVars ./fix-paths.patch {
       inherit tzdata;
     })
   ];
 
+  depsBuildBuild = [
+    buildPackages.stdenv.cc
+    pkg-config
+  ];
+
   nativeBuildInputs = [
+    gettext
+    glib
     meson
     ninja
-    pkg-config
     perl
-    gettext
-    libxml2
-    libxslt
-    docbook_xsl
-    wrapGAppsHook3
-    python3
+    pkg-config
+    udevCheckHook
+    wrapGAppsNoGuiHook
   ];
 
   buildInputs = [
-    gtk3
+    alsa-lib
+    bashNonInteractive
+    colord
+    cups
+    fontconfig
+    gcr_4
+    geoclue2
+    geocode-glib_2
     glib
+    gnome-desktop
     gsettings-desktop-schemas
+    libcanberra
+    libgudev
+    libgweather
+    libnotify
+    libpulseaudio
+    libx11
+    libxfixes
     modemmanager
     networkmanager
-    libnotify
-    libgnomekbd # for org.gnome.libgnomekbd.keyboard schema
-    gnome-desktop
-    libpulseaudio
-    alsa-lib
-    libcanberra-gtk3
-    upower
-    colord
-    libgweather
     polkit
-    geocode-glib_2
-    geoclue2
+    upower
+  ]
+  ++ lib.optionals withSystemd [
     systemd
-    libgudev
-    libwacom
-    gcr_4
   ];
 
   mesonFlags = [
     "-Dudev_dir=${placeholder "out"}/lib/udev"
+    (lib.mesonBool "systemd" withSystemd)
+  ]
+  ++ lib.optionals withSystemd [
     "-Dgnome_session_ctl_path=${gnome-session-ctl}/libexec/gnome-session-ctl"
   ];
 
@@ -105,11 +118,13 @@ stdenv.mkDerivation (finalAttrs: {
   env.NIX_CFLAGS_COMPILE = "-DG_DISABLE_CAST_CHECKS";
 
   postPatch = ''
-    for f in gnome-settings-daemon/codegen.py plugins/power/gsd-power-constants-update.pl; do
+    for f in plugins/power/gsd-power-constants-update.pl; do
       chmod +x $f
       patchShebangs $f
     done
   '';
+
+  doInstallCheck = true;
 
   passthru = {
     updateScript = gnome.updateScript {
@@ -117,9 +132,11 @@ stdenv.mkDerivation (finalAttrs: {
     };
   };
 
-  meta = with lib; {
-    license = licenses.gpl2Plus;
-    maintainers = teams.gnome.members;
-    platforms = platforms.linux;
+  meta = {
+    description = "GNOME Settings Daemon";
+    homepage = "https://gitlab.gnome.org/GNOME/gnome-settings-daemon/";
+    license = lib.licenses.gpl2Plus;
+    teams = [ lib.teams.gnome ];
+    platforms = lib.platforms.linux;
   };
 })

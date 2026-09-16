@@ -1,9 +1,9 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
   fetchPypi,
   maturin,
-  pythonOlder,
   rustPlatform,
   rustc,
   cargo,
@@ -11,49 +11,64 @@
   setuptools,
   setuptools-rust,
   setuptools-scm,
-  tomli,
-  typing-extensions,
+  replaceVars,
+  python,
+  targetPackages,
 }:
-
 buildPythonPackage rec {
   pname = "setuptools-rust";
-  version = "1.9.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "1.13.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-cE3wlI8uTMYMJZatboQOpnn09D5Y7UrQwYV4ByQOq5Y=";
+    pname = "setuptools_rust";
+    inherit version;
+    hash = "sha256-8q/PS67uaJkQzknPqKrU4IzOcvQXRJvMMokbhmT9xyY=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
     setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     semantic-version
     setuptools
-    typing-extensions
-  ] ++ lib.optionals (pythonOlder "3.11") [ tomli ];
+  ];
 
   pythonImportsCheck = [ "setuptools_rust" ];
 
   doCheck = false;
 
+  # integrate the setup hook to set up the build environment for cross compilation
+  # this hook is automatically propagated to consumers using setuptools-rust as build-system
+  #
+  # Only include the setup hook if python.pythonOnTargetForTarget is not empty.
+  # python.pythonOnTargetForTarget is not always available, for example in
+  # pkgsLLVM.python3.pythonOnTargetForTarget. cross build with pkgsLLVM should not be affected.
+  setupHook =
+    if python.pythonOnTargetForTarget == { } then
+      null
+    else
+      replaceVars ./setuptools-rust-hook.sh {
+        pyLibDir = "${python.pythonOnTargetForTarget}/lib/${python.pythonOnTargetForTarget.libPrefix}";
+        cargoBuildTarget = stdenv.targetPlatform.rust.rustcTargetSpec;
+        cargoLinkerVar = stdenv.targetPlatform.rust.cargoEnvVarTarget;
+        targetLinker = "${targetPackages.stdenv.cc}/bin/${targetPackages.stdenv.cc.targetPrefix}cc";
+      };
+
   passthru.tests = {
     pyo3 = maturin.tests.pyo3.override {
-      format = "setuptools";
       buildAndTestSubdir = null;
 
-      nativeBuildInputs =
-        [ setuptools-rust ]
-        ++ [
-          rustPlatform.cargoSetupHook
-          cargo
-          rustc
-        ];
+      nativeBuildInputs = [
+        setuptools-rust
+      ]
+      ++ [
+        rustPlatform.cargoSetupHook
+        cargo
+        rustc
+      ];
 
       preConfigure = ''
         # sourceRoot puts Cargo.lock in the wrong place due to the
@@ -63,11 +78,11 @@ buildPythonPackage rec {
     };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Setuptools plugin for Rust support";
     homepage = "https://github.com/PyO3/setuptools-rust";
     changelog = "https://github.com/PyO3/setuptools-rust/releases/tag/v${version}";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
 }

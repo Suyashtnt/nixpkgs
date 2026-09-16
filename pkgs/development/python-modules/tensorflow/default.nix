@@ -1,6 +1,7 @@
 {
   stdenv,
-  bazel_5,
+  #bazel_5,
+  bazel,
   buildBazelPackage,
   lib,
   fetchFromGitHub,
@@ -12,7 +13,6 @@
   # Python deps
   buildPythonPackage,
   pythonAtLeast,
-  pythonOlder,
   python,
   # Python libraries
   numpy,
@@ -22,7 +22,6 @@
   packaging,
   setuptools,
   wheel,
-  keras-preprocessing,
   google-pasta,
   opt-einsum,
   astunparse,
@@ -56,7 +55,7 @@
   jsoncpp,
   nsync,
   curl,
-  snappy,
+  snappy-cpp,
   flatbuffers-core,
   icu,
   double-conversion,
@@ -71,7 +70,7 @@
   config,
   cudaSupport ? config.cudaSupport,
   cudaPackages,
-  cudaCapabilities ? cudaPackages.cudaFlags.cudaCapabilities,
+  cudaCapabilities ? cudaPackages.flags.cudaCapabilities,
   mklSupport ? false,
   mkl,
   tensorboardSupport ? true,
@@ -80,9 +79,6 @@
   sse42Support ? stdenv.hostPlatform.sse4_2Support,
   avx2Support ? stdenv.hostPlatform.avx2Support,
   fmaSupport ? stdenv.hostPlatform.fmaSupport,
-  # Darwin deps
-  Foundation,
-  Security,
   cctools,
   llvmPackages,
 }:
@@ -115,7 +111,8 @@ let
   # use compatible cuDNN (https://www.tensorflow.org/install/source#gpu)
   # cudaPackages.cudnn led to this:
   # https://github.com/tensorflow/tensorflow/issues/60398
-  cudnnAttribute = "cudnn_8_6";
+  #cudnnAttribute = "cudnn_8_6";
+  cudnnAttribute = "cudnn";
   cudnnMerged = symlinkJoin {
     name = "cudnn-merged";
     paths = [
@@ -134,12 +131,12 @@ let
     }
   ];
 
-  withTensorboard = (pythonOlder "3.6") || tensorboardSupport;
+  withTensorboard = tensorboardSupport;
 
   cudaComponents = with cudaPackages; [
     (cuda_nvcc.__spliced.buildHost or cuda_nvcc)
     (cuda_nvprune.__spliced.buildHost or cuda_nvprune)
-    cuda_cccl # block_load.cuh
+    cccl # block_load.cuh
     cuda_cudart # cuda.h
     cuda_cupti # cupti.h
     cuda_nvcc # See https://github.com/google/jax/issues/19811
@@ -153,7 +150,7 @@ let
   ];
 
   cudatoolkitDevMerged = symlinkJoin {
-    name = "cuda-${cudaPackages.cudaVersion}-dev-merged";
+    name = "cuda-${cudaPackages.cudaMajorMinorVersion}-dev-merged";
     paths = lib.concatMap (p: [
       (lib.getBin p)
       (lib.getDev p)
@@ -197,7 +194,6 @@ let
     google-pasta
     grpcio
     h5py
-    keras-preprocessing
     numpy
     opt-einsum
     packaging
@@ -214,7 +210,8 @@ let
   ]);
 
   rules_cc_darwin_patched = stdenv.mkDerivation {
-    name = "rules_cc-${pname}-${version}";
+    pname = "rules_cc-${pname}";
+    inherit version;
 
     src = _bazel-build.deps;
 
@@ -248,7 +245,8 @@ let
     '';
   };
   llvm-raw_darwin_patched = stdenv.mkDerivation {
-    name = "llvm-raw-${pname}-${version}";
+    pname = "llvm-raw-${pname}";
+    inherit version;
 
     src = _bazel-build.deps;
 
@@ -288,13 +286,14 @@ let
       _bazel-build;
 
   _bazel-build = buildBazelPackage.override { inherit stdenv; } {
-    name = "${pname}-${version}";
-    bazel = bazel_5;
+    inherit pname version;
+    #bazel = bazel_5;
+    bazel = bazel;
 
     src = fetchFromGitHub {
       owner = "tensorflow";
       repo = "tensorflow";
-      rev = "refs/tags/v${version}";
+      tag = "v${version}";
       hash = "sha256-Rq5pAVmxlWBVnph20fkAwbfy+iuBNlfFy14poDPd5h0=";
     };
 
@@ -308,123 +307,126 @@ let
       perl
       protobuf-core
       protobuf-extra
-    ] ++ lib.optional cudaSupport addDriverRunpath;
+    ]
+    ++ lib.optional cudaSupport addDriverRunpath;
 
-    buildInputs =
-      [
-        jemalloc
-        mpi
-        glibcLocales
-        git
+    buildInputs = [
+      jemalloc
+      mpi
+      glibcLocales
+      git
 
-        # libs taken from system through the TF_SYS_LIBS mechanism
-        abseil-cpp
-        boringssl
-        curl
-        double-conversion
-        flatbuffers-core
-        giflib
-        grpc
-        # Necessary to fix the "`GLIBCXX_3.4.30' not found" error
-        (icu.override { inherit stdenv; })
-        jsoncpp
-        libjpeg_turbo
-        libpng
-        (pybind11.overridePythonAttrs (_: {
+      # libs taken from system through the TF_SYS_LIBS mechanism
+      abseil-cpp
+      boringssl
+      curl
+      double-conversion
+      flatbuffers-core
+      giflib
+      grpc
+      # Necessary to fix the "`GLIBCXX_3.4.30' not found" error
+      (icu.override { inherit stdenv; })
+      jsoncpp
+      libjpeg_turbo
+      libpng
+      (pybind11.override (prev: {
+        buildPythonPackage = prev.buildPythonPackage.override {
           inherit stdenv;
-        }))
-        snappy
-        sqlite
-      ]
-      ++ lib.optionals cudaSupport [
-        cudatoolkit
-        cudnnMerged
-      ]
-      ++ lib.optionals mklSupport [ mkl ]
-      ++ lib.optionals stdenv.hostPlatform.isDarwin [
-        Foundation
-        Security
-      ]
-      ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [ nsync ];
+        };
+      }))
+      snappy-cpp
+      sqlite
+    ]
+    ++ lib.optionals cudaSupport [
+      cudatoolkit
+      cudnnMerged
+    ]
+    ++ lib.optionals mklSupport [ mkl ]
+    ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [ nsync ];
 
-    # arbitrarily set to the current latest bazel version, overly careful
-    TF_IGNORE_MAX_BAZEL_VERSION = true;
+    env = {
+      # arbitrarily set to the current latest bazel version, overly careful
+      TF_IGNORE_MAX_BAZEL_VERSION = true;
 
-    LIBTOOL = lib.optionalString stdenv.hostPlatform.isDarwin "${cctools}/bin/libtool";
+      LIBTOOL = lib.optionalString stdenv.hostPlatform.isDarwin "${cctools}/bin/libtool";
 
-    # Take as many libraries from the system as possible. Keep in sync with
-    # list of valid syslibs in
-    # https://github.com/tensorflow/tensorflow/blob/master/third_party/systemlibs/syslibs_configure.bzl
-    TF_SYSTEM_LIBS = lib.concatStringsSep "," (
-      [
-        "absl_py"
-        "astor_archive"
-        "astunparse_archive"
-        "boringssl"
-        "com_google_absl"
-        # Not packaged in nixpkgs
-        # "com_github_googleapis_googleapis"
-        # "com_github_googlecloudplatform_google_cloud_cpp"
-        "com_github_grpc_grpc"
-        "com_google_protobuf"
-        # Fails with the error: external/org_tensorflow/tensorflow/core/profiler/utils/tf_op_utils.cc:46:49: error: no matching function for call to 're2::RE2::FullMatch(absl::lts_2020_02_25::string_view&, re2::RE2&)'
-        # "com_googlesource_code_re2"
-        "curl"
-        "cython"
-        "dill_archive"
-        "double_conversion"
-        "flatbuffers"
-        "functools32_archive"
-        "gast_archive"
-        "gif"
-        "hwloc"
-        "icu"
-        "jsoncpp_git"
-        "libjpeg_turbo"
-        "nasm"
-        "opt_einsum_archive"
-        "org_sqlite"
-        "pasta"
-        "png"
-        "pybind11"
-        "six_archive"
-        "snappy"
-        "tblib_archive"
-        "termcolor_archive"
-        "typing_extensions_archive"
-        "wrapt"
-        "zlib"
-      ]
-      ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
-        "nsync" # fails to build on darwin
-      ]
-    );
+      # Take as many libraries from the system as possible. Keep in sync with
+      # list of valid syslibs in
+      # https://github.com/tensorflow/tensorflow/blob/master/third_party/systemlibs/syslibs_configure.bzl
+      TF_SYSTEM_LIBS = lib.concatStringsSep "," (
+        [
+          "absl_py"
+          "astor_archive"
+          "astunparse_archive"
+          "boringssl"
+          "com_google_absl"
+          # Not packaged in nixpkgs
+          # "com_github_googleapis_googleapis"
+          # "com_github_googlecloudplatform_google_cloud_cpp"
+          "com_github_grpc_grpc"
+          "com_google_protobuf"
+          # Fails with the error: external/org_tensorflow/tensorflow/core/profiler/utils/tf_op_utils.cc:46:49: error: no matching function for call to 're2::RE2::FullMatch(absl::lts_2020_02_25::string_view&, re2::RE2&)'
+          # "com_googlesource_code_re2"
+          "curl"
+          "cython"
+          "dill_archive"
+          "double_conversion"
+          "flatbuffers"
+          "functools32_archive"
+          "gast_archive"
+          "gif"
+          "hwloc"
+          "icu"
+          "jsoncpp_git"
+          "libjpeg_turbo"
+          "nasm"
+          "opt_einsum_archive"
+          "org_sqlite"
+          "pasta"
+          "png"
+          "pybind11"
+          "six_archive"
+          "snappy"
+          "tblib_archive"
+          "termcolor_archive"
+          "typing_extensions_archive"
+          "wrapt"
+          "zlib"
+        ]
+        ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [
+          "nsync" # fails to build on darwin
+        ]
+      );
 
-    INCLUDEDIR = "${includes_joined}/include";
+      INCLUDEDIR = "${includes_joined}/include";
 
-    # This is needed for the Nix-provided protobuf dependency to work,
-    # as otherwise the rule `link_proto_files` tries to create the links
-    # to `/usr/include/...` which results in build failures.
-    PROTOBUF_INCLUDE_PATH = "${protobuf-core}/include";
+      # This is needed for the Nix-provided protobuf dependency to work,
+      # as otherwise the rule `link_proto_files` tries to create the links
+      # to `/usr/include/...` which results in build failures.
+      PROTOBUF_INCLUDE_PATH = "${protobuf-core}/include";
 
-    PYTHON_BIN_PATH = pythonEnv.interpreter;
+      PYTHON_BIN_PATH = pythonEnv.interpreter;
 
-    TF_NEED_GCP = true;
-    TF_NEED_HDFS = true;
-    TF_ENABLE_XLA = tfFeature xlaSupport;
+      TF_NEED_GCP = true;
+      TF_NEED_HDFS = true;
+      TF_ENABLE_XLA = tfFeature xlaSupport;
 
-    CC_OPT_FLAGS = " ";
+      CC_OPT_FLAGS = " ";
 
-    # https://github.com/tensorflow/tensorflow/issues/14454
-    TF_NEED_MPI = tfFeature cudaSupport;
+      # https://github.com/tensorflow/tensorflow/issues/14454
+      TF_NEED_MPI = tfFeature cudaSupport;
 
-    TF_NEED_CUDA = tfFeature cudaSupport;
-    TF_CUDA_PATHS = lib.optionalString cudaSupport "${cudatoolkitDevMerged},${cudnnMerged},${lib.getLib nccl}";
-    TF_CUDA_COMPUTE_CAPABILITIES = lib.concatStringsSep "," cudaCapabilities;
+      TF_NEED_CUDA = tfFeature cudaSupport;
+      TF_CUDA_PATHS = lib.optionalString cudaSupport "${cudatoolkitDevMerged},${cudnnMerged},${lib.getLib nccl}";
+      TF_CUDA_COMPUTE_CAPABILITIES = lib.concatStringsSep "," cudaCapabilities;
 
-    # Needed even when we override stdenv: e.g. for ar
-    GCC_HOST_COMPILER_PREFIX = lib.optionalString cudaSupport "${cudatoolkit_cc_joined}/bin";
-    GCC_HOST_COMPILER_PATH = lib.optionalString cudaSupport "${cudatoolkit_cc_joined}/bin/cc";
+      # Needed even when we override stdenv: e.g. for ar
+      GCC_HOST_COMPILER_PREFIX = lib.optionalString cudaSupport "${cudatoolkit_cc_joined}/bin";
+      GCC_HOST_COMPILER_PATH = lib.optionalString cudaSupport "${cudatoolkit_cc_joined}/bin/cc";
+
+      # https://github.com/tensorflow/tensorflow/pull/39470
+      NIX_CFLAGS_COMPILE = toString [ "-Wno-stringop-truncation" ];
+    };
 
     patches = [
       "${gentoo-patches}/0002-systemlib-Latest-absl-LTS-has-split-cord-libs.patch"
@@ -441,26 +443,20 @@ let
       ./protobuf_python.patch
       ./pybind11_protobuf_python_runtime_dep.patch
       ./pybind11_protobuf_newer_version.patch
-    ] ++ lib.optionals (stdenv.hostPlatform.system == "aarch64-darwin") [ ./absl_to_std.patch ];
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.system == "aarch64-darwin") [ ./absl_to_std.patch ];
 
-    postPatch =
-      ''
-        # bazel 3.3 should work just as well as bazel 3.1
-        rm -f .bazelversion
-        patchShebangs .
-      ''
-      + lib.optionalString (stdenv.hostPlatform.system == "x86_64-darwin") ''
-        cat ${./com_google_absl_fix_macos.patch} >> third_party/absl/com_google_absl_fix_mac_and_nvcc_build.patch
-      ''
-      + lib.optionalString (!withTensorboard) ''
-        # Tensorboard pulls in a bunch of dependencies, some of which may
-        # include security vulnerabilities. So we make it optional.
-        # https://github.com/tensorflow/tensorflow/issues/20280#issuecomment-400230560
-        sed -i '/tensorboard ~=/d' tensorflow/tools/pip_package/setup.py
-      '';
-
-    # https://github.com/tensorflow/tensorflow/pull/39470
-    env.NIX_CFLAGS_COMPILE = toString [ "-Wno-stringop-truncation" ];
+    postPatch = ''
+      # bazel 3.3 should work just as well as bazel 3.1
+      rm -f .bazelversion
+      patchShebangs .
+    ''
+    + lib.optionalString (!withTensorboard) ''
+      # Tensorboard pulls in a bunch of dependencies, some of which may
+      # include security vulnerabilities. So we make it optional.
+      # https://github.com/tensorflow/tensorflow/issues/20280#issuecomment-400230560
+      sed -i '/tensorboard ~=/d' tensorflow/tools/pip_package/setup.py
+    '';
 
     preConfigure =
       let
@@ -495,20 +491,19 @@ let
 
     hardeningDisable = [ "format" ];
 
-    bazelBuildFlags =
-      [
-        "--config=opt" # optimize using the flags set in the configure phase
-      ]
-      ++ lib.optionals stdenv.cc.isClang [
-        "--cxxopt=-x"
-        "--cxxopt=c++"
-        "--host_cxxopt=-x"
-        "--host_cxxopt=c++"
+    bazelBuildFlags = [
+      "--config=opt" # optimize using the flags set in the configure phase
+    ]
+    ++ lib.optionals stdenv.cc.isClang [
+      "--cxxopt=-x"
+      "--cxxopt=c++"
+      "--host_cxxopt=-x"
+      "--host_cxxopt=c++"
 
-        # workaround for https://github.com/bazelbuild/bazel/issues/15359
-        "--spawn_strategy=sandboxed"
-      ]
-      ++ lib.optionals (mklSupport) [ "--config=mkl" ];
+      # workaround for https://github.com/bazelbuild/bazel/issues/15359
+      "--spawn_strategy=sandboxed"
+    ]
+    ++ lib.optionals mklSupport [ "--config=mkl" ];
 
     bazelTargets = [
       "//tensorflow/tools/pip_package:build_pip_package //tensorflow/tools/lib_package:libtensorflow"
@@ -531,7 +526,6 @@ let
               "sha256-ty5+51BwHWE1xR4/0WcWTp608NzSAS/iiyN+9zx7/wI="
             else
               "sha256-9btXrNHqd720oXTPDhSmFidv5iaZRLjCVX8opmrMjXk=";
-          x86_64-darwin = "sha256-gqb03kB0z2pZQ6m1fyRp1/Nbt8AVVHWpOJSeZNCLc4w=";
           aarch64-darwin = "sha256-WdgAaFZU+ePwWkVBhLzjlNT7ELfGHOTaMdafcAMD5yo=";
         }
         .${stdenv.hostPlatform.system} or (throw "unsupported system ${stdenv.hostPlatform.system}");
@@ -588,30 +582,34 @@ let
       requiredSystemFeatures = [ "big-parallel" ];
     };
 
-    meta =
-      {
-        badPlatforms = lib.optionals cudaSupport lib.platforms.darwin;
-        changelog = "https://github.com/tensorflow/tensorflow/releases/tag/v${version}";
-        description = "Computation using data flow graphs for scalable machine learning";
-        homepage = "http://tensorflow.org";
-        license = lib.licenses.asl20;
-        maintainers = with lib.maintainers; [ abbradar ];
-        platforms = with lib.platforms; linux ++ darwin;
-        broken =
-          stdenv.hostPlatform.isDarwin
-          || !(xlaSupport -> cudaSupport)
-          || !(cudaSupport -> builtins.hasAttr cudnnAttribute cudaPackages)
-          || !(cudaSupport -> cudaPackages ? cudatoolkit);
-      }
-      // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
-        timeout = 86400; # 24 hours
-        maxSilent = 14400; # 4h, double the default of 7200s
-      };
+    meta = {
+      badPlatforms = lib.optionals cudaSupport lib.platforms.darwin;
+      changelog = "https://github.com/tensorflow/tensorflow/releases/tag/v${version}";
+      description = "Computation using data flow graphs for scalable machine learning";
+      homepage = "http://tensorflow.org";
+      license = lib.licenses.asl20;
+      maintainers = [ ];
+      platforms = with lib.platforms; linux ++ darwin;
+      broken =
+        # Dependencies are EOL and have been removed; an update
+        # to a newer TensorFlow version will be required to fix the
+        # source build.
+        true
+        || stdenv.hostPlatform.isDarwin
+        || !(xlaSupport -> cudaSupport)
+        || !(cudaSupport -> builtins.hasAttr cudnnAttribute cudaPackages)
+        || !(cudaSupport -> cudaPackages ? cudatoolkit);
+    }
+    // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+      timeout = 86400; # 24 hours
+      maxSilent = 14400; # 4h, double the default of 7200s
+    };
   };
 in
 buildPythonPackage {
-  inherit version pname;
-  disabled = pythonAtLeast "3.12";
+  __structuredAttrs = true;
+  inherit version pname format;
+  disabled = pythonAtLeast "3.13";
 
   src = bazel-build.python;
 
@@ -619,7 +617,7 @@ buildPythonPackage {
   # - Drop tensorflow-io dependency until we get it to build
   # - Relax flatbuffers and gast version requirements
   # - The purpose of python3Packages.libclang is not clear at the moment and we don't have it packaged yet
-  # - keras and tensorlow-io-gcs-filesystem will be considered as optional for now.
+  # - keras will be considered as optional for now.
   postPatch = ''
     sed -i setup.py \
       -e '/tensorflow-io-gcs-filesystem/,+1d' \
@@ -627,19 +625,27 @@ buildPythonPackage {
       -e "s/'gast[^']*',/'gast',/" \
       -e "/'libclang[^']*',/d" \
       -e "/'keras[^']*')\?,/d" \
-      -e "/'tensorflow-io-gcs-filesystem[^']*',/d" \
-      -e "s/'protobuf[^']*',/'protobuf',/" \
+      -e "s/'protobuf[^']*',/'protobuf',/"
   '';
 
-  # Upstream has a pip hack that results in bin/tensorboard being in both tensorflow
-  # and the propagated input tensorboard, which causes environment collisions.
-  # Another possibility would be to have tensorboard only in the buildInputs
-  # https://github.com/tensorflow/tensorflow/blob/v1.7.1/tensorflow/tools/pip_package/setup.py#L79
-  postInstall = ''
-    rm $out/bin/tensorboard
-  '';
+  postInstall =
+    # Upstream has a pip hack that results in bin/tensorboard being in both tensorflow
+    # and the propagated input tensorboard, which causes environment collisions.
+    # Another possibility would be to have tensorboard only in the buildInputs
+    # https://github.com/tensorflow/tensorflow/blob/v1.7.1/tensorflow/tools/pip_package/setup.py#L79
+    ''
+      rm $out/bin/tensorboard
+    ''
+    # Don't set RTLD_GLOBAL by removing file only meant to ship in static builds.
+    # https://github.com/tensorflow/tensorflow/commit/5720ab7845de0b2a2e2f5fdf547d2515d39a20b9
+    + ''
+      rm $out/${python.sitePackages}/tensorflow/python/pywrap_dlopen_global_flags.py
+    '';
 
-  setupPyGlobalFlags = [ "--project_name ${pname}" ];
+  setupPyGlobalFlags = [
+    "--project_name"
+    pname
+  ];
 
   # tensorflow/tools/pip_package/setup.py
   propagatedBuildInputs = [
@@ -651,7 +657,6 @@ buildPythonPackage {
     google-pasta
     grpcio
     h5py
-    keras-preprocessing
     numpy
     opt-einsum
     packaging
@@ -661,7 +666,8 @@ buildPythonPackage {
     termcolor
     typing-extensions
     wrapt
-  ] ++ lib.optionals withTensorboard [ tensorboard ];
+  ]
+  ++ lib.optionals withTensorboard [ tensorboard ];
 
   nativeBuildInputs = lib.optionals cudaSupport [ addDriverRunpath ];
 

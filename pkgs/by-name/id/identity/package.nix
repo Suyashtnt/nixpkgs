@@ -1,77 +1,114 @@
 {
   lib,
   stdenv,
-  fetchFromGitLab,
-  rustPlatform,
-  cargo,
-  rustc,
   appstream,
   blueprint-compiler,
+  cargo,
   dav1d,
   desktop-file-utils,
+  fetchFromGitLab,
+  glib,
+  glycin-loaders,
   gst_all_1,
   gtk4,
+  lcms,
   libadwaita,
+  libglycin-gtk4,
+  libseccomp,
   libwebp,
   meson,
   ninja,
-  pkg-config,
   nix-update-script,
+  pkg-config,
+  rustPlatform,
+  rustc,
+  versionCheckHook,
   wrapGAppsHook4,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "identity";
-  version = "0.6.0";
+  version = "26.03";
 
   src = fetchFromGitLab {
     domain = "gitlab.gnome.org";
     owner = "YaLTeR";
     repo = "identity";
-    rev = "v${version}";
-    hash = "sha256-AiOaTjYOc7Eo+9kl1H91TKAkCKNUJNWobmBENZlHBhQ=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-CVSUk0xhfsMM47L0BVQj69Jw2MhsElBI3mxETCWBqcU=";
   };
 
-  cargoDeps = rustPlatform.importCargoLock {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "gst-plugin-gtk4-0.12.0-alpha.1" = "sha256-JSw9yZ4oy7m6c9pqOT+fnYEbTlneLTtWQf3/Jbek/ps=";
-    };
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-AuIAfk6BipUHkIfRiLJf0tjadVxsEIKKvpZgKA11oJE=";
   };
+
+  # The crate can't find our provided gstreamer-gl-egl-1.0.pc in the PKG_CONFIG_PATH otherwise.
+  postPatch = ''
+    substituteInPlace $cargoDepsCopy/*/gstreamer-gl-egl-sys-*/Cargo.toml \
+      --replace-fail 'gstreamer-gl-egl-1.0' 'gstreamer-gl-1.0'
+  '';
+
+  strictDeps = true;
 
   nativeBuildInputs = [
     appstream
     blueprint-compiler
     cargo
-    desktop-file-utils
+    desktop-file-utils # for `desktop-file-validate`
+    glib # for `glib-compile-schemas`
+    gtk4 # for `gtk-update-icon-cache`
     meson
     ninja
     pkg-config
-    rustc
+    rustPlatform.cargoCheckHook
     rustPlatform.cargoSetupHook
+    rustc
     wrapGAppsHook4
   ];
 
   buildInputs = [
     dav1d
+    glycin-loaders
     gst_all_1.gst-libav
     gst_all_1.gst-plugins-bad
     gst_all_1.gst-plugins-base
     gst_all_1.gst-plugins-good
     gst_all_1.gstreamer
     gtk4
+    lcms
     libadwaita
+    libglycin-gtk4
+    libseccomp
     libwebp
   ];
+
+  mesonBuildType = "release";
+
+  doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
+  cargoCheckType = if (finalAttrs.mesonBuildType != "debug") then "release" else "debug";
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  checkPhase = ''
+    runHook preCheck
+
+    cargoCheckHook
+    mesonCheckPhase
+
+    runHook postCheck
+  '';
 
   passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Program for comparing multiple versions of an image or video";
     homepage = "https://gitlab.gnome.org/YaLTeR/identity";
+    changelog = "https://gitlab.gnome.org/YaLTeR/identity/-/releases/v${finalAttrs.version}";
     license = lib.licenses.gpl3Plus;
-    maintainers = with lib.maintainers; [ getchoo ];
+    teams = [ lib.teams.gnome-circle ];
     mainProgram = "identity";
     platforms = lib.platforms.linux;
   };
-}
+})

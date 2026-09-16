@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.zigbee2mqtt;
 
@@ -7,11 +12,14 @@ let
 
 in
 {
-  meta.maintainers = with lib.maintainers; [ sweber hexa ];
+  meta.maintainers = with lib.maintainers; [ hexa ];
 
   imports = [
-    # Remove warning before the 21.11 release
-    (lib.mkRenamedOptionModule [ "services" "zigbee2mqtt" "config" ] [ "services" "zigbee2mqtt" "settings" ])
+    (lib.mkRemovedOptionModule [
+      "services"
+      "zigbee2mqtt"
+      "config"
+    ] "The option services.zigbee2mqtt.config was renamed to services.zigbee2mqtt.settings.")
   ];
 
   options.services.zigbee2mqtt = {
@@ -30,7 +38,7 @@ in
       default = { };
       example = lib.literalExpression ''
         {
-          homeassistant = config.services.home-assistant.enable;
+          homeassistant.enabled = config.services.home-assistant.enable;
           permit_join = true;
           serial = {
             port = "/dev/ttyACM1";
@@ -49,7 +57,7 @@ in
 
     # preset config values
     services.zigbee2mqtt.settings = {
-      homeassistant = lib.mkDefault config.services.home-assistant.enable;
+      homeassistant.enabled = lib.mkDefault config.services.home-assistant.enable;
       permit_join = lib.mkDefault false;
       mqtt = {
         base_topic = lib.mkDefault "zigbee2mqtt";
@@ -68,16 +76,20 @@ in
       after = [ "network.target" ];
       environment.ZIGBEE2MQTT_DATA = cfg.dataDir;
       serviceConfig = {
+        ExecStartPre = "${lib.getExe' pkgs.coreutils "cp"} --no-preserve=mode ${configFile} '${cfg.dataDir}/configuration.yaml'";
         ExecStart = "${cfg.package}/bin/zigbee2mqtt";
         User = "zigbee2mqtt";
         Group = "zigbee2mqtt";
         WorkingDirectory = cfg.dataDir;
+        StateDirectory = "zigbee2mqtt";
+        StateDirectoryMode = "0700";
         Restart = "on-failure";
+        RestartSec = 10;
 
         # Hardening
         CapabilityBoundingSet = "";
-        DeviceAllow = [
-          config.services.zigbee2mqtt.settings.serial.port
+        DeviceAllow = lib.optionals (lib.hasPrefix "/" cfg.settings.serial.port) [
+          cfg.settings.serial.port
         ];
         DevicePolicy = "closed";
         LockPersonality = true;
@@ -101,6 +113,8 @@ in
         RestrictAddressFamilies = [
           "AF_INET"
           "AF_INET6"
+          "AF_NETLINK"
+          "AF_UNIX"
         ];
         RestrictNamespaces = true;
         RestrictRealtime = true;
@@ -112,12 +126,10 @@ in
         SystemCallFilter = [
           "@system-service @pkey"
           "~@privileged @resources"
+          "@chown"
         ];
         UMask = "0077";
       };
-      preStart = ''
-        cp --no-preserve=mode ${configFile} "${cfg.dataDir}/configuration.yaml"
-      '';
     };
 
     users.users.zigbee2mqtt = {

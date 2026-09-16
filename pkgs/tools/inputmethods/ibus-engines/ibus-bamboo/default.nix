@@ -1,20 +1,22 @@
-{ lib, stdenv
-, fetchFromGitHub
-, xorg
-, pkg-config
-, wrapGAppsHook3
-, go
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  libxtst,
+  pkg-config,
+  wrapGAppsHook3,
+  go,
 }:
 
 stdenv.mkDerivation rec {
   pname = "ibus-bamboo";
-  version = "0.8.4-rc6";
+  version = "0.8.5";
 
   src = fetchFromGitHub {
     owner = "BambooEngine";
     repo = pname;
     rev = "v" + lib.toUpper version;
-    sha256 = "sha256-8eBrgUlzrfQkgzr0/Nz/0FQ98UBdV0GQcZhJVbmyOg0=";
+    sha256 = "sha256-1qj1Fx8RDdA1qEGWn+/nQCAu4HCei+YbF7SHDzuFw2I=";
   };
 
   nativeBuildInputs = [
@@ -24,7 +26,7 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs = [
-    xorg.libXtst
+    libxtst
   ];
 
   preConfigure = ''
@@ -36,13 +38,12 @@ stdenv.mkDerivation rec {
     "PREFIX=${placeholder "out"}"
   ];
 
-
-  meta = with lib; {
+  meta = {
     isIbusEngine = true;
     description = "Vietnamese IME for IBus";
     homepage = "https://github.com/BambooEngine/ibus-bamboo";
-    license = licenses.gpl3;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ astronaut0212 ];
+    license = lib.licenses.gpl3;
+    platforms = lib.platforms.linux;
+    maintainers = [ ];
   };
 }

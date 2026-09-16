@@ -1,26 +1,25 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, pkg-config
-, openssl
-, sqlite
-, stdenv
-, darwin
-, nixosTests
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  openssl,
+  sqlite,
+  nixosTests,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "mollysocket";
-  version = "1.4.1";
+  version = "1.7.1";
 
   src = fetchFromGitHub {
     owner = "mollyim";
     repo = "mollysocket";
-    rev = version;
-    hash = "sha256-vE5J4BKYmVqtowfxDDTOwFKws7phYRm9xKFPiDNuNn4=";
+    tag = finalAttrs.version;
+    hash = "sha256-QtyFIN04t4XuZfgTja14YAJmYqfZNDh1Dygv2QlXyxY=";
   };
 
-  cargoHash = "sha256-s/EhX5o6XuUqcrqhXY274MyWhRukgetfIZKQ4XNlq6Y=";
+  cargoHash = "sha256-CBRVFWr3FUy+aRT/xU9nbu8bvf0565jGkvSO1E8+1UI=";
 
   nativeBuildInputs = [
     pkg-config
@@ -29,8 +28,6 @@ rustPlatform.buildRustPackage rec {
   buildInputs = [
     openssl
     sqlite
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.Security
   ];
 
   checkFlags = [
@@ -48,11 +45,11 @@ rustPlatform.buildRustPackage rec {
   };
 
   meta = {
-    changelog = "https://github.com/mollyim/mollysocket/releases/tag/${version}";
+    changelog = "https://github.com/mollyim/mollysocket/releases/tag/${finalAttrs.version}";
     description = "Get Signal notifications via UnifiedPush";
     homepage = "https://github.com/mollyim/mollysocket";
     license = lib.licenses.agpl3Plus;
     mainProgram = "mollysocket";
     maintainers = with lib.maintainers; [ dotlambda ];
   };
-}
+})

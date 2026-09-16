@@ -9,31 +9,33 @@
   protobuf,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-shell";
-  version = "1.9.5";
+  version = "1.16.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     pname = "google_cloud_shell";
-    inherit version;
-    hash = "sha256-UpDomrWUTrsiI+OdrI5nJKC/J+eaZiNDmMt0QgcP5Fw==";
+    inherit (finalAttrs) version;
+    hash = "sha256-e0RMNqR4jxA+hwlNM2Lyspsh9WKfQRWndZ1oZJMRZoI=";
   };
 
   build-system = [ setuptools ];
+
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
 
   dependencies = [
     google-api-core
     google-auth
     proto-plus
     protobuf
-  ] ++ google-api-core.optional-dependencies.grpc;
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
 
   nativeCheckInputs = [
     mock
@@ -46,11 +48,11 @@ buildPythonPackage rec {
     "google.cloud.shell_v1"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python Client for Cloud Shell";
     homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-shell";
-    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-shell-v${version}/packages/google-cloud-shell/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-shell-v${finalAttrs.version}/packages/google-cloud-shell/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

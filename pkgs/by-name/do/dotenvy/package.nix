@@ -1,17 +1,24 @@
-{ lib, fetchCrate, rustPlatform }:
+{
+  lib,
+  fetchCrate,
+  rustPlatform,
+}:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "dotenvy";
   version = "0.15.7";
 
   src = fetchCrate {
-    inherit pname version;
+    inherit (finalAttrs) pname version;
     hash = "sha256-virK/TpYBmwTf5UCQCqC/df8iKYAzPBfsQ1nQkFKF2Y=";
   };
 
-  cargoHash = "sha256-qjFTv15FSvgYgQ4nTEIo0KUqaCbg6E+W5B2B5BH6sp4=";
+  cargoHash = "sha256-eDmSPl1wsEriOtesv0KpLlpdeJPSQzbwh+QeZcFzDbc=";
 
-  cargoBuildFlags = [ "--bin=dotenvy" "--features=cli" ];
+  cargoBuildFlags = [
+    "--bin=dotenvy"
+    "--features=cli"
+  ];
 
   # just run unittests and skip doc-tests
   cargoTestFlags = [ "--lib" ];
@@ -22,4 +29,4 @@ rustPlatform.buildRustPackage rec {
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ phlip9 ];
   };
-}
+})

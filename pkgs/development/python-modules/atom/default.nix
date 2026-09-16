@@ -5,21 +5,18 @@
   setuptools-scm,
   cppy,
   pytestCheckHook,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "atom";
-  version = "0.10.5";
+  version = "0.12.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "nucleic";
     repo = "atom";
-    rev = "refs/tags/${version}";
-    hash = "sha256-wRVmCyqMwDs1thnRXYH6z1a/qCubw8CVUhaEMqLtiSM=";
+    tag = version;
+    hash = "sha256-XFJujJrxubtdCLTr1oaM7h0LNS1Ep08f8+1tRzARBqs=";
   };
 
   nativeBuildInputs = [ setuptools-scm ];
@@ -34,11 +31,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "atom.api" ];
 
-  meta = with lib; {
+  meta = {
     description = "Memory efficient Python objects";
     homepage = "https://github.com/nucleic/atom";
     changelog = "https://github.com/nucleic/atom/releases/tag/${version}";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ bhipple ];
+    license = lib.licenses.bsd3;
   };
 }

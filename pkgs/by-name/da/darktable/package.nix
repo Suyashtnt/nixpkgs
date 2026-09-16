@@ -1,122 +1,185 @@
-{ lib
-, stdenv
-, fetchurl
-, libsoup
-, graphicsmagick
-, json-glib
-, wrapGAppsHook3
-, cairo
-, cmake
-, ninja
-, curl
-, perl
-, desktop-file-utils
-, exiv2
-, glib
-, glib-networking
-, ilmbase
-, gtk3
-, intltool
-, lcms2
-, lensfun
-, libX11
-, libexif
-, libgphoto2
-, libjpeg
-, libpng
-, librsvg
-, libtiff
-, libjxl
-, openexr_3
-, osm-gps-map
-, pkg-config
-, sqlite
-, libxslt
-, openjpeg
-, pugixml
-, colord
-, colord-gtk
-, libwebp
-, libsecret
-, adwaita-icon-theme
-, SDL2
-, ocl-icd
-, pcre
-, gtk-mac-integration
-, isocodes
-, llvmPackages
-, gmic
-, libavif
-, icu
-, jasper
-, libheif
-, libaom
-, portmidi
-, lua
-}:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  withAi ? false,
 
+  # nativeBuildInputs
+  cmake,
+  desktop-file-utils,
+  intltool,
+  llvmPackages,
+  ninja,
+  perl,
+  pkg-config,
+  wrapGAppsHook3,
+  saxon,
+
+  # buildInputs
+  SDL2,
+  adwaita-icon-theme,
+  alsa-lib,
+  cairo,
+  curl,
+  exiv2,
+  glib,
+  glib-networking,
+  gmic,
+  graphicsmagick,
+  gtk3,
+  icu,
+  isocodes,
+  jasper,
+  json-glib,
+  lcms2,
+  lensfun,
+  lerc,
+  libaom,
+  libarchive,
+  libavif,
+  libdatrie,
+  libepoxy,
+  libexif,
+  libgcrypt,
+  libgpg-error,
+  libgphoto2,
+  libheif,
+  libjpeg,
+  libjxl,
+  libpng,
+  librsvg,
+  libsecret,
+  libsysprof-capture,
+  libthai,
+  libtiff,
+  libwebp,
+  libxml2,
+  lua5_4,
+  onnxruntime,
+  util-linux,
+  openexr,
+  openjpeg,
+  osm-gps-map,
+  pcre2,
+  portmidi,
+  potrace,
+  pugixml,
+  sqlite,
+  # Linux only
+  colord,
+  colord-gtk,
+  libselinux,
+  libsepol,
+  libx11,
+  libxdmcp,
+  libxkbcommon,
+  libxtst,
+  ocl-icd,
+  # Darwin only
+  gtk-mac-integration,
+
+  versionCheckHook,
+  gitUpdater,
+}:
+let
+  pugixml-shared = pugixml.override { shared = true; };
+in
 stdenv.mkDerivation rec {
-  version = "4.8.1";
+  version = "5.6.0";
   pname = "darktable";
 
   src = fetchurl {
     url = "https://github.com/darktable-org/darktable/releases/download/release-${version}/darktable-${version}.tar.xz";
-    hash = "sha256-kBsOLK7Tb7hhn99MYO37jTETS5R9MFS1xm/VXDivWZE=";
+    hash = "sha256-FX1tOEevivyr54lERUeG9zqIbgilBLS9YRTCBl/gBuQ=";
   };
 
-  nativeBuildInputs = [ cmake ninja llvmPackages.llvm pkg-config intltool perl desktop-file-utils wrapGAppsHook3 ];
+  nativeBuildInputs = [
+    cmake
+    desktop-file-utils
+    intltool
+    llvmPackages.llvm
+    ninja
+    perl
+    pkg-config
+    wrapGAppsHook3
+    saxon # Use Saxon instead of libxslt to fix XSLT generate-id() consistency issues
+  ];
 
   buildInputs = [
+    SDL2
+    adwaita-icon-theme
     cairo
     curl
     exiv2
     glib
     glib-networking
+    gmic
+    graphicsmagick
     gtk3
-    ilmbase
+    icu
+    isocodes
+    jasper
+    json-glib
     lcms2
     lensfun
+    lerc
+    libaom
+    libavif
+    libdatrie
+    libepoxy
     libexif
+    libgcrypt
+    libgpg-error
     libgphoto2
+    libheif
     libjpeg
+    libjxl
     libpng
     librsvg
-    libtiff
-    libjxl
-    openexr_3
-    sqlite
-    libxslt
-    libsoup
-    graphicsmagick
-    json-glib
-    openjpeg
-    pugixml
-    libwebp
     libsecret
-    SDL2
-    adwaita-icon-theme
+    libsysprof-capture
+    libthai
+    libtiff
+    libwebp
+    libxml2
+    lua5_4
+    openexr
+    openjpeg
     osm-gps-map
-    pcre
-    isocodes
-    gmic
-    libavif
-    icu
-    jasper
-    libheif
-    libaom
+    pcre2
     portmidi
-    lua
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+    potrace
+    pugixml-shared
+    sqlite
+  ]
+  ++ lib.optionals withAi [
+    libarchive
+    onnxruntime
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    alsa-lib
     colord
     colord-gtk
-    libX11
+    libselinux
+    libsepol
+    libx11
+    libxdmcp
+    libxkbcommon
+    libxtst
     ocl-icd
-  ] ++ lib.optional stdenv.hostPlatform.isDarwin gtk-mac-integration
+    util-linux
+  ]
+  ++ lib.optional stdenv.hostPlatform.isDarwin gtk-mac-integration
   ++ lib.optional stdenv.cc.isClang llvmPackages.openmp;
 
   cmakeFlags = [
     "-DBUILD_USERMANUAL=False"
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
+  ]
+  ++ lib.optionals withAi [
+    (lib.cmakeBool "USE_AI" true)
+    (lib.cmakeBool "ONNXRUNTIME_OFFLINE" true)
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
     "-DUSE_COLORD=OFF"
     "-DUSE_KWALLET=OFF"
   ];
@@ -128,7 +191,10 @@ stdenv.mkDerivation rec {
   preFixup =
     let
       libPathEnvVar = if stdenv.hostPlatform.isDarwin then "DYLD_LIBRARY_PATH" else "LD_LIBRARY_PATH";
-      libPathPrefix = "$out/lib/darktable" + lib.optionalString stdenv.hostPlatform.isLinux ":${ocl-icd}/lib";
+      libPathPrefix =
+        "$out/lib/darktable"
+        + lib.optionalString (withAi && stdenv.hostPlatform.isLinux) ":${lib.getLib onnxruntime}/lib"
+        + lib.optionalString stdenv.hostPlatform.isLinux ":${ocl-icd}/lib";
     in
     ''
       for f in $out/share/darktable/kernels/*.cl; do
@@ -140,11 +206,32 @@ stdenv.mkDerivation rec {
       )
     '';
 
-  meta = with lib; {
+  postPatch = ''
+    patchShebangs ./tools/generate_styles_string.sh
+  '';
+
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  passthru.updateScript = gitUpdater {
+    rev-prefix = "release-";
+    odd-unstable = true;
+    url = "https://github.com/darktable-org/darktable.git";
+  };
+
+  meta = {
     description = "Virtual lighttable and darkroom for photographers";
     homepage = "https://www.darktable.org";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux ++ platforms.darwin;
-    maintainers = with maintainers; [ flosse mrVanDalo paperdigits freyacodes ];
+    changelog = "https://github.com/darktable-org/darktable/releases/tag/release-${version}";
+    mainProgram = "darktable";
+    license = lib.licenses.gpl3Plus;
+    platforms = with lib.platforms; linux ++ darwin;
+    maintainers = with lib.maintainers; [
+      flosse
+      mrVanDalo
+      freyacodes
+    ];
   };
 }

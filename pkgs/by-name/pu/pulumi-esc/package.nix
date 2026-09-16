@@ -4,33 +4,32 @@
   fetchFromGitHub,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "pulumi-esc";
-  version = "0.10.0";
+  version = "0.26.0";
 
   src = fetchFromGitHub {
     owner = "pulumi";
     repo = "esc";
-    rev = "v${version}";
-    hash = "sha256-SeHO8N8NwAF4f6Eo46V2mBElVgJc5ijVrjsBHWtUMc0=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-hj2eRt/223kEWcgy8UdgQAn3oLS3Rr4A2srN+Iw0fKw=";
   };
 
   subPackages = "cmd/esc";
 
-  vendorHash = "sha256-xJtlTyhGyoxefE2pFcLGHMapn9L2F/PKuNt49J41viE=";
+  vendorHash = "sha256-Va8vcIbNqAcrbJECa+utSg6EZNOTSZalP/W3GC0I2lM=";
 
   ldflags = [
     "-s"
     "-w"
-    "-X=github.com/pulumi/esc/cmd/esc/cli/version.Version=${src.rev}"
+    "-X=github.com/pulumi/esc/cmd/esc/cli/version.Version=${finalAttrs.src.rev}"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Pulumi ESC (Environments, Secrets, and Configuration) for cloud applications and infrastructure";
     homepage = "https://github.com/pulumi/esc/tree/main";
-    changelog = "https://github.com/pulumi/esc/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ yomaq ];
+    changelog = "https://github.com/pulumi/esc/blob/${finalAttrs.src.rev}/CHANGELOG.md";
+    license = lib.licenses.asl20;
     mainProgram = "esc";
   };
-}
+})

@@ -3,40 +3,36 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
+  pytest-cov-stub,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pynmeagps";
-  version = "1.0.42";
+  version = "1.1.7";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "semuconsulting";
     repo = "pynmeagps";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-hlGqc4vZ/C98vQwJewK0cfC3zP9xyO0oXXtlyNUDg0Y=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-tElTqwAISkt1hNlUIuduHdYfqLVhGZwqucvPb3ppY+c=";
   };
-
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail "--cov --cov-report html --cov-fail-under 98" ""
-  '';
 
   build-system = [ setuptools ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
 
   pythonImportsCheck = [ "pynmeagps" ];
 
   meta = {
     description = "NMEA protocol parser and generator";
     homepage = "https://github.com/semuconsulting/pynmeagps";
-    changelog = "https://github.com/semuconsulting/pynmeagps/releases/tag/v${version}";
+    changelog = "https://github.com/semuconsulting/pynmeagps/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ dylan-gonzalez ];
   };
-}
+})

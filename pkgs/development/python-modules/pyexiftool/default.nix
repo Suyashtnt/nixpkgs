@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   exiftool,
   setuptools,
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "0.5.6";
   pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
   src = fetchFromGitHub {
     owner = "sylikc";
     repo = "pyexiftool";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-dgQkbpCbdq2JbupY0DyQbHPR9Bg+bwDo7yN03o3sX+A=";
   };
 

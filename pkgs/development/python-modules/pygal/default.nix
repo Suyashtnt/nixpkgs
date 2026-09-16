@@ -2,6 +2,7 @@
   lib,
   buildPythonPackage,
   fetchPypi,
+  stdenv,
 
   # build-system
   setuptools,
@@ -20,24 +21,24 @@
 
 buildPythonPackage rec {
   pname = "pygal";
-  version = "3.0.4";
+  version = "3.1.3";
   pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-bF2jPxBB6LMMvJgPijSRDZ7cWEuDMkApj2ol32VCUok=";
+    hash = "sha256-3RGcFM3rVr64UoLj4mh+zjBWEiXUEKgi5rtoaZqm57E=";
   };
 
   postPatch = ''
     substituteInPlace setup.py \
-      --replace pytest-runner ""
+      --replace-fail pytest-runner ""
   '';
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ importlib-metadata ];
+  dependencies = [ importlib-metadata ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     lxml = [ lxml ];
     png = [ cairosvg ];
   };
@@ -45,20 +46,29 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     pyquery
     pytestCheckHook
-  ] ++ passthru.optional-dependencies.png;
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   preCheck = ''
     # necessary on darwin to pass the testsuite
     export LANG=en_US.UTF-8
   '';
 
-  meta = with lib; {
+  # Cairo tries to load system fonts by default.
+  # It's surfaced as a Cairo "out of memory" error in tests.
+  __impureHostDeps = [ "/System/Library/Fonts" ];
+
+  postCheck = ''
+    export LANG=${if stdenv.hostPlatform.isDarwin then "en_US.UTF-8" else "C.UTF-8"}
+  '';
+
+  meta = {
+    description = "Module for dynamic SVG charting";
+    homepage = "http://www.pygal.org";
     changelog = "https://github.com/Kozea/pygal/blob/${version}/docs/changelog.rst";
     downloadPage = "https://github.com/Kozea/pygal";
-    description = "Sexy and simple python charting";
-    mainProgram = "pygal_gen.py";
-    homepage = "http://www.pygal.org";
-    license = licenses.lgpl3Plus;
+    license = lib.licenses.lgpl3Plus;
     maintainers = [ ];
+    mainProgram = "pygal_gen.py";
   };
 }

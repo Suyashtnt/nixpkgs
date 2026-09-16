@@ -1,36 +1,41 @@
-{ fetchFromGitHub
-, glib
-, gobject-introspection
-, gtk3
-, libgnomekbd
-, gdk-pixbuf
-, cairo
-, xorg
-, meson
-, ninja
-, pkg-config
-, python3
-, lib
-, stdenv
-, vala
-, wrapGAppsHook3
-, inxi
-, mate
-, dbus
-, libdbusmenu-gtk3
+{
+  fetchFromGitHub,
+  glib,
+  gobject-introspection,
+  gtk3,
+  libgnomekbd,
+  gdk-pixbuf,
+  cairo,
+  libxkbfile,
+  meson,
+  ninja,
+  pkg-config,
+  python3,
+  lib,
+  stdenv,
+  vala,
+  wrapGAppsHook3,
+  file,
+  inxi,
+  mate-panel,
+  dbus,
+  libdbusmenu-gtk3,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "xapp";
-  version = "2.8.5";
+  version = "3.2.3";
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   src = fetchFromGitHub {
     owner = "linuxmint";
-    repo = pname;
-    rev = version;
-    hash = "sha256-HGWaa1S+maphP9colWdWSzGyoA0f4vJkF889X5/rzvs=";
+    repo = "xapp";
+    rev = finalAttrs.version;
+    hash = "sha256-WisSymt3l+bt02aUy+SaqDa5S9V+xxgy8mkFQfB+shM=";
   };
 
   # Recommended by upstream, which enables the build of xapp-debug.
@@ -48,15 +53,17 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs = [
-    (python3.withPackages (ps: with ps; [
-      pygobject3
-      setproctitle # mate applet
-    ]))
+    (python3.withPackages (
+      ps: with ps; [
+        pygobject3
+        setproctitle # mate applet
+      ]
+    ))
     libgnomekbd
     gdk-pixbuf
-    xorg.libxkbfile
+    libxkbfile
     python3.pkgs.pygobject3 # for .pc file
-    mate.mate-panel # for gobject-introspection
+    mate-panel # for gobject-introspection
     dbus
     libdbusmenu-gtk3
   ];
@@ -76,19 +83,28 @@ stdenv.mkDerivation rec {
     chmod +x schemas/meson_install_schemas.py # patchShebangs requires executable file
     patchShebangs schemas/meson_install_schemas.py
 
-    # Patch pastebin & inxi location
-    sed "s|/usr/bin/pastebin|$out/bin/pastebin|" -i scripts/upload-system-info
-    sed "s|'inxi'|'${inxi}/bin/inxi'|" -i scripts/upload-system-info
+    # Used in cinnamon-settings
+    substituteInPlace scripts/upload-system-info \
+      --replace-fail "'/usr/bin/pastebin'" "'$out/bin/pastebin'" \
+      --replace-fail "'inxi'" "'${inxi}/bin/inxi'"
+
+    # Used in x-d-p-xapp
+    substituteInPlace scripts/xfce4-set-wallpaper \
+      --replace-fail "file --mime-type" "${file}/bin/file --mime-type"
   '';
 
   # Fix gtk3 module target dir. Proper upstream solution should be using define_variable.
-  PKG_CONFIG_GTK__3_0_LIBDIR = "${placeholder "out"}/lib";
+  env.PKG_CONFIG_GTK__3_0_LIBDIR = "${placeholder "out"}/lib";
 
-  meta = with lib; {
+  preFixup = ''
+    wrapGApp $out/lib/xapps/xapp-sn-watcher
+  '';
+
+  meta = {
     homepage = "https://github.com/linuxmint/xapp";
     description = "Cross-desktop libraries and common resources";
-    license = licenses.lgpl3;
-    platforms = platforms.linux;
-    maintainers = teams.cinnamon.members;
+    license = lib.licenses.lgpl3;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.cinnamon ];
   };
-}
+})

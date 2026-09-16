@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.services.oauth2-proxy;
@@ -13,71 +18,100 @@ let
       resource = cfg.azure.resource;
     };
 
-    github = cfg: { github = {
-      inherit (cfg.github) org team;
-    }; };
+    github = cfg: {
+      github = {
+        inherit (cfg.github) org team;
+      };
+    };
 
-    google = cfg: { google = with cfg.google; lib.optionalAttrs (groups != []) {
-      admin-email = adminEmail;
-      service-account = serviceAccountJSON;
-      group = groups;
-    }; };
+    google = cfg: {
+      google =
+        with cfg.google;
+        lib.optionalAttrs (groups != [ ]) {
+          admin-email = adminEmail;
+          service-account = serviceAccountJSON;
+          group = groups;
+        };
+    };
   };
 
   authenticatedEmailsFile = pkgs.writeText "authenticated-emails" cfg.email.addresses;
 
-  getProviderOptions = cfg: provider: providerSpecificOptions.${provider} or (_: {}) cfg;
+  getProviderOptions = cfg: provider: providerSpecificOptions.${provider} or (_: { }) cfg;
 
-  allConfig = with cfg; {
-    inherit (cfg) provider scope upstream;
-    approval-prompt = approvalPrompt;
-    basic-auth-password = basicAuthPassword;
-    client-id = clientID;
-    client-secret = clientSecret;
-    custom-templates-dir = customTemplatesDir;
-    email-domain = email.domains;
-    http-address = httpAddress;
-    login-url = loginURL;
-    pass-access-token = passAccessToken;
-    pass-basic-auth = passBasicAuth;
-    pass-host-header = passHostHeader;
-    reverse-proxy = reverseProxy;
-    proxy-prefix = proxyPrefix;
-    profile-url = profileURL;
-    oidc-issuer-url = oidcIssuerUrl;
-    redeem-url = redeemURL;
-    redirect-url = redirectURL;
-    request-logging = requestLogging;
-    skip-auth-regex = skipAuthRegexes;
-    signature-key = signatureKey;
-    validate-url = validateURL;
-    htpasswd-file = htpasswd.file;
-    cookie = {
-      inherit (cookie) domain secure expire name secret refresh;
-      httponly = cookie.httpOnly;
-    };
-    set-xauthrequest = setXauthrequest;
-  } // lib.optionalAttrs (cfg.email.addresses != null) {
-    authenticated-emails-file = authenticatedEmailsFile;
-  } // lib.optionalAttrs (cfg.passBasicAuth) {
-    basic-auth-password = cfg.basicAuthPassword;
-  } // lib.optionalAttrs (cfg.htpasswd.file != null) {
-    display-htpasswd-file = cfg.htpasswd.displayForm;
-  } // lib.optionalAttrs tls.enable {
-    tls-cert-file = tls.certificate;
-    tls-key-file = tls.key;
-    https-address = tls.httpsAddress;
-  } // (getProviderOptions cfg cfg.provider) // cfg.extraConfig;
+  allConfig =
+    with cfg;
+    {
+      inherit (cfg) provider scope upstream;
+      approval-prompt = approvalPrompt;
+      basic-auth-password = basicAuthPassword;
+      client-id = clientID;
+      client-secret-file = if clientSecretFile != null then "%d/client-secret" else null;
+      custom-templates-dir = customTemplatesDir;
+      email-domain = email.domains;
+      http-address = httpAddress;
+      login-url = loginURL;
+      pass-access-token = passAccessToken;
+      pass-basic-auth = passBasicAuth;
+      pass-host-header = passHostHeader;
+      reverse-proxy = reverseProxy;
+      trusted-proxy-ip = trustedProxyIP;
+      proxy-prefix = proxyPrefix;
+      profile-url = profileURL;
+      oidc-issuer-url = oidcIssuerUrl;
+      redeem-url = redeemURL;
+      redirect-url = redirectURL;
+      request-logging = requestLogging;
+      skip-auth-regex = skipAuthRegexes;
+      signature-key = signatureKey;
+      validate-url = validateURL;
+      htpasswd-file = htpasswd.file;
+      cookie = {
+        inherit (cookie)
+          domain
+          secure
+          expire
+          name
+          refresh
+          ;
+        secret-file = if cookie.secretFile != null then "%d/cookie-secret" else null;
+        httponly = cookie.httpOnly;
+      };
+      set-xauthrequest = setXauthrequest;
+    }
+    // lib.optionalAttrs (cfg.email.addresses != null) {
+      authenticated-emails-file = authenticatedEmailsFile;
+    }
+    // lib.optionalAttrs (cfg.passBasicAuth) {
+      basic-auth-password = cfg.basicAuthPassword;
+    }
+    // lib.optionalAttrs (cfg.htpasswd.file != null) {
+      display-htpasswd-form = cfg.htpasswd.displayForm;
+    }
+    // lib.optionalAttrs tls.enable {
+      tls-cert-file = tls.certificate;
+      tls-key-file = tls.key;
+      https-address = tls.httpsAddress;
+    }
+    // (getProviderOptions cfg cfg.provider)
+    // cfg.extraConfig;
 
-  mapConfig = key: attr:
-  lib.optionalString (attr != null && attr != []) (
-    if lib.isDerivation attr then mapConfig key (toString attr) else
-    if (builtins.typeOf attr) == "set" then lib.concatStringsSep " "
-      (lib.mapAttrsToList (name: value: mapConfig (key + "-" + name) value) attr) else
-    if (builtins.typeOf attr) == "list" then lib.concatMapStringsSep " " (mapConfig key) attr else
-    if (builtins.typeOf attr) == "bool" then "--${key}=${lib.boolToString attr}" else
-    if (builtins.typeOf attr) == "string" then "--${key}='${attr}'" else
-    "--${key}=${toString attr}");
+  mapConfig =
+    key: attr:
+    lib.optionalString (attr != null && attr != [ ]) (
+      if lib.isDerivation attr then
+        mapConfig key (toString attr)
+      else if (builtins.typeOf attr) == "set" then
+        lib.concatStringsSep " " (lib.mapAttrsToList (name: value: mapConfig (key + "-" + name) value) attr)
+      else if (builtins.typeOf attr) == "list" then
+        lib.concatMapStringsSep " " (mapConfig key) attr
+      else if (builtins.typeOf attr) == "bool" then
+        "--${key}=${lib.boolToString attr}"
+      else if (builtins.typeOf attr) == "string" then
+        "--${key}='${attr}'"
+      else
+        "--${key}=${toString attr}"
+    );
 
   configString = lib.concatStringsSep " " (lib.mapAttrsToList mapConfig allConfig);
 in
@@ -114,7 +148,10 @@ in
     };
 
     approvalPrompt = lib.mkOption {
-      type = lib.types.enum ["force" "auto"];
+      type = lib.types.enum [
+        "force"
+        "auto"
+      ];
       default = "force";
       description = ''
         OAuth approval_prompt.
@@ -123,6 +160,7 @@ in
 
     clientID = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
+      default = null;
       description = ''
         The OAuth Client ID.
       '';
@@ -138,27 +176,29 @@ in
       example = "https://login.microsoftonline.com/{TENANT_ID}/v2.0";
     };
 
-    clientSecret = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
+    clientSecretFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
       description = ''
-        The OAuth Client Secret.
+        The path to a file containing the OAuth Client Secret.
       '';
+      example = "/run/keys/oauth2-client-secret";
     };
 
     skipAuthRegexes = lib.mkOption {
-     type = lib.types.listOf lib.types.str;
-     default = [];
-     description = ''
-       Skip authentication for requests matching any of these regular
-       expressions.
-     '';
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Skip authentication for requests matching any of these regular
+        expressions.
+      '';
     };
 
     # XXX: Not clear whether these two options are mutually exclusive or not.
     email = {
       domains = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = ''
           Authenticate emails with the specified domains. Use
           `*` to authenticate any email.
@@ -257,7 +297,7 @@ in
 
       groups = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = ''
           Restrict logins to members of these Google groups.
         '';
@@ -289,12 +329,11 @@ in
       };
     };
 
-
     ####################################################
     # UPSTREAM Configuration
     upstream = lib.mkOption {
-      type = with lib.types; coercedTo str (x: [x]) (listOf str);
-      default = [];
+      type = with lib.types; coercedTo str (x: [ x ]) (listOf str);
+      default = [ ];
       description = ''
         The http url(s) of the upstream endpoint or `file://`
         paths for static files. Routing is based on the path.
@@ -388,11 +427,13 @@ in
         example = "168h0m0s";
       };
 
-      secret = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
+      secretFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
         description = ''
-          The seed string for secure cookies.
+          The path to a file containing the seed string for secure cookies.
         '';
+        example = "/run/keys/oauth2-cookie-secret";
       };
 
       secure = lib.mkOption {
@@ -452,6 +493,16 @@ in
         like `X-Real-Ip` are accepted. Usage behind a reverse
         proxy will require this flag to be set to avoid logging the reverse
         proxy IP address.
+      '';
+    };
+
+    trustedProxyIP = lib.mkOption {
+      type = with lib.types; listOf str;
+      default = [ ];
+      description = ''
+        List of IPs or CIDR ranges allowed to supply X-Forwarded-* headers when reverseProxy is enabled.
+        If not set, OAuth2 Proxy preserves backwards compatibility by trusting all source IPs (0.0.0.0/0, ::/0) and logs a warning at startup.
+        Configure this to your reverse proxy addresses to prevent forwarded header spoofing.
       '';
     };
 
@@ -538,7 +589,7 @@ in
     };
 
     extraConfig = lib.mkOption {
-      default = {};
+      default = { };
       type = lib.types.attrsOf lib.types.anything;
       description = ''
         Extra config to pass to oauth2-proxy.
@@ -560,14 +611,30 @@ in
 
   imports = [
     (lib.mkRenamedOptionModule [ "services" "oauth2_proxy" ] [ "services" "oauth2-proxy" ])
+    (lib.mkRemovedOptionModule [ "services" "oauth2-proxy" "clientSecret" ] ''
+      This option has been removed as it made the client secret world-readable.
+      Use services.oauth2-proxy.clientSecretFile instead.
+    '')
+    (lib.mkRemovedOptionModule [ "services" "oauth2-proxy" "cookie" "secret" ] ''
+      This option has been removed as it made the cookie secret world-readable.
+      Use services.oauth2-proxy.cookie.secretFile instead.
+    '')
   ];
 
   config = lib.mkIf cfg.enable {
-    services.oauth2-proxy = lib.mkIf (cfg.keyFile != null) {
-      clientID = lib.mkDefault null;
-      clientSecret = lib.mkDefault null;
-      cookie.secret = lib.mkDefault null;
-    };
+    assertions = [
+      {
+        assertion = cfg.clientID != null || cfg.keyFile != null;
+        message = "Either services.oauth2-proxy.clientID or services.oauth2-proxy.keyFile must be specified.";
+      }
+    ];
+
+    warnings = lib.mkIf (cfg.reverseProxy && cfg.trustedProxyIP == [ ]) [
+      ''
+        When config.services.oauth2-proxy.reverseProxy is enabled, configure config.services.oauth2-proxy.trustedProxyIP to the IPs or CIDR range(s) of the reverse proxies that are allowed to send X-Forwarded-* headers.
+        If you leave it unset, OAuth2 Proxy currently trusts all source IPs for backwards compatibility, which means a client that can reach OAuth2 Proxy directly may be able to spoof forwarded headers.
+      ''
+    ];
 
     users.users.oauth2-proxy = {
       description = "OAuth2 Proxy";
@@ -575,12 +642,18 @@ in
       group = "oauth2-proxy";
     };
 
-    users.groups.oauth2-proxy = {};
+    users.groups.oauth2-proxy = { };
 
     systemd.services.oauth2-proxy =
-      let needsKeycloak = lib.elem cfg.provider ["keycloak" "keycloak-oidc"]
-                          && config.services.keycloak.enable;
-      in {
+      let
+        needsKeycloak =
+          lib.elem cfg.provider [
+            "keycloak"
+            "keycloak-oidc"
+          ]
+          && config.services.keycloak.enable;
+      in
+      {
         description = "OAuth2 Proxy";
         path = [ cfg.package ];
         wantedBy = [ "multi-user.target" ];
@@ -592,6 +665,9 @@ in
           Restart = "always";
           ExecStart = "${lib.getExe cfg.package} ${configString}";
           EnvironmentFile = lib.mkIf (cfg.keyFile != null) cfg.keyFile;
+          LoadCredential =
+            lib.optional (cfg.clientSecretFile != null) "client-secret:${cfg.clientSecretFile}"
+            ++ lib.optional (cfg.cookie.secretFile != null) "cookie-secret:${cfg.cookie.secretFile}";
         };
       };
   };

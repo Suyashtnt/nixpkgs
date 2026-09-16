@@ -3,15 +3,20 @@
   buildPythonPackage,
   catboost,
   python,
+
+  # build-system
+  cmake,
+  cython,
+  setuptools,
+
+  # dependencies
   graphviz,
   matplotlib,
   numpy,
   pandas,
   plotly,
   scipy,
-  setuptools,
   six,
-  wheel,
 }:
 
 buildPythonPackage rec {
@@ -19,18 +24,18 @@ buildPythonPackage rec {
     pname
     version
     src
-    meta
     ;
-  format = "pyproject";
+  pyproject = true;
 
   sourceRoot = "${src.name}/catboost/python-package";
 
-  nativeBuildInputs = [
+  build-system = [
+    cmake
+    cython
     setuptools
-    wheel
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     graphviz
     matplotlib
     numpy
@@ -39,6 +44,15 @@ buildPythonPackage rec {
     scipy
     six
   ];
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail "cmake (>=3.24, <4.0)" "cmake" \
+      --replace-fail "'conan (>=2.4.1, <3.0)', " "" \
+      --replace-fail "cython ~= 3.0.10" "cython"
+  '';
+
+  dontConfigure = true;
 
   buildPhase = ''
     runHook preBuild
@@ -53,4 +67,6 @@ buildPythonPackage rec {
   doCheck = false;
 
   pythonImportsCheck = [ "catboost" ];
+
+  meta = catboost.meta;
 }

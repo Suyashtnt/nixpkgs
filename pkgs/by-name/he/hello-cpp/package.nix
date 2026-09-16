@@ -6,13 +6,18 @@
 }:
 
 stdenv.mkDerivation {
-  name = "hello-cpp";
+  pname = "hello-cpp";
+  version = lib.trivial.release;
   src = ./src;
-  nativeBuildInputs = [ cmake ninja ];
+  nativeBuildInputs = [
+    cmake
+    ninja
+  ];
   meta = {
     description = "Basic sanity check that C++ and cmake infrastructure are working";
     platforms = lib.platforms.all;
-    maintainers = stdenv.meta.maintainers or [];
+    maintainers = stdenv.meta.maintainers or [ ];
     mainProgram = "hello-cpp";
+    license = lib.licenses.mit;
   };
 }

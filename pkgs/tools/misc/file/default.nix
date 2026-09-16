@@ -1,6 +1,12 @@
-{ lib, stdenv, fetchurl, file, zlib, libgnurx
-, updateAutotoolsGnuConfigScriptsHook
-, testers
+{
+  lib,
+  stdenv,
+  fetchurl,
+  buildPackages,
+  zlib,
+  libgnurx,
+  updateAutotoolsGnuConfigScriptsHook,
+  testers,
 }:
 
 # Note: this package is used for bootstrapping fetchurl, and thus
@@ -10,46 +16,57 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "file";
-  version = "5.45";
+  version = "5.48";
 
   src = fetchurl {
     urls = [
       "https://astron.com/pub/file/file-${finalAttrs.version}.tar.gz"
       "https://distfiles.macports.org/file/file-${finalAttrs.version}.tar.gz"
     ];
-    hash = "sha256-/Jf1ECm7DiyfTjv/79r2ePDgOe6HK53lwAKm0Jx4TYI=";
+    hash = "sha256-7RRlaIOyOjZLQFfAVZXZMlLam8Rz0wEGUZUZ0NoUEoM=";
   };
 
-  outputs = [ "out" "dev" "man" ];
+  # Work around too strict landlock hardening
+  # https://bugs.astron.com/view.php?id=785
+  postPatch = ''
+    substituteInPlace src/landlock.c --replace-fail \
+      "LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR" \
+      "LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR | LANDLOCK_ACCESS_FS_EXECUTE"
+  '';
 
-  patches = [
-    # Upstream patch to fix 32-bit tests.
-    # Will be included in 5.46+ releases.
-    ./32-bit-time_t.patch
+  outputs = [
+    "out"
+    "dev"
+    "man"
   ];
 
   strictDeps = true;
   enableParallelBuilding = true;
 
-  nativeBuildInputs = [ updateAutotoolsGnuConfigScriptsHook ]
-    ++ lib.optional (stdenv.hostPlatform != stdenv.buildPlatform) file;
-  buildInputs = [ zlib ]
-    ++ lib.optional stdenv.hostPlatform.isWindows libgnurx;
+  nativeBuildInputs = [
+    updateAutotoolsGnuConfigScriptsHook
+  ];
+  buildInputs = [ zlib ] ++ lib.optional stdenv.hostPlatform.isMinGW libgnurx;
 
   # https://bugs.astron.com/view.php?id=382
   doCheck = !stdenv.buildPlatform.isMusl;
 
-  makeFlags = lib.optional stdenv.hostPlatform.isWindows "FILE_COMPILE=file";
+  # In native builds, it will use the newly-compiled file instead.
+  makeFlags = lib.optional (
+    !lib.systems.equals stdenv.hostPlatform stdenv.buildPlatform
+  ) "FILE_COMPILE=${lib.getExe buildPackages.file}";
 
   passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
 
-  meta = with lib; {
+  __structuredAttrs = true;
+
+  meta = {
     homepage = "https://darwinsys.com/file";
     description = "Program that shows the type of files";
-    maintainers = with maintainers; [ doronbehar ];
-    license = licenses.bsd2;
+    maintainers = with lib.maintainers; [ doronbehar ];
+    license = lib.licenses.bsd2;
     pkgConfigModules = [ "libmagic" ];
-    platforms = platforms.all;
+    platforms = lib.platforms.all;
     mainProgram = "file";
   };
 })

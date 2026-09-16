@@ -1,60 +1,41 @@
 {
   lib,
-  stdenv,
-  overrideSDK,
+  apple-sdk_15,
+  bintools-unwrapped,
+  cups,
   fetchFromGitHub,
-  fetchzip,
   installShellFiles,
-  testers,
-  writeShellScript,
-  common-updater-scripts,
-  curl,
-  darwin,
-  jq,
-  xcodebuild,
+  llvmPackages,
+  nix-update-script,
+  stdenv,
+  versionCheckHook,
   xxd,
-  yabai,
 }:
-let
-  inherit (darwin.apple_sdk_11_0.frameworks)
-    Carbon
-    Cocoa
-    ScriptingBridge
-    SkyLight
-    ;
-
-  stdenv' = if stdenv.hostPlatform.isDarwin then overrideSDK stdenv "11.0" else stdenv;
-in
-stdenv'.mkDerivation (finalAttrs: {
+stdenv.mkDerivation (finalAttrs: {
   pname = "yabai";
-  version = "7.1.3";
+  version = "7.1.25";
 
-  src =
-    finalAttrs.passthru.sources.${stdenv.hostPlatform.system}
-      or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
-
-  env = {
-    # silence service.h error
-    NIX_CFLAGS_COMPILE = "-Wno-implicit-function-declaration";
+  src = fetchFromGitHub {
+    owner = "asmvik";
+    repo = "yabai";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-61knfbahxxlJnVZy47347slsjUGiQUJyZh58G97SDkE=";
   };
 
-  nativeBuildInputs =
-    [ installShellFiles ]
-    ++ lib.optionals stdenv.hostPlatform.isx86_64 [
-      xcodebuild
-      xxd
-    ];
+  __structuredAttrs = true;
+  strictDeps = true;
 
-  buildInputs = lib.optionals stdenv.hostPlatform.isx86_64 [
-    Carbon
-    Cocoa
-    ScriptingBridge
-    SkyLight
+  nativeBuildInputs = [
+    installShellFiles
+    xxd
   ];
 
-  dontConfigure = true;
-  dontBuild = stdenv.hostPlatform.isAarch64;
-  enableParallelBuilding = true;
+  buildInputs = [
+    apple-sdk_15
+  ];
+
+  # Upstream Makefile races clean-build against linking under parallel make.
+  enableParallelBuilding = false;
 
   installPhase = ''
     runHook preInstall
@@ -62,69 +43,48 @@ stdenv'.mkDerivation (finalAttrs: {
     mkdir -p $out/{bin,share/icons/hicolor/scalable/apps}
 
     cp ./bin/yabai $out/bin/yabai
-    ${lib.optionalString stdenv.hostPlatform.isx86_64 "cp ./assets/icon/icon.svg $out/share/icons/hicolor/scalable/apps/yabai.svg"}
+    cp ./assets/icon/icon.svg $out/share/icons/hicolor/scalable/apps/yabai.svg
     installManPage ./doc/yabai.1
 
     runHook postInstall
   '';
 
+  # yabai's makefile builds universal (x86_64 + arm64/arm64e) binaries with
+  # `xcrun clang`. Collapse it to the host arch and use plain `clang`, since the
+  # scripting addition (arm64e) is compiled in preBuild with the unwrapped clang,
+  # which needs the SDK/clang/CUPS include paths passed explicitly.
   postPatch =
-    lib.optionalString stdenv.hostPlatform.isx86_64 # bash
-      ''
-        # aarch64 code is compiled on all targets, which causes our Apple SDK headers to error out.
-        # Since multilib doesn't work on darwin i dont know of a better way of handling this.
-        substituteInPlace makefile \
-        --replace "-arch arm64e" "" \
-        --replace "-arch arm64" "" \
-        --replace "clang" "${stdenv.cc.targetPrefix}clang"
-
-        # `NSScreen::safeAreaInsets` is only available on macOS 12.0 and above, which frameworks aren't packaged.
-        # When a lower OS version is detected upstream just returns 0, so we can hardcode that at compile time.
-        # https://github.com/koekeishiya/yabai/blob/v4.0.2/src/workspace.m#L109
-        substituteInPlace src/workspace.m \
-        --replace 'return screen.safeAreaInsets.top;' 'return 0;'
-      '';
-
-  passthru = {
-    tests.version = testers.testVersion {
-      package = yabai;
-      version = "yabai-v${finalAttrs.version}";
-    };
-
-    sources = {
-      # Unfortunately compiling yabai from source on aarch64-darwin is a bit complicated. We use the precompiled binary instead for now.
-      # See the comments on https://github.com/NixOS/nixpkgs/pull/188322 for more information.
-      "aarch64-darwin" = fetchzip {
-        url = "https://github.com/koekeishiya/yabai/releases/download/v${finalAttrs.version}/yabai-v${finalAttrs.version}.tar.gz";
-        hash = "sha256-wp5B24DYX1RYHS/3+4WRRCzVE6FyCzatJDpzJWrEIpQ=";
-      };
-      "x86_64-darwin" = fetchFromGitHub {
-        owner = "koekeishiya";
-        repo = "yabai";
-        rev = "v${finalAttrs.version}";
-        hash = "sha256-hCwI6ziUR4yuJOv4MQXh3ufbausaDrG8XfjR+jIOeC4=";
-      };
-    };
-
-    updateScript = writeShellScript "update-yabai" ''
-      set -o errexit
-      export PATH="${
-        lib.makeBinPath [
-          curl
-          jq
-          common-updater-scripts
-        ]
-      }"
-      NEW_VERSION=$(curl --silent https://api.github.com/repos/koekeishiya/yabai/releases/latest | jq '.tag_name | ltrimstr("v")' --raw-output)
-      if [[ "${finalAttrs.version}" = "$NEW_VERSION" ]]; then
-          echo "The new version same as the old version."
-          exit 0
-      fi
-      for platform in ${lib.escapeShellArgs finalAttrs.meta.platforms}; do
-        update-source-version "yabai" "$NEW_VERSION" --ignore-same-version --source-key="sources.$platform"
-      done
+    let
+      arch = stdenv.hostPlatform.darwinArch;
+      # The scripting addition is injected into arm64e system processes, so on
+      # aarch64 it must be arm64e even though the main binary stays arm64.
+      archSA = "${arch}${lib.optionalString stdenv.hostPlatform.isAarch64 "e"}";
+      clangFlags = lib.concatStringsSep " " [
+        "-isystem $(SDKROOT)/usr/include"
+        "-isystem ${llvmPackages.libclang.lib}/lib/clang/*/include"
+        "-isystem ${lib.getDev cups}/include"
+        "-F$(SDKROOT)/System/Library/Frameworks"
+        "-L$(SDKROOT)/usr/lib"
+        "-Wl,-no_uuid"
+      ];
+    in
+    ''
+      substituteInPlace makefile \
+        --replace-fail "-arch x86_64 -arch arm64e" "-arch ${archSA}" \
+        --replace-fail "-arch x86_64 -arch arm64" "-arch ${arch}" \
+        --replace-fail 'xcrun clang' 'clang ${clangFlags}'
     '';
-  };
+
+  # The cc-wrapper can't target arm64e, so build the scripting addition (the only
+  # arm64e part) with the unwrapped clang.
+  preBuild = lib.optionalString stdenv.hostPlatform.isAarch64 ''
+    make ./src/osax/payload_bin.c ./src/osax/loader_bin.c "PATH=${bintools-unwrapped}/bin:${llvmPackages.clang-unwrapped}/bin:$PATH"
+  '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Tiling window manager for macOS based on binary space partitioning";
@@ -134,19 +94,15 @@ stdenv'.mkDerivation (finalAttrs: {
       using an intuitive command line interface and optionally set user-defined keyboard shortcuts
       using skhd and other third-party software.
     '';
-    homepage = "https://github.com/koekeishiya/yabai";
-    changelog = "https://github.com/koekeishiya/yabai/blob/v${finalAttrs.version}/CHANGELOG.md";
+    homepage = "https://github.com/asmvik/yabai";
+    changelog = "https://github.com/asmvik/yabai/blob/v${finalAttrs.version}/CHANGELOG.md";
     license = lib.licenses.mit;
-    platforms = builtins.attrNames finalAttrs.passthru.sources;
+    platforms = lib.platforms.darwin;
     mainProgram = "yabai";
     maintainers = with lib.maintainers; [
       cmacrae
-      shardy
       khaneliman
     ];
-    sourceProvenance =
-      with lib.sourceTypes;
-      lib.optionals stdenv.hostPlatform.isx86_64 [ fromSource ]
-      ++ lib.optionals stdenv.hostPlatform.isAarch64 [ binaryNativeCode ];
+    sourceProvenance = [ lib.sourceTypes.fromSource ];
   };
 })

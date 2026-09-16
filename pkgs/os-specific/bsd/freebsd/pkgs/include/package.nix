@@ -14,6 +14,8 @@ mkDerivation {
     "contrib/libc-vis"
     "etc/mtree/BSD.include.dist"
     "sys"
+    # Used for aarch64-freebsd
+    "lib/msun/arm"
   ];
 
   extraNativeBuildInputs = [
@@ -43,5 +45,4 @@ mkDerivation {
 
   MK_HESIOD = "yes";
 
-  meta.platforms = lib.platforms.freebsd;
 }

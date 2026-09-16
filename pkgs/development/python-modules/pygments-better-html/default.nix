@@ -1,32 +1,41 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
+  flit-core,
   pygments,
-  isPy3k,
+  python,
 }:
 
-buildPythonPackage rec {
-  pname = "pygments_better_html";
-  version = "0.1.5";
-  disabled = !isPy3k;
+buildPythonPackage (finalAttrs: {
+  pname = "pygments-better-html";
+  version = "0.1.6";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-SLAe5ubIGEchUNoHCct6CWisBja3WNEfpE48v9CTzPQ=";
+  src = fetchFromGitHub {
+    owner = "Kwpolska";
+    repo = "pygments_better_html";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-7vX/xm1lb89YLuDJmgdDCg+/UHinQAchi8OaF9TXRJA=";
   };
 
-  propagatedBuildInputs = [ pygments ];
+  build-system = [ flit-core ];
 
-  # has no tests
-  doCheck = false;
+  dependencies = [ pygments ];
+
+  checkPhase = ''
+    runHook preCheck
+    ${python.interpreter} demo.py
+    runHook postCheck
+  '';
 
   pythonImportsCheck = [ "pygments_better_html" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/Kwpolska/pygments_better_html/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     homepage = "https://github.com/Kwpolska/pygments_better_html";
     description = "Improved line numbering for Pygments’ HTML formatter";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-}
+})

@@ -1,29 +1,30 @@
-{ lib
-, acl
-, attr
-, autoreconfHook
-, bzip2
-, fetchFromGitea
-, libburn
-, libcdio
-, libiconv
-, libisofs
-, pkg-config
-, readline
-, stdenv
-, zlib
+{
+  lib,
+  acl,
+  attr,
+  autoreconfHook,
+  bzip2,
+  fetchFromGitea,
+  libburn,
+  libcdio,
+  libiconv,
+  libisofs,
+  pkg-config,
+  readline,
+  stdenv,
+  zlib,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "libisoburn";
-  version = "1.5.6";
+  version = "1.5.8.pl02";
 
   src = fetchFromGitea {
     domain = "dev.lovelyhq.com";
     owner = "libburnia";
     repo = "libisoburn";
     rev = "release-${finalAttrs.version}";
-    hash = "sha256-16qNVlWFVXfvbte5EgP/u193wK2GV/r22hVX0SZWr+0=";
+    hash = "sha256-wYX2foI0YXrhVENz8QqfS9IdXwbsHP7rqYOWzlo8FdM=";
   };
 
   nativeBuildInputs = [
@@ -39,7 +40,8 @@ stdenv.mkDerivation (finalAttrs: {
     zlib
     libburn
     libisofs
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     acl
     attr
   ];
@@ -48,7 +50,13 @@ stdenv.mkDerivation (finalAttrs: {
     acl
   ];
 
-  outputs = [ "out" "lib" "dev" "info" "man" ];
+  outputs = [
+    "out"
+    "lib"
+    "dev"
+    "info"
+    "man"
+  ];
 
   strictDeps = true;
 
@@ -58,7 +66,7 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://dev.lovelyhq.com/libburnia/libisoburn/src/tag/${finalAttrs.src.rev}/ChangeLog";
     license = lib.licenses.gpl2Plus;
     mainProgram = "osirrox";
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     inherit (libisofs.meta) platforms;
   };
 })

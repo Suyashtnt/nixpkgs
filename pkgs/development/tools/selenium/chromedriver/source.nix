@@ -1,5 +1,9 @@
-{ chromium, testers, chromedriver }:
-chromium.mkDerivation (_: {
+{
+  chromium,
+  testers,
+  chromedriver,
+}:
+chromium.mkDerivation (finalAttrs: {
   name = "chromedriver";
   packageName = "chromedriver";
 
@@ -13,6 +17,8 @@ chromium.mkDerivation (_: {
 
   # Kill existing postFixup that tries to patchelf things
   postFixup = null;
+
+  requiredSystemFeatures = [ "big-parallel" ];
 
   passthru.tests.version = testers.testVersion { package = chromedriver; };
 

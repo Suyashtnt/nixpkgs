@@ -6,6 +6,7 @@
   makeBinaryWrapper,
   mkNugetDeps,
   mkNugetSource,
+  nginx-config-formatter,
   pkgs,
   stdenv,
 }:
@@ -17,6 +18,7 @@ let
     last
     optionalString
     strings
+    toFunction
     types
     ;
 in
@@ -31,7 +33,7 @@ rec {
       : the [interpreter](https://en.wikipedia.org/wiki/Shebang_(Unix)) to use for the script.
     : `check` (String)
       : A command to check the script. For example, this could be a linting check.
-    : `makeWrapperArgs` (Optional, [ String ], Default: [])
+    : `makeWrapperArgs` (Optional, [String], Default: [])
       : Arguments forwarded to (`makeWrapper`)[#fun-makeWrapper].
 
     `nameOrPath` (String)
@@ -195,7 +197,7 @@ rec {
     : `strip` (Boolean, Default: true)
       : Whether to [strip](https://nixos.org/manual/nixpkgs/stable/#ssec-fixup-phase) the executable or not.
 
-    : `makeWrapperArgs` (Optional, [ String ], Default: [])
+    : `makeWrapperArgs` (Optional, [String], Default: [])
       : Arguments forwarded to (`makeWrapper`)[#fun-makeWrapper]
 
     `nameOrPath` (String)
@@ -330,9 +332,9 @@ rec {
   writeBash =
     name: argsOrScript:
     if lib.isAttrs argsOrScript && !lib.isDerivation argsOrScript then
-      makeScriptWriter (argsOrScript // { interpreter = "${lib.getExe pkgs.bash}"; }) name
+      makeScriptWriter (argsOrScript // { interpreter = "${lib.getExe pkgs.bashNonInteractive}"; }) name
     else
-      makeScriptWriter { interpreter = "${lib.getExe pkgs.bash}"; } name argsOrScript;
+      makeScriptWriter { interpreter = "${lib.getExe pkgs.bashNonInteractive}"; } name argsOrScript;
 
   /**
     Like writeScriptBin but the first line is a shebang to bash
@@ -523,6 +525,226 @@ rec {
   writeFishBin = name: writeFish "/bin/${name}";
 
   /**
+    writeBabashka takes a name, an attrset with babashka interpreter and linting check (both optional)
+    and some babashka source code and returns an executable.
+
+    `pkgs.babashka-unwrapped` is used as default interpreter for small closure size. If dependencies needed, use `pkgs.babashka` instead. Pass empty string to check to disable the default clj-kondo linting.
+
+    # Examples
+    :::{.example}
+    ## `pkgs.writers.writeBabashka` with empty arguments
+
+    ```nix
+    writeBabashka "example" { } ''
+      (println "hello world")
+    ''
+    ```
+    :::
+
+    :::{.example}
+    ## `pkgs.writers.writeBabashka` with arguments
+
+    ```nix
+    writeBabashka "example"
+    {
+      makeWrapperArgs = [
+        "--prefix" "PATH" ":" "${lib.makeBinPath [ pkgs.hello ]}"
+      ];
+    }
+    ''
+      (require '[babashka.tasks :as tasks])
+      (tasks/shell "hello" "-g" "Hello babashka!")
+    ''
+    ```
+    :::
+
+    :::{.note}
+    Babashka needs Java for fetching dependencies. Wrapped babashka contains jdk,
+    pass wrapped version `pkgs.babashka` to babashka if dependencies are required.
+
+    For example:
+
+    ```nix
+    writeBabashka "example"
+    {
+      babashka = pkgs.babashka;
+    }
+    ''
+      (require '[babashka.deps :as deps])
+      (deps/add-deps '{:deps {medley/medley {:mvn/version "1.3.0"}}})
+      (require '[medley.core :as m])
+      (prn (m/index-by :id [{:id 1} {:id 2}]))
+    ''
+    ```
+    :::
+
+    :::{.note}
+    Disable clj-kondo linting:
+
+    ```nix
+    writeBabashka "example"
+    {
+      check = "";
+    }
+    ''
+      (println "hello world")
+    ''
+    ```
+    :::
+  */
+  writeBabashka =
+    name:
+    {
+      makeWrapperArgs ? [ ],
+      babashka ? pkgs.babashka-unwrapped,
+      check ? "${lib.getExe pkgs.clj-kondo} --lint",
+      ...
+    }@args:
+    makeScriptWriter (
+      (removeAttrs args [
+        "babashka"
+      ])
+      // {
+        interpreter = "${lib.getExe babashka}";
+      }
+    ) name;
+
+  /**
+    writeBabashkaBin takes the same arguments as writeBabashka but outputs a directory
+    (like writeScriptBin)
+  */
+  writeBabashkaBin = name: writeBabashka "/bin/${name}";
+
+  /**
+    `writeGuile` returns a derivation that creates an executable Guile script.
+
+    # Inputs
+
+    `nameOrPath` (String)
+    : Name of or path to the script. The semantics is the same as that of
+     `makeScriptWriter`.
+
+    `config` (AttrSet)
+    : `guile` (Optional, Derivation, Default: `pkgs.guile`)
+      : Guile package used for the script.
+    : `libraries` (Optional, [ Derivation ], Default: [])
+      : Extra Guile libraries exposed to the script.
+    : `r6rs` and `r7rs` (Optional, Boolean, Default: false)
+      : Whether to adapt Guile’s initial environment to better support R6RS/
+        R7RS. See the [Guile Reference Manual](https://www.gnu.org/software/guile/manual/html_node/index.html)
+        for details.
+    : `srfi` (Optional, [ Int ], Default: [])
+      : SRFI module to be loaded into the interpreter before evaluating a
+        script file or starting the REPL. See the Guile Reference Manual to
+        know which SRFI are supported.
+    : Other attributes are directly passed to `makeScriptWriter`.
+
+    `content` (String)
+    : Content of the script.
+
+    # Examples
+
+    :::{.example}
+    ## `pkgs.writers.writeGuile` with default config
+
+    ```nix
+    writeGuile "guile-script" { }
+    ''
+      (display "Hello, world!")
+    ''
+    ```
+    :::
+
+    :::{.example}
+    ## `pkgs.writers.writeGuile` with SRFI-1 enabled and extra libraries
+
+    ```nix
+    writeGuile "guile-script" {
+      libraries = [ pkgs.guile-semver ];
+      srfi = [ 1 ];
+    }
+    ''
+      (use-modules (semver))
+      (make-semver 1 (third '(2 3 4)) 5) ; => #<semver 1.4.5>
+    ''
+    ```
+    :::
+  */
+  writeGuile =
+    nameOrPath:
+    {
+      guile ? pkgs.guile,
+      libraries ? [ ],
+      r6rs ? false,
+      r7rs ? false,
+      srfi ? [ ],
+      ...
+    }@config:
+    content:
+    assert builtins.all builtins.isInt srfi;
+    let
+      finalGuile = pkgs.buildEnv {
+        name = "guile-env";
+        paths = [ guile ] ++ libraries;
+        passthru = {
+          inherit (guile) siteDir siteCcacheDir;
+        };
+        meta.mainProgram = guile.meta.mainProgram or "guile";
+      };
+    in
+    makeScriptWriter
+      (
+        (removeAttrs config [
+          "guile"
+          "libraries"
+          "r6rs"
+          "r7rs"
+          "srfi"
+        ])
+        // {
+          interpreter = "${lib.getExe finalGuile} \\";
+          makeWrapperArgs = [
+            "--set"
+            "GUILE_LOAD_PATH"
+            "${finalGuile}/${finalGuile.siteDir}:${finalGuile}/lib/scheme-libs"
+            "--set"
+            "GUILE_LOAD_COMPILED_PATH"
+            "${finalGuile}/${finalGuile.siteCcacheDir}:${finalGuile}/lib/libobj"
+            "--set"
+            "LD_LIBRARY_PATH"
+            "${finalGuile}/lib/ffi"
+            "--set"
+            "DYLD_LIBRARY_PATH"
+            "${finalGuile}/lib/ffi"
+          ];
+        }
+      )
+      nameOrPath
+      /*
+        Spaces, newlines and tabs are significant for the "meta switch" of Guile, so
+        certain complication must be made to ensure correctness.
+      */
+      (
+        lib.concatStringsSep "\n" [
+          (lib.concatStringsSep " " (
+            [ "--no-auto-compile" ]
+            ++ lib.optional r6rs "--r6rs"
+            ++ lib.optional r7rs "--r7rs"
+            ++ lib.optional (srfi != [ ]) ("--use-srfi=" + concatMapStringsSep "," toString srfi)
+            ++ [ "-s" ]
+          ))
+          "!#"
+          content
+        ]
+      );
+
+  /**
+    writeGuileBin takes the same arguments as writeGuile but outputs a directory
+    (like writeScriptBin)
+  */
+  writeGuileBin = name: writeGuile "/bin/${name}";
+
+  /**
     writeHaskell takes a name, an attrset with libraries and haskell version (both optional)
     and some haskell source code and returns an executable.
 
@@ -531,7 +753,7 @@ rec {
     ## `pkgs.writers.writeHaskell` usage example
 
     ```nix
-    writeHaskell "missiles" { libraries = [ pkgs.haskellPackages.acme-missiles ]; } ''
+    writeHaskell "missiles" { libraries = hpkgs: [ hpkgs.acme-missiles ]; } ''
       import Acme.Missiles
 
       main = launchMissiles
@@ -557,7 +779,7 @@ rec {
     makeBinWriter {
       compileScript = ''
         cp $contentPath tmp.hs
-        ${(ghc.withPackages (_: libraries))}/bin/ghc ${lib.escapeShellArgs ghcArgs'} tmp.hs
+        ${(ghc.withPackages (toFunction libraries))}/bin/ghc ${lib.escapeShellArgs ghcArgs'} tmp.hs
         mv tmp $out
       '';
       inherit makeWrapperArgs strip;
@@ -567,6 +789,59 @@ rec {
     writeHaskellBin takes the same arguments as writeHaskell but outputs a directory (like writeScriptBin)
   */
   writeHaskellBin = name: writeHaskell "/bin/${name}";
+
+  /**
+    writeNim takes a name, an attrset with an optional Nim compiler, and some
+    Nim source code, returning an executable.
+
+    # Examples
+    :::{.example}
+    ## `pkgs.writers.writeNim` usage example
+
+    ```nix
+      writeNim "hello-nim" { nim = pkgs.nim; } ''
+        echo "hello nim"
+      '';
+    ```
+    :::
+  */
+  writeNim =
+    name:
+    {
+      makeWrapperArgs ? [ ],
+      nim ? pkgs.nim,
+      nimCompileOptions ? { },
+      strip ? true,
+    }:
+    let
+      optionFormat = optionName: {
+        option = "--${optionName}";
+        sep = ":";
+        explicitBool = false;
+      };
+
+      nimCompileCmdArgs = lib.cli.toCommandLineShell optionFormat (
+        {
+          d = "release";
+          nimcache = ".";
+        }
+        // nimCompileOptions
+      );
+    in
+    makeBinWriter {
+      compileScript = ''
+        cp $contentPath tmp.nim
+        ${lib.getExe nim} compile ${nimCompileCmdArgs} tmp.nim
+        mv tmp $out
+      '';
+      inherit makeWrapperArgs strip;
+    } name;
+
+  /**
+    writeNimBin takes the same arguments as writeNim but outputs a directory
+    (like writeScriptBin)
+  */
+  writeNimBin = name: writeNim "/bin/${name}";
 
   /**
     Like writeScript but the first line is a shebang to nu
@@ -654,7 +929,7 @@ rec {
       ...
     }@args:
     makeScriptWriter (
-      (builtins.removeAttrs args [ "libraries" ])
+      (removeAttrs args [ "libraries" ])
       // {
         interpreter =
           if libraries == [ ] then "${ruby}/bin/ruby" else "${(ruby.withPackages (ps: libraries))}/bin/ruby";
@@ -696,7 +971,7 @@ rec {
       ...
     }@args:
     makeScriptWriter (
-      (builtins.removeAttrs args [ "libraries" ])
+      (removeAttrs args [ "libraries" ])
       // {
         interpreter = lua.interpreter;
         # if libraries == []
@@ -813,7 +1088,7 @@ rec {
     in
     writeDash name ''
       export NODE_PATH=${node-env}/lib/node_modules
-      exec ${lib.getExe pkgs.nodejs} ${pkgs.writeText "js" content} "$@"
+      exec ${lib.getExe pkgs.nodejs-slim} ${pkgs.writeText "js" content} "$@"
     '';
 
   /**
@@ -821,26 +1096,21 @@ rec {
   */
   writeJSBin = name: writeJS "/bin/${name}";
 
-  awkFormatNginx = builtins.toFile "awkFormat-nginx.awk" ''
-    awk -f
-    {sub(/^[ \t]+/,"");idx=0}
-    /\{/{ctx++;idx=1}
-    /\}/{ctx--}
-    {id="";for(i=idx;i<ctx;i++)id=sprintf("%s%s", id, "\t");printf "%s%s\n", id, $0}
-  '';
-
   writeNginxConfig =
     name: text:
     pkgs.runCommandLocal name
       {
         inherit text;
-        passAsFile = [ "text" ];
-        nativeBuildInputs = [ gixy ];
+        __structuredAttrs = true;
+        nativeBuildInputs = [
+          gixy
+          nginx-config-formatter
+        ];
       } # sh
       ''
-        # nginx-config-formatter has an error - https://github.com/1connect/nginx-config-formatter/issues/16
-        awk -f ${awkFormatNginx} "$textPath" | sed '/^\s*$/d' > $out
-        gixy $out
+        printf "%s" "$text" | nginxfmt --max-empty-lines 0 - > $out
+        sed -i 's/ ;/;/g' $out
+        gixy $out || (echo "\n\nThis can be caused by combining multiple incompatible services on the same hostname.\n\nFull merged config:\n\n"; cat $out; exit 1)
       '';
 
   /**
@@ -867,7 +1137,7 @@ rec {
       ...
     }@args:
     makeScriptWriter (
-      (builtins.removeAttrs args [ "libraries" ])
+      (removeAttrs args [ "libraries" ])
       // {
         interpreter = "${lib.getExe (pkgs.perl.withPackages (p: libraries))}";
       }
@@ -919,17 +1189,19 @@ rec {
           "--ignore ${concatMapStringsSep "," escapeShellArg flakeIgnore}";
     in
     makeScriptWriter (
-      (builtins.removeAttrs args [
+      (removeAttrs args [
         "libraries"
         "flakeIgnore"
         "doCheck"
       ])
       // {
         interpreter =
-          if pythonPackages != pkgs.pypy2Packages || pythonPackages != pkgs.pypy3Packages then
-            if libraries == [ ] then python.interpreter else (python.withPackages (ps: libraries)).interpreter
+          if libraries == [ ] then
+            python.interpreter
+          else if (lib.isFunction libraries) then
+            (python.withPackages libraries).interpreter
           else
-            python.interpreter;
+            (python.withPackages (ps: libraries)).interpreter;
         check = optionalString (python.isPy3k && doCheck) (
           writeDash "pythoncheck.sh" ''
             exec ${buildPythonPackages.flake8}/bin/flake8 --show-source ${ignoreAttribute} "$1"
@@ -1043,11 +1315,17 @@ rec {
       };
 
       fsi = writeBash "fsi" ''
+        set -euo pipefail
         export HOME=$NIX_BUILD_TOP/.home
         export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
         export DOTNET_CLI_TELEMETRY_OPTOUT=1
         export DOTNET_NOLOGO=1
+        export DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK=1
         script="$1"; shift
+        (
+          ${lib.getExe dotnet-sdk} new nugetconfig
+          ${lib.getExe dotnet-sdk} nuget disable source nuget
+        ) > /dev/null
         ${lib.getExe dotnet-sdk} fsi --quiet --nologo --readline- ${fsi-flags} "$@" < "$script"
       '';
 
@@ -1055,7 +1333,7 @@ rec {
     content:
     makeScriptWriter
       (
-        (builtins.removeAttrs args [
+        (removeAttrs args [
           "dotnet-sdk"
           "fsi-flags"
           "libraries"

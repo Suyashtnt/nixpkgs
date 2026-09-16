@@ -3,45 +3,50 @@
   buildPythonPackage,
   fetchPypi,
   google-api-core,
+  google-auth,
   google-cloud-testutils,
   grpc-google-iam-v1,
-  grpcio,
   grpcio-status,
+  grpcio,
   libcst,
+  opentelemetry-api,
+  opentelemetry-sdk,
   proto-plus,
   protobuf,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-pubsub";
-  version = "2.23.1";
+  version = "2.40.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     pname = "google_cloud_pubsub";
     inherit version;
-    hash = "sha256-4f3nm1tktyEpCvTAIpB6/LuDUS2S9OXDNMORz7sCKss=";
+    hash = "sha256-/n1+t291P2rrzdovTf9TZ0jRmZFH9k2VWlVPVyq7FYU=";
   };
 
   build-system = [ setuptools ];
 
   dependencies = [
     google-api-core
+    google-auth
     grpc-google-iam-v1
     grpcio
     grpcio-status
-    libcst
+    opentelemetry-api
+    opentelemetry-sdk
     proto-plus
     protobuf
-  ] ++ google-api-core.optional-dependencies.grpc;
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
 
-  passthru.optional-dependencies = {
+  pythonRelaxDeps = [ "protobuf" ];
+
+  optional-dependencies = {
     libcst = [ libcst ];
   };
 
@@ -63,11 +68,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "google.cloud.pubsub" ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Pub/Sub API client library";
-    homepage = "https://github.com/googleapis/python-pubsub";
-    changelog = "https://github.com/googleapis/python-pubsub/blob/v${version}/CHANGELOG.md";
-    license = licenses.asl20;
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-pubsub";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-pubsub-v${version}/packages/google-cloud-pubsub/CHANGELOG.md";
+    license = lib.licenses.asl20;
     maintainers = [ ];
     mainProgram = "fixup_pubsub_v1_keywords.py";
   };

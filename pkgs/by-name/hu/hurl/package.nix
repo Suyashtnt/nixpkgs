@@ -1,38 +1,40 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, fetchpatch
-, pkg-config
-, installShellFiles
-, libxml2
-, openssl
-, stdenv
-, curl
-, versionCheckHook
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  installShellFiles,
+  libxml2,
+  openssl,
+  curl,
+  versionCheckHook,
+  nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "hurl";
-  version = "5.0.1";
+  version = "8.0.1";
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "Orange-OpenSource";
     repo = "hurl";
-    rev = "refs/tags/${version}";
-    hash = "sha256-+GmIKxD5wHovhKXuV2IbDX43gbD8OxJzWvH3Z0MwwV4=";
+    tag = finalAttrs.version;
+    hash = "sha256-DVxY7vjZpcqptq/4CUxo5WX7+Bf9o/sxGobZ7+BMXHM=";
   };
 
-  cargoHash = "sha256-exAEJhHm7zTzXykkLyz46C0GJ7/7HYEwdfCd8zUDZ/A=";
+  cargoHash = "sha256-rBn14XK1DrwRfe4Mo0aezF4lLhQf4PtsRYkuM1wcZXU=";
 
   nativeBuildInputs = [
     pkg-config
     installShellFiles
+    rustPlatform.bindgenHook
   ];
 
   buildInputs = [
     libxml2
     openssl
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
     curl
   ];
 
@@ -53,12 +55,17 @@ rustPlatform.buildRustPackage rec {
       --zsh completions/_hurlfmt
   '';
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Command line tool that performs HTTP requests defined in a simple plain text format";
     homepage = "https://hurl.dev/";
-    changelog = "https://github.com/Orange-OpenSource/hurl/blob/${version}/CHANGELOG.md";
-    maintainers = with maintainers; [ eonpatapon figsoda ];
-    license = licenses.asl20;
+    changelog = "https://github.com/Orange-OpenSource/hurl/blob/${finalAttrs.version}/CHANGELOG.md";
+    maintainers = with lib.maintainers; [
+      eonpatapon
+      defelo
+    ];
+    license = lib.licenses.asl20;
     mainProgram = "hurl";
   };
-}
+})

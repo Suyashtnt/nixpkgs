@@ -1,28 +1,30 @@
-{ stdenv
-, lib
-, gettext
-, fetchurl
-, vala
-, desktop-file-utils
-, meson
-, ninja
-, pkg-config
-, gtk4
-, libadwaita
-, glib
-, libxml2
-, wrapGAppsHook4
-, itstool
-, gnome
+{
+  stdenv,
+  lib,
+  gettext,
+  fetchurl,
+  vala,
+  desktop-file-utils,
+  meson,
+  ninja,
+  pkg-config,
+  gtk4,
+  libadwaita,
+  glib,
+  libxml2,
+  wrapGAppsHook4,
+  itstool,
+  gnome,
+  desktopToDarwinBundle,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "baobab";
-  version = "46.0";
+  version = "50.0";
 
   src = fetchurl {
-    url = "mirror://gnome/sources/baobab/${lib.versions.major version}/baobab-${version}.tar.xz";
-    hash = "sha256-zk3vXILQVnGlAJ9768+FrJhnXZ2BYNKK2RgbJppy43w=";
+    url = "mirror://gnome/sources/baobab/${lib.versions.major finalAttrs.version}/baobab-${finalAttrs.version}.tar.xz";
+    hash = "sha256-VzyE8V9fljpEBQD29DQSySisIzX2tp3LWPGh/lIBAks=";
   };
 
   nativeBuildInputs = [
@@ -36,7 +38,8 @@ stdenv.mkDerivation rec {
     pkg-config
     vala
     wrapGAppsHook4
-  ];
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ desktopToDarwinBundle ];
 
   buildInputs = [
     gtk4
@@ -52,12 +55,12 @@ stdenv.mkDerivation rec {
     };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Graphical application to analyse disk usage in any GNOME environment";
     mainProgram = "baobab";
     homepage = "https://apps.gnome.org/Baobab/";
-    license = licenses.gpl2Plus;
-    maintainers = teams.gnome.members;
-    platforms = platforms.unix;
+    license = lib.licenses.gpl2Plus;
+    teams = [ lib.teams.gnome ];
+    platforms = lib.platforms.unix;
   };
-}
+})

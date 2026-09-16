@@ -1,23 +1,28 @@
-{ lib
-, stdenv
-, fetchurl
-, SDL
-, SDL_image
-, SDL_ttf
-, installShellFiles
-, fontconfig
-, libpng
-, libtiff
-, lua5
-, pkg-config
-, zlib
+{
+  lib,
+  stdenv,
+  fetchurl,
+  SDL,
+  SDL_image,
+  SDL_ttf,
+  installShellFiles,
+  fontconfig,
+  libpng,
+  libtiff,
+  libx11,
+  lua5,
+  pkg-config,
+  zlib,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "grafx2";
   version = "2.8.3091";
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   src = fetchurl {
     name = "grafx2-${finalAttrs.version}.tar.gz";
@@ -27,12 +32,13 @@ stdenv.mkDerivation (finalAttrs: {
 
   postPatch = ''
     substituteInPlace misc/unix/grafx2.desktop \
-      --replace "Exec=grafx2" "Exec=grafx2-sdl"
+      --replace-fail "Exec=grafx2" "Exec=grafx2-sdl"
   '';
 
   nativeBuildInputs = [
     installShellFiles
     pkg-config
+    SDL # for sdl-config
   ];
 
   buildInputs = [
@@ -42,14 +48,19 @@ stdenv.mkDerivation (finalAttrs: {
     fontconfig
     libpng
     libtiff
+    libx11
     lua5
     zlib
   ];
 
-  strictDeps = false; # Why??
+  strictDeps = true;
+  __structuredAttrs = true;
 
-  makeFlags = [ "-C src" ];
-  installFlags = [ "-C src" "PREFIX=$(out)" ];
+  makeFlags = [ "--directory=src" ];
+  installFlags = [
+    "--directory=src"
+    "PREFIX=$(out)"
+  ];
 
   postInstall = ''
     installManPage misc/unix/grafx2.1
@@ -68,9 +79,9 @@ stdenv.mkDerivation (finalAttrs: {
       The program is mostly developed on Haiku, Linux and Windows, but is also
       portable on many other platforms.
     '';
-    license = with lib.licenses; [ gpl2Plus ];
+    license = lib.licenses.gpl2Plus;
     mainProgram = "grafx2-sdl";
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
   };
 })

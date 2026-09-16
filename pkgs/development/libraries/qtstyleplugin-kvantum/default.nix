@@ -1,34 +1,35 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchpatch
-, cmake
-, qmake
-, qtbase
-, qtsvg
-, qtx11extras ? null
-, kwindowsystem ? null
-, qtwayland
-, libX11
-, libXext
-, qttools
-, wrapQtAppsHook
-, gitUpdater
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchpatch,
+  cmake,
+  qmake,
+  qtbase,
+  qtsvg,
+  qtx11extras ? null, # Qt 5 only
+  kwindowsystem ? null, # Qt 6 only
+  qtwayland,
+  libx11,
+  libxext,
+  qttools,
+  wrapQtAppsHook,
+  gitUpdater,
 
-, qt6Kvantum ? null
+  qt6Kvantum ? null,
 }:
 let
   isQt5 = lib.versionOlder qtbase.version "6";
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "qtstyleplugin-kvantum${lib.optionalString isQt5 "5"}";
-  version = "1.1.2";
+  version = "1.1.8";
 
   src = fetchFromGitHub {
     owner = "tsujan";
     repo = "Kvantum";
     rev = "V${finalAttrs.version}";
-    hash = "sha256-1aeXcN9DwPE8CoaxCqCNL9UEcRHJdaKxS7Ivjp3YNN8=";
+    hash = "sha256-Ki3AAcKKuPNARXH6kMsxA2JfouNPJIQkXjTE+7+vgq4=";
   };
 
   nativeBuildInputs = [
@@ -41,11 +42,14 @@ stdenv.mkDerivation (finalAttrs: {
   buildInputs = [
     qtbase
     qtsvg
-    libX11
-    libXext
+    libx11
+    libxext
+  ]
+  ++ lib.optionals isQt5 [ qtx11extras ]
+  ++ lib.optionals (!isQt5) [
     kwindowsystem
-  ] ++ lib.optionals isQt5 [ qtx11extras ]
-    ++ lib.optionals (!isQt5) [ qtwayland ];
+    qtwayland
+  ];
 
   sourceRoot = "${finalAttrs.src.name}/Kvantum";
 
@@ -78,11 +82,14 @@ stdenv.mkDerivation (finalAttrs: {
     rev-prefix = "V";
   };
 
-  meta = with lib; {
+  meta = {
     description = "SVG-based Qt5 theme engine plus a config tool and extra themes";
     homepage = "https://github.com/tsujan/Kvantum";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ romildo Scrumplex ];
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [
+      romildo
+      Scrumplex
+    ];
   };
 })

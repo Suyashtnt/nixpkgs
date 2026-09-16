@@ -2,23 +2,27 @@
   lib,
   fetchFromGitHub,
   php,
+  versionCheckHook,
 }:
 
-php.buildComposerProject (finalAttrs: {
+php.buildComposerProject2 (finalAttrs: {
   pname = "php-cs-fixer";
-  version = "3.58.1";
+  version = "3.95.1";
 
   src = fetchFromGitHub {
     owner = "PHP-CS-Fixer";
     repo = "PHP-CS-Fixer";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-MBNFTHhApANDeHY0tTKbIP2EfVDH7mxwA42PKihzPug=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-nQSVAEb57kcboaqTa344eIsDC7qRiCAA6M9x77hsTio=";
   };
 
-  # Missing `composer.lock` from the repository.
-  # Issue open at https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/issues/7590
   composerLock = ./composer.lock;
-  vendorHash = "sha256-dryqtCUr2xkZgDRLKpQjyEpLGz8WiHtLY4fF/pCR10w=";
+  vendorHash = "sha256-VIwZQutV2qlz0kZDQCncEM8Wa2zT9o+oM9O+FmhiTas=";
+
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  passthru.updateScript = ./update.sh;
 
   meta = {
     changelog = "https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/releases/tag/v${finalAttrs.version}";
@@ -26,6 +30,6 @@ php.buildComposerProject (finalAttrs: {
     homepage = "https://cs.symfony.com/";
     license = lib.licenses.mit;
     mainProgram = "php-cs-fixer";
-    maintainers = lib.teams.php.members;
+    maintainers = [ lib.maintainers.patka ];
   };
 })

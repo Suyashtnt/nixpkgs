@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.haproxy;
   haproxyCfg = pkgs.writeText "haproxy.conf" ''
@@ -41,10 +46,12 @@ in
 
   config = lib.mkIf cfg.enable {
 
-    assertions = [{
-      assertion = cfg.config != null;
-      message = "You must provide services.haproxy.config.";
-    }];
+    assertions = [
+      {
+        assertion = cfg.config != null;
+        message = "You must provide services.haproxy.config.";
+      }
+    ];
 
     # configuration file indirection is needed to support reloading
     environment.etc."haproxy.cfg".source = haproxyCfg;
@@ -61,13 +68,10 @@ in
           # when the master process receives USR2, it reloads itself using exec(argv[0]),
           # so we create a symlink there and update it before reloading
           "${pkgs.coreutils}/bin/ln -sf ${lib.getExe cfg.package} /run/haproxy/haproxy"
-          # when running the config test, don't be quiet so we can see what goes wrong
-          "/run/haproxy/haproxy -c -f ${haproxyCfg}"
         ];
         ExecStart = "/run/haproxy/haproxy -Ws -f /etc/haproxy.cfg -p /run/haproxy/haproxy.pid";
         # support reloading
         ExecReload = [
-          "${lib.getExe cfg.package} -c -f ${haproxyCfg}"
           "${pkgs.coreutils}/bin/ln -sf ${lib.getExe cfg.package} /run/haproxy/haproxy"
           "${pkgs.coreutils}/bin/kill -USR2 $MAINPID"
         ];
@@ -82,7 +86,7 @@ in
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
         ProtectControlGroups = true;
-        SystemCallFilter= "~@cpu-emulation @keyring @module @obsolete @raw-io @reboot @swap @sync";
+        SystemCallFilter = "~@cpu-emulation @keyring @module @obsolete @raw-io @reboot @swap @sync";
         # needed in case we bind to port < 1024
         AmbientCapabilities = "CAP_NET_BIND_SERVICE";
       };
@@ -96,7 +100,7 @@ in
     };
 
     users.groups = lib.optionalAttrs (cfg.group == "haproxy") {
-      haproxy = {};
+      haproxy = { };
     };
   };
 }

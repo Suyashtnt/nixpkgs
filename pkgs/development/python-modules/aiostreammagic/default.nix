@@ -6,26 +6,20 @@
   mashumaro,
   orjson,
   poetry-core,
-  pythonOlder,
-  websockets,
   yarl,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiostreammagic";
-  version = "2.4.0";
+  version = "2.13.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "noahhusby";
     repo = "aiostreammagic";
-    rev = "refs/tags/${version}";
-    hash = "sha256-TWGDviQ1SYLlzuIsot7JgB5XIEZES54ERJ3tv7+9DNc=";
+    tag = finalAttrs.version;
+    hash = "sha256-9HDQdzPq2YyVZ0GHmtJcK5ppk3OPNevYtlPK26hJ0TI=";
   };
-
-  pythonRelaxDeps = [ "websockets" ];
 
   build-system = [ poetry-core ];
 
@@ -33,7 +27,6 @@ buildPythonPackage rec {
     aiohttp
     mashumaro
     orjson
-    websockets
     yarl
   ];
 
@@ -45,8 +38,8 @@ buildPythonPackage rec {
   meta = {
     description = "Module for interfacing with Cambridge Audio/Stream Magic compatible streamers";
     homepage = "https://github.com/noahhusby/aiostreammagic";
-    changelog = "https://github.com/noahhusby/aiostreammagic/releases/tag/${version}";
+    changelog = "https://github.com/noahhusby/aiostreammagic/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

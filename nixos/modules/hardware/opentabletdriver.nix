@@ -1,9 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.hardware.opentabletdriver;
 in
 {
-  meta.maintainers = with lib.maintainers; [ thiagokokada ];
+  meta.maintainers = with lib.maintainers; [
+    gepbird
+    thiagokokada
+  ];
 
   options = {
     hardware.opentabletdriver = {
@@ -18,7 +26,10 @@ in
 
       blacklistedKernelModules = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [ "hid-uclogic" "wacom" ];
+        default = [
+          "hid-uclogic"
+          "wacom"
+        ];
         description = ''
           Blacklist of kernel modules known to conflict with OpenTabletDriver.
         '';
@@ -45,15 +56,32 @@ in
 
     boot.blacklistedKernelModules = cfg.blacklistedKernelModules;
 
-    systemd.user.services.opentabletdriver = with pkgs; lib.mkIf cfg.daemon.enable {
+    systemd.user.services.opentabletdriver = lib.mkIf cfg.daemon.enable {
       description = "Open source, cross-platform, user-mode tablet driver";
       wantedBy = [ "graphical-session.target" ];
       partOf = [ "graphical-session.target" ];
 
+      unitConfig = {
+        After = "graphical-session.target";
+        ConditionEnvironment = [
+          "|WAYLAND_DISPLAY"
+          "|DISPLAY"
+        ];
+      };
+
       serviceConfig = {
         Type = "simple";
-        ExecStart = "${cfg.package}/bin/otd-daemon";
+        # workaround for https://github.com/NixOS/nixpkgs/issues/469340 and
+        # https://github.com/OpenTabletDriver/OpenTabletDriver/issues/4885
+        ExecStartPre = pkgs.writeShellScript "poll-for-non-gdm-greeter-display" ''
+          if [[ "$USER" = "gdm-greeter"* \
+              || ( "$${XDG_SESSION_TYPE}" = wayland && -z "$${WAYLAND_DISPLAY}" ) ]]; then
+            exit 1
+          fi
+        '';
+        ExecStart = lib.getExe' cfg.package "otd-daemon";
         Restart = "on-failure";
+        RestartSec = 3;
       };
     };
   };

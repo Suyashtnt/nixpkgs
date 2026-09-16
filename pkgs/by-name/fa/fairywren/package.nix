@@ -1,7 +1,12 @@
-{ lib
-, stdenvNoCC
-, fetchFromGitLab
-, colorVariants ? [] # default: install all icons
+{
+  lib,
+  stdenvNoCC,
+  fetchFromGitLab,
+  hicolor-icon-theme,
+  kdePackages,
+  papirus-icon-theme,
+  unstableGitUpdater,
+  colorVariants ? [ ], # default: install all icons
 }:
 
 let
@@ -14,31 +19,47 @@ let
 in
 lib.checkListOfEnum "${pname}: colorVariants" colorVariantList colorVariants
 
-stdenvNoCC.mkDerivation {
-  inherit pname;
-  version = "0-unstable-2024-06-10";
+  stdenvNoCC.mkDerivation
+  {
+    inherit pname;
+    version = "0-unstable-2026-08-24";
 
-  src = fetchFromGitLab{
-    owner = "aiyahm";
-    repo = "FairyWren-Icons";
-    rev = "a86736cc9ff50af0ca59ef31c464da2f9e9da103";
-    hash = "sha256-IzTq45lMdlAt+mEb7gpp1hWKBUSeLWINK53Sv4RithI=";
-  };
+    src = fetchFromGitLab {
+      owner = "FreshDoctor";
+      repo = "FairyWren-Icons";
+      rev = "03779cda0f6e8cd9f9a71e9e0f0984363d901358";
+      hash = "sha256-TbDQKkuz8BpeW2zcOCRw0SDH1zZAWpyHoENEWdLWlt0=";
+    };
 
-  installPhase = ''
-    runHook preInstall
-    mkdir -p $out/share/icons
-    cp -r ${lib.concatStringsSep " " (if colorVariants != [] then colorVariants else colorVariantList)} $out/share/icons/
-    runHook postInstall
-  '';
+    propagatedBuildInputs = [
+      hicolor-icon-theme
+      kdePackages.breeze-icons
+      papirus-icon-theme
+    ];
 
-  dontFixup = true;
+    dontDropIconThemeCache = true;
+    dontWrapQtApps = true;
 
-  meta = with lib; {
-    description = "FairyWren Icon Set";
-    homepage = "https://gitlab.com/aiyahm/FairyWren-Icons";
-    maintainers = with maintainers; [ d3vil0p3r ];
-    platforms = platforms.all;
-    license = with licenses; [ gpl3Plus ];
-  };
-}
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/share/icons
+      cp -r ${
+        lib.concatStringsSep " " (if colorVariants != [ ] then colorVariants else colorVariantList)
+      } $out/share/icons/
+      runHook postInstall
+    '';
+
+    dontFixup = true;
+
+    passthru.updateScript = unstableGitUpdater {
+      hardcodeZeroVersion = true;
+    };
+
+    meta = {
+      description = "FairyWren Icon Set";
+      homepage = "https://gitlab.com/FreshDoctor/FairyWren-Icons";
+      maintainers = with lib.maintainers; [ iamanaws ];
+      platforms = lib.platforms.all;
+      license = lib.licenses.gpl3Plus;
+    };
+  }

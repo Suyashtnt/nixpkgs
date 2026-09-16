@@ -1,7 +1,7 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
   webtest,
   zope-component,
   hupper,
@@ -9,27 +9,30 @@
   plaster,
   plaster-pastedeploy,
   repoze-lru,
+  setuptools_80,
   translationstring,
   venusian,
   webob,
   zope-deprecation,
   zope-interface,
-  pythonOlder,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyramid";
-  version = "2.0.2";
-  format = "setuptools";
+  version = "2.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-NyE4pzjkIWU1zHbczm7d1aGqypUTDyNU+4NCZMBvGN4=";
+  src = fetchFromGitHub {
+    owner = "Pylons";
+    repo = "pyramid";
+    tag = finalAttrs.version;
+    hash = "sha256-N0zH0BpS9ImSTWeADBOBSgLYI062sdLxTzwBENAawFc=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools_80 ];
+
+  dependencies = [
     hupper
     pastedeploy
     plaster
@@ -45,15 +48,16 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     webtest
     zope-component
+    pytestCheckHook
   ];
 
   pythonImportsCheck = [ "pyramid" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python web framework";
     homepage = "https://trypyramid.com/";
-    changelog = "https://github.com/Pylons/pyramid/blob/${version}/CHANGES.rst";
-    license = licenses.bsd0;
-    maintainers = with maintainers; [ domenkozar ];
+    changelog = "https://github.com/Pylons/pyramid/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd0;
+    maintainers = [ ];
   };
-}
+})

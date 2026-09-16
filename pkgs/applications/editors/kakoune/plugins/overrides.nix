@@ -1,8 +1,20 @@
-{ lib, stdenv, fetchFromGitHub, fetchFromGitLab, fetchgit
-, buildKakounePluginFrom2Nix
-, kakoune-lsp, parinfer-rust, rep
-, fzf, git, guile, kakoune-unwrapped, lua5_3, plan9port
-, rustPlatform
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchFromGitLab,
+  fetchgit,
+  buildKakounePluginFrom2Nix,
+  kakoune-lsp,
+  parinfer-rust,
+  rep,
+  fzf,
+  git,
+  guile,
+  kakoune-unwrapped,
+  lua5_3,
+  plan9port,
+  rustPlatform,
 }:
 
 self: super: {
@@ -20,7 +32,7 @@ self: super: {
     meta.homepage = "https://gitlab.com/FlyingWombat/case.kak";
   };
 
-  fzf-kak = super.fzf-kak.overrideAttrs(oldAttrs: rec {
+  fzf-kak = super.fzf-kak.overrideAttrs (oldAttrs: {
     preFixup = ''
       if [[ -x "${fzf}/bin/fzf" ]]; then
         fzfImpl='${fzf}/bin/fzf'
@@ -33,45 +45,48 @@ self: super: {
     '';
   });
 
-  kak-ansi = stdenv.mkDerivation rec {
+  kak-ansi = stdenv.mkDerivation (finalAttrs: {
     pname = "kak-ansi";
-    version = "0.2.4";
+    version = "0.3.0";
 
     src = fetchFromGitHub {
       owner = "eraserhd";
       repo = "kak-ansi";
-      rev = "v${version}";
-      sha256 = "kFjTYFy0KF5WWEHU4hHFAnD/03/d3ptjqMMbTSaGImE=";
+      rev = "v${finalAttrs.version}";
+      sha256 = "sha256-Tp+cKZxDESlpks6l+6J0H/1BvHyfQSqCxeutUcsZrEc=";
     };
 
     installPhase = ''
-      mkdir -p $out/bin $out/share/kak/autoload/plugins/
-      cp kak-ansi-filter $out/bin/
-      # Hard-code path of filter and don't try to build when Kakoune boots
-      sed '
-        /^declare-option.* ansi_filter /i\
-declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
-        /^declare-option.* ansi_filter /,/^}/d
-      ' rc/ansi.kak >$out/share/kak/autoload/plugins/ansi.kak
+            mkdir -p $out/bin $out/share/kak/autoload/plugins/
+            cp kak-ansi-filter $out/bin/
+            # Hard-code path of filter and don't try to build when Kakoune boots
+            sed '
+              /^declare-option.* ansi_filter /i\
+      declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
+              /^declare-option.* ansi_filter /,/^}/d
+            ' rc/ansi.kak >$out/share/kak/autoload/plugins/ansi.kak
     '';
 
-    meta = with lib; {
+    meta = {
       description = "Kakoune support for rendering ANSI code";
       homepage = "https://github.com/eraserhd/kak-ansi";
-      license = licenses.unlicense;
-      maintainers = with maintainers; [ eraserhd philiptaron ];
-      platforms = platforms.all;
+      license = lib.licenses.unlicense;
+      maintainers = with lib.maintainers; [
+        eraserhd
+        philiptaron
+      ];
+      platforms = lib.platforms.all;
     };
-  };
+  });
 
-  kak-plumb = stdenv.mkDerivation rec {
+  kak-plumb = stdenv.mkDerivation (finalAttrs: {
     pname = "kak-plumb";
     version = "0.1.1";
 
     src = fetchFromGitHub {
       owner = "eraserhd";
       repo = "kak-plumb";
-      rev = "v${version}";
+      rev = "v${finalAttrs.version}";
       sha256 = "1rz6pr786slnf1a78m3sj09axr4d2lb5rg7sfa4mfg1zcjh06ps6";
     };
 
@@ -85,16 +100,19 @@ declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
       chmod +x $out/bin/edit-client
     '';
 
-    meta = with lib; {
+    meta = {
       description = "Kakoune integration with the Plan 9 plumber";
       homepage = "https://github.com/eraserhd/kak-plumb";
-      license = licenses.unlicense;
-      maintainers = with maintainers; [ eraserhd philiptaron ];
-      platforms = platforms.all;
+      license = lib.licenses.unlicense;
+      maintainers = with lib.maintainers; [
+        eraserhd
+        philiptaron
+      ];
+      platforms = lib.platforms.all;
     };
-  };
+  });
 
-  kakoune-rainbow = super.kakoune-rainbow.overrideAttrs(oldAttrs: rec {
+  kakoune-rainbow = super.kakoune-rainbow.overrideAttrs (oldAttrs: {
     preFixup = ''
       mkdir -p $out/bin
       mv $out/share/kak/autoload/plugins/kakoune-rainbow/bin/kak-rainbow.scm $out/bin
@@ -116,23 +134,26 @@ declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
       sha256 = "AAOCG0TY3G188NnkkwMCSbkkNe487F4gwiFWwG9Yo+A=";
     };
 
-    meta = with lib; {
+    meta = {
       description = "Help Kakoune save and restore state between sessions";
       homepage = "https://gitlab.com/Screwtapello/kakoune-state-save";
-      license = licenses.mit;
-      maintainers = with maintainers; [ Flakebi philiptaron ];
-      platforms = platforms.all;
+      license = lib.licenses.mit;
+      maintainers = with lib.maintainers; [
+        Flakebi
+        philiptaron
+      ];
+      platforms = lib.platforms.all;
     };
   };
 
-  powerline-kak = super.powerline-kak.overrideAttrs(oldAttrs: rec {
+  powerline-kak = super.powerline-kak.overrideAttrs (oldAttrs: {
     preFixup = ''
       substituteInPlace $out/share/kak/autoload/plugins/powerline-kak/rc/modules/git.kak \
         --replace ' git ' ' ${git}/bin/git '
     '';
   });
 
-  hop-kak = rustPlatform.buildRustPackage rec {
+  hop-kak = rustPlatform.buildRustPackage {
     pname = "hop-kak";
     version = "0.2.0";
 
@@ -151,19 +172,19 @@ declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
       git
     ];
 
-    cargoHash = "sha256-EjSj/+BysGwJBxK6Ccg2+pXHdB2Lg3dxIURRsSVTHVY=";
+    cargoHash = "sha256-cgUBa0rgfJFnosCgD20G1rlOl/nyXJ9bA9SSf4BuqAs=";
 
     postInstall = ''
       mkdir -p $out/share/kak/bin
       mv $out/bin/hop-kak $out/share/kak/bin/
     '';
 
-    meta = with lib; {
-      description = "hinting brought to Kakoune selections";
+    meta = {
+      description = "Hinting brought to Kakoune selections";
       homepage = "https://git.sr.ht/~hadronized/hop.kak/";
-      license = licenses.bsd3;
-      maintainers = with maintainers; [ oleina ];
-      platforms = platforms.all;
+      license = lib.licenses.bsd3;
+      maintainers = with lib.maintainers; [ oleina ];
+      platforms = lib.platforms.all;
     };
   };
 
@@ -186,12 +207,12 @@ declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
       sed -e 's,[|] *lua,|${lua5_3}/bin/lua,' quickscope.kak >$out/share/kak/autoload/plugins/quickscope.kak
     '';
 
-    meta = with lib; {
+    meta = {
       description = "Highlight f and t jump positions";
       homepage = "https://sr.ht/~voroskoi/quickscope.kak/";
-      license = licenses.unlicense;
-      maintainers = with maintainers; [ eraserhd ];
-      platforms = platforms.all;
+      license = lib.licenses.unlicense;
+      maintainers = with lib.maintainers; [ eraserhd ];
+      platforms = lib.platforms.all;
     };
   };
 
@@ -204,12 +225,12 @@ declare-option -hidden str ansi_filter %{'"$out"'/bin/kak-ansi-filter}
       rev = "7f187d9da2867a7fda568b2135d29b9c00cfbb94";
       hash = "sha256-acBOQuJ8MgsMKdvFV5B2CxuxvXIYsg11n1mHEGqd120=";
     };
-    meta = with lib; {
+    meta = {
       description = "Soothing pastel theme for Kakoune";
       homepage = "https://github.com/catppuccin/kakoune/";
-      license = licenses.mit;
-      platforms = platforms.all;
-      maintainers = with maintainers; [ philipwilk ];
+      license = lib.licenses.mit;
+      platforms = lib.platforms.all;
+      maintainers = with lib.maintainers; [ jadewilk ];
     };
   };
 }

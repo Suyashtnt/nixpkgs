@@ -6,9 +6,12 @@
   makeWrapper,
   autoPatchelfHook,
   patchelfUnstable,
-
+  fetchpatch,
+  libjxl,
+  brotli,
   at-spi2-atk,
   cairo,
+  enchant_2,
   flite,
   fontconfig,
   freetype,
@@ -17,8 +20,11 @@
   gst_all_1,
   harfbuzz,
   harfbuzzFull,
-  icu70,
+  hyphen,
+  icu74,
   lcms,
+  libavif,
+  libbacktrace,
   libdrm,
   libepoxy,
   libevent,
@@ -35,22 +41,24 @@
   libwpe,
   libwpe-fdo,
   libxkbcommon,
-  libxml2,
+  libxml2_13,
   libxslt,
-  mesa,
+  libgbm,
   sqlite,
   systemdLibs,
   wayland-scanner,
   woff2,
   zlib,
-  suffix,
   revision,
   system,
   throwSystem,
 }:
 let
-  suffix' =
-    if lib.hasPrefix "linux" suffix then "ubuntu-22.04" + (lib.removePrefix "linux" suffix) else suffix;
+  download =
+    (import ./browser-downloads.nix {
+      name = "webkit";
+      inherit revision;
+    }).${system} or throwSystem;
   libvpx' = libvpx.overrideAttrs (
     finalAttrs: previousAttrs: {
       version = "1.12.0";
@@ -62,74 +70,148 @@ let
       };
     }
   );
+  libjxl' = libjxl.overrideAttrs (
+    finalAttrs: previousAttrs: {
+      version = "0.8.2";
+      src = fetchFromGitHub {
+        owner = "libjxl";
+        repo = "libjxl";
+        rev = "v${finalAttrs.version}";
+        hash = "sha256-I3PGgh0XqRkCFz7lUZ3Q4eU0+0GwaQcVb6t4Pru1kKo=";
+        fetchSubmodules = true;
+      };
 
-in
-stdenv.mkDerivation {
-  name = "playwright-webkit";
-  src = fetchzip {
-    url = "https://playwright.azureedge.net/builds/webkit/${revision}/webkit-${suffix'}.zip";
-    stripRoot = false;
+      # override split output shenanigans from the main package
+      outputs = [
+        "out"
+        "dev"
+      ];
+
+      patches = [
+        # Add missing <atomic> content to fix gcc compilation for RISCV architecture
+        # https://github.com/libjxl/libjxl/pull/2211
+        (fetchpatch {
+          url = "https://github.com/libjxl/libjxl/commit/22d12d74e7bc56b09cfb1973aa89ec8d714fa3fc.patch";
+          hash = "sha256-X4fbYTMS+kHfZRbeGzSdBW5jQKw8UN44FEyFRUtw0qo=";
+        })
+      ];
+      postPatch = ''
+        # Fix multiple definition errors by using C++17 instead of C++11
+        substituteInPlace CMakeLists.txt \
+          --replace "set(CMAKE_CXX_STANDARD 11)" "set(CMAKE_CXX_STANDARD 17)"
+        # Fix the build with CMake 4.
+        # See:
+        # * <https://github.com/webmproject/sjpeg/commit/9990bdceb22612a62f1492462ef7423f48154072>
+        # * <https://github.com/webmproject/sjpeg/commit/94e0df6d0f8b44228de5be0ff35efb9f946a13c9>
+        substituteInPlace third_party/sjpeg/CMakeLists.txt \
+          --replace-fail \
+            'cmake_minimum_required(VERSION 2.8.7)' \
+            'cmake_minimum_required(VERSION 3.5...3.10)'
+      '';
+      postInstall = "";
+
+      cmakeFlags = [
+        "-DJPEGXL_FORCE_SYSTEM_BROTLI=ON"
+        "-DJPEGXL_FORCE_SYSTEM_HWY=ON"
+        "-DJPEGXL_FORCE_SYSTEM_GTEST=ON"
+      ]
+      ++ lib.optionals stdenv.hostPlatform.isStatic [
+        "-DJPEGXL_STATIC=ON"
+      ]
+      ++ lib.optionals stdenv.hostPlatform.isAarch32 [
+        "-DJPEGXL_FORCE_NEON=ON"
+      ];
+    }
+  );
+  webkit-linux = stdenv.mkDerivation {
+    name = "playwright-webkit";
+    src = fetchzip {
+      inherit (download) url stripRoot;
+      hash =
+        {
+          x86_64-linux = "sha256-w/avBW8CAiGd9WzddVGLymLLG23OzY/Bm7Dhw9JVQOA=";
+          aarch64-linux = "sha256-KUVT67b11IljTNpzCcEy+O5CW5UuqyVi6QFdQ87lVLA=";
+        }
+        .${system} or throwSystem;
+    };
+
+    nativeBuildInputs = [
+      autoPatchelfHook
+      patchelfUnstable
+      makeWrapper
+    ];
+    buildInputs = [
+      at-spi2-atk
+      cairo
+      enchant_2
+      flite
+      fontconfig.lib
+      freetype
+      glib
+      brotli
+      libjxl'
+      gst_all_1.gst-plugins-bad
+      gst_all_1.gst-plugins-base
+      gst_all_1.gstreamer
+      harfbuzz
+      harfbuzzFull
+      hyphen
+      icu74
+      lcms
+      libavif
+      libbacktrace
+      libdrm
+      libepoxy
+      libevent
+      libgcc
+      libgcrypt
+      libgpg-error
+      libjpeg8
+      libopus
+      libpng
+      libsoup_3
+      libtasn1
+      libwebp
+      libwpe
+      libwpe-fdo
+      libvpx'
+      libxml2_13
+      libxslt
+      libgbm
+      sqlite
+      systemdLibs
+      wayland-scanner
+      woff2.lib
+      libxkbcommon
+      zlib
+    ];
+
+    patchelfFlags = [ "--no-clobber-old-sections" ];
+    buildPhase = ''
+      cp -R . $out
+
+      # remove unused gtk browser
+      rm -rf $out/minibrowser-gtk
+      # remove bundled libs
+      rm -rf $out/minibrowser-wpe/sys
+
+      wrapProgram $out/minibrowser-wpe/bin/MiniBrowser \
+        --prefix GIO_EXTRA_MODULES ":" "${glib-networking}/lib/gio/modules/" \
+        --prefix LD_LIBRARY_PATH ":" $out/minibrowser-wpe/lib
+    '';
+  };
+  webkit-darwin = fetchzip {
+    inherit (download) url stripRoot;
     hash =
       {
-        x86_64-linux = "sha256-pHYGQYwu47jdOAD+/mLrP6Dd+2aDMHENddVwAu0uEfI=";
-        aarch64-linux = "sha256-0UeYWjeFnQ8yVa3juWg7Z7VF1GDbP4pJ9OUJRbv1OJw=";
+        aarch64-darwin = "sha256-ARcl9y1PD+rzxUipixxGvsII2ah8vsDozAUHI0dSgA8=";
       }
       .${system} or throwSystem;
   };
-
-  nativeBuildInputs = [
-    autoPatchelfHook
-    patchelfUnstable
-    makeWrapper
-  ];
-  buildInputs = [
-    at-spi2-atk
-    cairo
-    flite
-    fontconfig.lib
-    freetype
-    glib
-    gst_all_1.gst-plugins-bad
-    gst_all_1.gst-plugins-base
-    gst_all_1.gstreamer
-    harfbuzz
-    harfbuzzFull
-    icu70
-    lcms
-    libdrm
-    libepoxy
-    libevent
-    libgcc.lib
-    libgcrypt
-    libgpg-error
-    libjpeg8
-    libopus
-    libpng
-    libsoup_3
-    libtasn1
-    libwebp
-    libwpe
-    libwpe-fdo
-    libvpx'
-    libxml2
-    libxslt
-    mesa
-    sqlite
-    systemdLibs
-    wayland-scanner
-    woff2.lib
-    libxkbcommon
-    zlib
-  ];
-
-  patchelfFlags = [ "--no-clobber-old-sections" ];
-  buildPhase = ''
-    cp -R . $out
-
-    # remove unused gtk browser
-    rm -rf $out/minibrowser-gtk
-
-    wrapProgram $out/minibrowser-wpe/bin/MiniBrowser \
-      --prefix GIO_EXTRA_MODULES ":" "${glib-networking}/lib/gio/modules/"
-  '';
+in
+{
+  x86_64-linux = webkit-linux;
+  aarch64-linux = webkit-linux;
+  aarch64-darwin = webkit-darwin;
 }
+.${system} or throwSystem

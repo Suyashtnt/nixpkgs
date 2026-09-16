@@ -3,29 +3,33 @@
   buildPythonPackage,
   fetchPypi,
   setuptools,
+  types-webencodings,
 }:
 
 buildPythonPackage rec {
   pname = "types-html5lib";
-  version = "1.1.11.20240806";
+  version = "1.1.11.20260518";
   pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-gGDcmLr2PWeWp2W7vICf/596OD9uOprdUm+BTAhlRe8=";
+    pname = "types_html5lib";
+    inherit version;
+    hash = "sha256-TzPAh8sRGdZcTIDspDI8K1Afnq+K+WFri3Mu1Njq6Po=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
+
+  dependencies = [ types-webencodings ];
 
   # Module has no tests
   doCheck = false;
 
   pythonImportsCheck = [ "html5lib-stubs" ];
 
-  meta = with lib; {
+  meta = {
     description = "Typing stubs for html5lib";
     homepage = "https://pypi.org/project/types-html5lib/";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

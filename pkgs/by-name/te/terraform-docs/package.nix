@@ -1,26 +1,56 @@
 {
+  stdenv,
   lib,
   buildGoModule,
   fetchFromGitHub,
+  installShellFiles,
+  testers,
 }:
-buildGoModule rec {
+
+buildGoModule (finalAttrs: {
   pname = "terraform-docs";
-  version = "0.18.0";
+  version = "0.24.0";
 
   src = fetchFromGitHub {
     owner = "terraform-docs";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-XZS+mGp2QsrKS3fPZd0ja4w/CAfPcyzSgwolQ+StER0=";
+    repo = "terraform-docs";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-9bTri27VyZgpCsgKoClQh9PCHK5WkARdp1DphlGKxeA=";
   };
 
-  vendorHash = "sha256-aweKTHQBYYqSp8CymwhnVv1WNQ7cZ1/bJNz7DSo7PKc=";
+  vendorHash = "sha256-k4xypyNk80EXH823oItjc45kkupjTSXHybnMrKEgFvs=";
 
-  meta = with lib; {
+  ldflags = [
+    "-s"
+    "-w"
+  ];
+
+  env.CGO_ENABLED = 0;
+
+  excludedPackages = [ "scripts" ];
+
+  nativeBuildInputs = [ installShellFiles ];
+
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    $out/bin/terraform-docs completion bash >terraform-docs.bash
+    $out/bin/terraform-docs completion fish >terraform-docs.fish
+    $out/bin/terraform-docs completion zsh >terraform-docs.zsh
+    installShellCompletion terraform-docs.{bash,fish,zsh}
+  '';
+
+  passthru.tests.version = testers.testVersion {
+    package = finalAttrs.finalPackage;
+    version = "v${finalAttrs.version}";
+  };
+
+  meta = {
     description = "Utility to generate documentation from Terraform modules in various output formats";
     mainProgram = "terraform-docs";
     homepage = "https://github.com/terraform-docs/terraform-docs/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ zimbatm ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      zimbatm
+      anthonyroussel
+    ];
   };
-}
+})

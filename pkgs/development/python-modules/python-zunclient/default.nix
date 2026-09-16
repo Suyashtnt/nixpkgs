@@ -11,7 +11,6 @@
   oslo-utils,
   pbr,
   prettytable,
-  pythonOlder,
   setuptools,
   sphinxHook,
   stestr,
@@ -20,16 +19,14 @@
 
 buildPythonPackage rec {
   pname = "python-zunclient";
-  version = "5.0.0";
+  version = "5.4.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "openstack";
     repo = "python-zunclient";
-    rev = "refs/tags/${version}";
-    hash = "sha256-EVfrxSc/eHYZR0FGFnNAxFCiXangt8uRkAC2zpwWqcA=";
+    tag = version;
+    hash = "sha256-Ps4V05obkbiy4dbPBOff3WQ1d502Ie303jAmtatNOdc=";
   };
 
   env.PBR_VERSION = version;
@@ -83,10 +80,10 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "zunclient" ];
 
   meta = {
-    homepage = "https://opendev.org/openstack/python-zunclient";
+    homepage = "https://github.com/openstack/python-zunclient";
     description = "Client library for OpenStack Zun API";
     license = lib.licenses.asl20;
     mainProgram = "zun";
-    maintainers = lib.teams.openstack.members;
+    teams = [ lib.teams.openstack ];
   };
 }

@@ -1,27 +1,58 @@
-lib: { rke2Version, rke2RepoSha256, rke2VendorHash, updateScript
-
-, rke2Commit, k8sImageTag, etcdVersion, pauseVersion, ccmVersion, dockerizedVersion, ... }:
-
-{ lib, stdenv, buildGoModule, go, fetchgit, makeWrapper
-
-# Runtime dependencies
-, procps, coreutils, util-linux, ethtool, socat, iptables, bridge-utils, iproute2, kmod, lvm2
-
-# Killall Script dependencies
-, systemd, gnugrep, gnused
-
-# Testing dependencies
-, nixosTests, testers, rke2
+lib:
+{
+  rke2Version,
+  rke2Commit,
+  rke2TarballHash,
+  rke2VendorHash,
+  updateScript ? null,
+  k8sImageTag,
+  etcdVersion,
+  pauseVersion,
+  ccmVersion,
+  dockerizedVersion,
+  helmJobVersion,
+  imagesVersions,
 }:
 
-buildGoModule rec {
+# Build dependencies
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  go,
+  makeWrapper,
+  fetchzip,
+  fetchurl,
+  versionCheckHook,
+
+  # Runtime dependencies
+  procps,
+  coreutils,
+  util-linux,
+  ethtool,
+  socat,
+  iptables,
+  bridge-utils,
+  iproute2,
+  kmod,
+  lvm2,
+
+  # Killall Script dependencies
+  systemd,
+  gnugrep,
+  gnused,
+
+  # Testing dependencies
+  nixosTests,
+}:
+buildGoModule (finalAttrs: {
+  __structuredAttrs = true;
   pname = "rke2";
   version = rke2Version;
 
-  src = fetchgit {
-    url = "https://github.com/rancher/rke2.git";
-    rev = "v${version}";
-    sha256 = rke2RepoSha256;
+  src = fetchzip {
+    url = "https://github.com/rancher/rke2/archive/refs/tags/v${rke2Version}.tar.gz";
+    hash = "${rke2TarballHash}";
   };
 
   vendorHash = rke2VendorHash;
@@ -44,20 +75,35 @@ buildGoModule rec {
     lvm2 # dmsetup
   ];
 
-  # See: https://github.com/rancher/rke2/blob/e7f87c6dd56fdd76a7dab58900aeea8946b2c008/scripts/build-binary#L27-L38
-  ldflags = [
-    "-w"
-    "-X github.com/k3s-io/k3s/pkg/version.GitCommit=${lib.substring 0 6 rke2Commit}"
-    "-X github.com/k3s-io/k3s/pkg/version.Program=${pname}"
-    "-X github.com/k3s-io/k3s/pkg/version.Version=v${version}"
-    "-X github.com/k3s-io/k3s/pkg/version.UpstreamGolang=go${go.version}"
-    "-X github.com/rancher/rke2/pkg/images.DefaultRegistry=docker.io"
-    "-X github.com/rancher/rke2/pkg/images.DefaultEtcdImage=rancher/hardened-etcd:${etcdVersion}-build20240418"
-    "-X github.com/rancher/rke2/pkg/images.DefaultKubernetesImage=rancher/hardened-kubernetes:${k8sImageTag}"
-    "-X github.com/rancher/rke2/pkg/images.DefaultPauseImage=rancher/mirrored-pause:${pauseVersion}"
-    "-X github.com/rancher/rke2/pkg/images.DefaultRuntimeImage=rancher/rke2-runtime:${dockerizedVersion}"
-    "-X github.com/rancher/rke2/pkg/images.DefaultCloudControllerManagerImage=rancher/rke2-cloud-provider:${ccmVersion}"
-  ];
+  # Enable FIPS 140-3 compliance mode for Go
+  # at time of writing, upstream RKE2 uses the GOEXPERIMENT BoringCrypto module instead:
+  # https://docs.rke2.io/security/fips_support
+  # which has been superseded by this - see https://go.dev/doc/security/fips140#goboringcrypto
+  env.GOFIPS140 = "latest";
+  # tlsmlkem=0 can be removed in a future version of Go, see https://github.com/golang/go/issues/75166
+  env.GODEBUG = "fips140=only,tlsmlkem=0";
+
+  # https://github.com/rancher/rke2/blob/104ddbf3de65ab5490aedff36df2332d503d90fe/scripts/build-binary#L27-L39
+  ldflags =
+    let
+      K3S_PKG = "github.com/k3s-io/k3s";
+      HELMCTR_PKG = "github.com/k3s-io/helm-controller";
+      RKE2_PKG = "github.com/rancher/rke2";
+    in
+    [
+      "-w"
+      "-X ${K3S_PKG}/pkg/version.GitCommit=${lib.substring 0 6 rke2Commit}"
+      "-X ${K3S_PKG}/pkg/version.Program=${finalAttrs.pname}"
+      "-X ${K3S_PKG}/pkg/version.Version=v${finalAttrs.version}"
+      "-X ${K3S_PKG}/pkg/version.UpstreamGolang=go${go.version}"
+      "-X ${HELMCTR_PKG}/pkg/controllers/chart.DefaultJobImage=rancher/klipper-helm:${helmJobVersion}"
+      "-X ${RKE2_PKG}/pkg/images.DefaultRegistry=docker.io"
+      "-X ${RKE2_PKG}/pkg/images.DefaultEtcdImage=rancher/hardened-etcd:${etcdVersion}"
+      "-X ${RKE2_PKG}/pkg/images.DefaultKubernetesImage=rancher/hardened-kubernetes:${k8sImageTag}"
+      "-X ${RKE2_PKG}/pkg/images.DefaultPauseImage=rancher/mirrored-pause:${pauseVersion}"
+      "-X ${RKE2_PKG}/pkg/images.DefaultRuntimeImage=rancher/rke2-runtime:${dockerizedVersion}"
+      "-X ${RKE2_PKG}/pkg/images.DefaultCloudControllerManagerImage=rancher/rke2-cloud-provider:${ccmVersion}"
+    ];
 
   tags = [
     "no_cri_dockerd"
@@ -74,34 +120,51 @@ buildGoModule rec {
   installPhase = ''
     install -D $GOPATH/bin/rke2 $out/bin/rke2
     wrapProgram $out/bin/rke2 \
-      --prefix PATH : ${lib.makeBinPath buildInputs}
+      --prefix PATH : ${lib.makeBinPath finalAttrs.buildInputs}
 
     install -D ./bundle/bin/rke2-killall.sh $out/bin/rke2-killall.sh
     wrapProgram $out/bin/rke2-killall.sh \
-      --prefix PATH : ${lib.makeBinPath [ systemd gnugrep gnused ]} \
-      --prefix PATH : ${lib.makeBinPath buildInputs}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          systemd
+          gnugrep
+          gnused
+        ]
+      } \
+      --prefix PATH : ${lib.makeBinPath finalAttrs.buildInputs}
   '';
 
   doCheck = false;
 
-  passthru.updateScript = updateScript;
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "--version";
 
-  passthru.tests = {
-    version = testers.testVersion {
-      package = rke2;
-      version = "v${version}";
-    };
-  } // lib.optionalAttrs stdenv.hostPlatform.isLinux {
-    inherit (nixosTests) rke2;
-  };
+  passthru = {
+    inherit updateScript;
+    tests =
+      let
+        versionedPackage =
+          "rke2_" + lib.replaceStrings [ "." ] [ "_" ] (lib.versions.majorMinor rke2Version);
+      in
+      lib.mapAttrs (name: _: nixosTests.rke2.${name}.${versionedPackage}) (
+        lib.filterAttrs (n: _: n != "all") nixosTests.rke2
+      );
+  }
+  // (lib.mapAttrs (_: value: fetchurl value) imagesVersions);
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/rancher/rke2";
-    description = "RKE2, also known as RKE Government, is Rancher's next-generation Kubernetes distribution";
-    changelog = "https://github.com/rancher/rke2/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ zimbatm zygot ];
+    description = "Rancher's next-generation Kubernetes distribution, also known as RKE Government";
+    changelog = "https://github.com/rancher/rke2/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      maevii
+      rorosen
+      zimbatm
+      zygot
+    ];
     mainProgram = "rke2";
-    platforms = platforms.linux;
+    platforms = lib.platforms.linux;
   };
-}
+})

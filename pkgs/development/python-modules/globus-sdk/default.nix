@@ -6,34 +6,36 @@
   flaky,
   pyjwt,
   pytestCheckHook,
-  pythonOlder,
   requests,
   responses,
   setuptools,
-  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "globus-sdk";
-  version = "3.41.0";
+  version = "4.3.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "globus";
     repo = "globus-sdk-python";
-    rev = "refs/tags/${version}";
-    hash = "sha256-FQO1D960mg0G/zYMo4J5MtJbPID4oE8UWNpTPKWtsic=";
+    tag = version;
+    hash = "sha256-q3fYU8/r6IfoC55iN83jAGdFrhnXx7bTtvuf0R4RBv4=";
   };
 
   build-system = [ setuptools ];
+
+  preCheck = ''
+    export HOME=$(mktemp -d)
+  '';
 
   dependencies = [
     cryptography
     requests
     pyjwt
-  ] ++ lib.optionals (pythonOlder "3.10") [ typing-extensions ];
+  ];
+
+  __darwinAllowLocalNetworking = true;
 
   nativeCheckInputs = [ pytestCheckHook ];
 
@@ -44,10 +46,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "globus_sdk" ];
 
-  meta = with lib; {
+  meta = {
     description = "Interface to Globus REST APIs, including the Transfer API and the Globus Auth API";
     homepage = "https://github.com/globus/globus-sdk-python";
-    changelog = "https://github.com/globus/globus-sdk-python/releases/tag/${version}";
-    license = licenses.asl20;
+    changelog = "https://github.com/globus/globus-sdk-python/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ bot-wxt1221 ];
   };
 }

@@ -1,80 +1,88 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  pythonAtLeast,
+  fetchFromGitHub,
   pythonOlder,
-  hatchling,
+
+  # build-system
   hatch-vcs,
+  hatchling,
+
+  # dependencies
   numpy,
   packaging,
   importlib-resources,
+  typing-extensions,
+
+  # optional-dependencies
+  backports-zstd,
+  indexed-gzip,
+  matplotlib,
   pydicom,
   pillow,
   h5py,
   scipy,
-  git,
+
+  addBinToPathHook,
+  gitMinimal,
   pytest-doctestplus,
   pytest-httpserver,
   pytest-xdist,
-  pytest7CheckHook,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "nibabel";
-  version = "5.2.1";
+  version = "5.4.2";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-tsgLLnKOS8K2XxFC2bjSKHqRAqi/hHfhFe8NgzRVmXU=";
+  src = fetchFromGitHub {
+    owner = "nipy";
+    repo = "nibabel";
+    tag = finalAttrs.version;
+    hash = "sha256-QzkmSI0JGdIXLc3XSPZrGrBYSq98tLFrozNNopR/ytg=";
   };
 
-  nativeBuildInputs = [
-    hatchling
+  build-system = [
     hatch-vcs
+    hatchling
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     numpy
     packaging
-  ] ++ lib.optionals (pythonOlder "3.9") [ importlib-resources ];
+  ]
+  ++ lib.optionals (pythonOlder "3.12") [ importlib-resources ]
+  ++ lib.optionals (pythonOlder "3.13") [ typing-extensions ];
 
-  passthru.optional-dependencies = rec {
-    all = dicom ++ dicomfs ++ minc2 ++ spm ++ zstd;
+  optional-dependencies = lib.fix (self: {
+    all = self.dicomfs ++ self.indexed_gzip ++ self.minc2 ++ self.spm ++ self.zstd;
     dicom = [ pydicom ];
-    dicomfs = [ pillow ] ++ dicom;
+    dicomfs = [ pillow ] ++ self.dicom;
+    indexed_gzip = [ indexed-gzip ];
     minc2 = [ h5py ];
     spm = [ scipy ];
-    zstd = [
-      # TODO: pyzstd
-    ];
-  };
+    viewers = [ matplotlib ];
+    zstd = lib.optionals (pythonOlder "3.14") [ backports-zstd ];
+  });
 
   nativeCheckInputs = [
-    git
+    addBinToPathHook
+    gitMinimal
     pytest-doctestplus
     pytest-httpserver
     pytest-xdist
-    pytest7CheckHook
-  ] ++ passthru.optional-dependencies.all;
+    pytestCheckHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.all;
 
-  preCheck = ''
-    export PATH=$out/bin:$PATH
-  '';
+  pythonImportsCheck = [ "nibabel" ];
 
-  disabledTestPaths = lib.optionals (pythonAtLeast "3.12") [
-    # uses distutils
-    "nisext/tests/test_sexts.py"
-  ];
-
-  meta = with lib; {
+  meta = {
     homepage = "https://nipy.org/nibabel";
-    changelog = "https://github.com/nipy/nibabel/blob/${version}/Changelog";
+    changelog = "https://github.com/nipy/nibabel/blob/${finalAttrs.version}/Changelog";
     description = "Access a multitude of neuroimaging data formats";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ashgillman ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ashgillman ];
   };
-}
+})

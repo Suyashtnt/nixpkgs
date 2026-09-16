@@ -1,4 +1,4 @@
-import ./make-test-python.nix ({ lib, ... }:
+{ lib, ... }:
 
 {
   name = "firefoxpwa";
@@ -8,7 +8,10 @@ import ./make-test-python.nix ({ lib, ... }:
     { pkgs, ... }:
     {
       imports = [ ./common/x11.nix ];
-      environment.systemPackages = with pkgs; [ firefoxpwa jq ];
+      environment.systemPackages = with pkgs; [
+        firefoxpwa
+        jq
+      ];
 
       programs.firefox = {
         enable = true;
@@ -16,6 +19,8 @@ import ./make-test-python.nix ({ lib, ... }:
       };
 
       services.jellyfin.enable = true;
+      # Jellyfin requires at least 2 GB of disk space
+      virtualisation.diskSize = 3 * 1024; # 3 GB
     };
 
   enableOCR = true;
@@ -23,9 +28,12 @@ import ./make-test-python.nix ({ lib, ... }:
   testScript = ''
     machine.start()
 
-    with subtest("Install a progressive web app"):
+    with subtest("Wait for Jellyfin to be ready"):
         machine.wait_for_unit("jellyfin.service")
         machine.wait_for_open_port(8096)
+        machine.wait_until_succeeds("curl -fs http://localhost:8096/web/manifest.json")
+
+    with subtest("Install a progressive web app"):
         machine.succeed("firefoxpwa site install http://localhost:8096/web/manifest.json >&2")
 
     with subtest("Launch the progressive web app"):
@@ -33,4 +41,4 @@ import ./make-test-python.nix ({ lib, ... }:
         machine.wait_for_window("Jellyfin")
         machine.wait_for_text("Jellyfin")
   '';
-})
+}

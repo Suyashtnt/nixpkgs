@@ -1,28 +1,27 @@
 {
   lib,
+  bleak,
   buildPythonPackage,
   cryptography,
   esptool,
-  fetchFromGitHub,
+  fetchPypi,
   netifaces,
   pyserial,
-  pythonOlder,
   replaceVars,
   setuptools,
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "rns";
-  version = "0.8.0";
+  version = "1.5.4";
   pyproject = true;
+  __structuredAttrs = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchFromGitHub {
-    owner = "markqvist";
-    repo = "Reticulum";
-    rev = "refs/tags/${version}";
-    hash = "sha256-I4H2f49xYw7z1487WYbspztxprIecBV07TiwyK9aX6c=";
+  src = fetchPypi {
+    pname = "rns";
+    version = finalAttrs.version;
+    hash = "sha256-V4UI7wje33wQn3OkRQZcqJxQpjxqac7XsUftIDkc6xU=";
   };
 
   patches = [
@@ -34,21 +33,27 @@ buildPythonPackage rec {
   build-system = [ setuptools ];
 
   dependencies = [
+    bleak
     cryptography
     netifaces
     pyserial
   ];
 
-  # Module has no tests
-  doCheck = false;
-
   pythonImportsCheck = [ "RNS" ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ versionCheckHook ];
+
+  versionCheckProgram = "${placeholder "out"}/bin/rncp";
+
+  meta = {
     description = "Cryptography-based networking stack for wide-area networks";
-    homepage = "https://github.com/markqvist/Reticulum";
-    changelog = "https://github.com/markqvist/Reticulum/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://reticulum.network";
+    changelog = "https://github.com/markqvist/Reticulum/blob/${finalAttrs.version}/Changelog.md";
+    license = lib.licenses.reticulum;
+    maintainers = with lib.maintainers; [
+      drupol
+      fab
+      qbit
+    ];
   };
-}
+})

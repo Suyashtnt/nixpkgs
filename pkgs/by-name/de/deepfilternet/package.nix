@@ -1,17 +1,18 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, rustPlatform
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  rustPlatform,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "deepfilternet";
   version = "0.5.6";
 
   src = fetchFromGitHub {
     owner = "Rikorose";
     repo = "DeepFilterNet";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-5bYbfO1kmduNm9YV5niaaPvRIDRmPt4QOX7eKpK+sWY=";
   };
 
@@ -20,12 +21,7 @@ rustPlatform.buildRustPackage rec {
     ./cargo-lock-bump-time.patch
   ];
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "hdf5-0.8.1" = "sha256-qWF2mURVblSLPbt4oZSVxIxI/RO3ZNcZdwCdaOTACYs=";
-    };
-  };
+  cargoHash = "sha256-I0hY2WmaHu/HKQJHyZp0C6wIi0++w5dFeExVMyhInJY=";
 
   # only the ladspa plugin part has been packaged so far...
 
@@ -37,10 +33,13 @@ rustPlatform.buildRustPackage rec {
   '';
 
   meta = {
-    description = "Noise supression using deep filtering";
+    description = "Noise suppression using deep filtering";
     homepage = "https://github.com/Rikorose/DeepFilterNet";
-    license = with lib.licenses; [ mit asl20 ];
+    license = with lib.licenses; [
+      mit
+      asl20
+    ];
     maintainers = with lib.maintainers; [ ralismark ];
-    changelog = "https://github.com/Rikorose/DeepFilterNet/releases/tag/${src.rev}";
+    changelog = "https://github.com/Rikorose/DeepFilterNet/releases/tag/${finalAttrs.src.rev}";
   };
-}
+})

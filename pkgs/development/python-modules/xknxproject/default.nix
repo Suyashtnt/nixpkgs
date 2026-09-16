@@ -1,10 +1,8 @@
 {
   lib,
   buildPythonPackage,
-  cryptography,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   pyzipper,
   setuptools,
   striprtf,
@@ -12,22 +10,19 @@
 
 buildPythonPackage rec {
   pname = "xknxproject";
-  version = "3.7.1";
+  version = "3.10.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "XKNX";
     repo = "xknxproject";
-    rev = "refs/tags/${version}";
-    hash = "sha256-/Zg4MYOvbsbJ0zyKuq+gX0PNbm8TyyBMziIaGCq6Lt8=";
+    tag = version;
+    hash = "sha256-WVSJcgOtu8z39jY3KSsDgItlQPQKPfpptiIKO2UX8go=";
   };
 
   build-system = [ setuptools ];
 
   dependencies = [
-    cryptography
     pyzipper
     striprtf
   ];
@@ -36,11 +31,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "xknxproject" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library to extract KNX projects and parses the underlying XML";
     homepage = "https://github.com/XKNX/xknxproject";
     changelog = "https://github.com/XKNX/xknxproject/releases/tag/${version}";
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

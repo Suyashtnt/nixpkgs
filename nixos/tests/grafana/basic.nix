@@ -1,7 +1,7 @@
-import ../make-test-python.nix ({ lib, pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
-  inherit (lib) mkMerge nameValuePair maintainers;
+  inherit (lib) mkMerge;
 
   baseGrafanaConf = {
     services.grafana = {
@@ -17,29 +17,32 @@ let
         security = {
           admin_user = "testadmin";
           admin_password = "snakeoilpwd";
+          secret_key = "11111111111111111111";
         };
       };
     };
   };
 
   extraNodeConfs = {
-    sqlite = {};
+    sqlite = { };
 
-    socket = { config, ... }: {
-      services.grafana.settings.server = {
-        protocol = "socket";
-        socket = "/run/grafana/sock";
-        socket_gid = config.users.groups.nginx.gid;
+    socket =
+      { config, ... }:
+      {
+        services.grafana.settings.server = {
+          protocol = "socket";
+          socket = "/run/grafana/sock";
+          socket_gid = config.users.groups.nginx.gid;
+        };
+
+        users.users.grafana.extraGroups = [ "nginx" ];
+
+        services.nginx = {
+          enable = true;
+          recommendedProxySettings = true;
+          virtualHosts."_".locations."/".proxyPass = "http://unix:/run/grafana/sock";
+        };
       };
-
-      users.users.grafana.extraGroups = [ "nginx" ];
-
-      services.nginx = {
-        enable = true;
-        recommendedProxySettings = true;
-        virtualHosts."_".locations."/".proxyPass = "http://unix:/run/grafana/sock";
-      };
-    };
 
     declarativePlugins = {
       services.grafana.declarativePlugins = [ pkgs.grafanaPlugins.grafana-clock-panel ];
@@ -53,12 +56,14 @@ let
       services.postgresql = {
         enable = true;
         ensureDatabases = [ "grafana" ];
-        ensureUsers = [{
-          name = "grafana";
-          ensureDBOwnership = true;
-        }];
+        ensureUsers = [
+          {
+            name = "grafana";
+            ensureDBOwnership = true;
+          }
+        ];
       };
-      systemd.services.grafana.after = [ "postgresql.service" ];
+      systemd.services.grafana.after = [ "postgresql.target" ];
     };
 
     mysql = {
@@ -66,25 +71,32 @@ let
       services.mysql = {
         enable = true;
         ensureDatabases = [ "grafana" ];
-        ensureUsers = [{
-          name = "grafana";
-          ensurePermissions."grafana.*" = "ALL PRIVILEGES";
-        }];
+        ensureUsers = [
+          {
+            name = "grafana";
+            ensurePermissions."grafana.*" = "ALL PRIVILEGES";
+          }
+        ];
         package = pkgs.mariadb;
       };
       systemd.services.grafana.after = [ "mysql.service" ];
     };
   };
 
-  nodes = builtins.mapAttrs (_: val: mkMerge [ val baseGrafanaConf ]) extraNodeConfs;
-in {
+  containers = builtins.mapAttrs (
+    _: val:
+    mkMerge [
+      val
+      baseGrafanaConf
+    ]
+  ) extraNodeConfs;
+in
+{
   name = "grafana-basic";
 
-  meta = with maintainers; {
-    maintainers = [ willibutz ];
-  };
+  meta.maintainers = [ ];
 
-  inherit nodes;
+  inherit containers;
 
   testScript = ''
     start_all()
@@ -121,7 +133,7 @@ in {
 
     with subtest("Successful API query as admin user with postgresql db"):
         postgresql.wait_for_unit("grafana.service")
-        postgresql.wait_for_unit("postgresql.service")
+        postgresql.wait_for_unit("postgresql.target")
         postgresql.wait_for_open_port(3000)
         postgresql.wait_for_open_port(5432)
         postgresql.succeed(
@@ -139,4 +151,4 @@ in {
         )
         mysql.shutdown()
   '';
-})
+}

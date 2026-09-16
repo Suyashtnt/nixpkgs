@@ -6,6 +6,7 @@
   autoconf,
   automake,
   libtool,
+  pkg-config,
   gitMinimal,
   perl,
   python3,
@@ -16,15 +17,15 @@
   pmix,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "prrte";
-  version = "3.0.6";
+  version = "4.1.0";
 
   src = fetchFromGitHub {
     owner = "openpmix";
     repo = "prrte";
-    rev = "v${version}";
-    hash = "sha256-0JHtUpGFdPKmgUk0+MNxTfZIUDz/vY/CV+Mqbmv0JFw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-FO2dFqvJ3Ahc7rE2gAiQhmM5GTc7LJ8nE4y5fe+FgDg=";
     fetchSubmodules = true;
   };
 
@@ -35,14 +36,23 @@ stdenv.mkDerivation rec {
 
   postPatch = ''
     patchShebangs ./autogen.pl ./config
+
+    # This is needed for multi-node jobs.
+    # mpirun/srun/prterun does not have "prted" in its path unless
+    # it is actively pulled in. Hard-coding the nix store path
+    # as a default universally solves this issue.
+    substituteInPlace src/runtime/prte_mca_params.c --replace-fail \
+      "prte_launch_agent = \"prted\"" "prte_launch_agent = \"$out/bin/prted\""
   '';
 
   preConfigure = ''
     ./autogen.pl
+    patchShebangs --build ./src/util/prte-convert-help.py
   '';
 
   postInstall = ''
     moveToOutput "bin/prte_info" "''${!outputDev}"
+    moveToOutput "bin/prte-info" "''${!outputDev}"
     # Fix a broken symlink, created due to FHS assumptions
     rm "$out/bin/pcc"
     ln -s ${lib.getDev pmix}/bin/pmixcc "''${!outputDev}"/bin/pcc
@@ -59,6 +69,7 @@ stdenv.mkDerivation rec {
     libtool
     flex
     gitMinimal
+    pkg-config
   ];
 
   buildInputs = [
@@ -68,6 +79,12 @@ stdenv.mkDerivation rec {
     pmix
   ];
 
+  # Setting this manually, required for RiscV cross-compile
+  configureFlags = [
+    "--with-pmix=${lib.getDev pmix}"
+    "--with-pmix-libdir=${lib.getLib pmix}/lib"
+  ];
+
   enableParallelBuilding = true;
 
   meta = {
@@ -75,6 +92,6 @@ stdenv.mkDerivation rec {
     homepage = "https://docs.prrte.org/";
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ markuskowa ];
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.unix;
   };
-}
+})

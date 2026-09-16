@@ -4,13 +4,13 @@
   fetchurl,
   stdenv,
 
-  autoreconfHook,
-  boost185,
-  cairomm,
+  boost191,
+  cairomm_1_0,
   cgal,
   expat,
-  gmp,
+  fontconfig,
   gobject-introspection,
+  graphviz,
   gtk3,
   llvmPackages,
   matplotlib,
@@ -21,73 +21,107 @@
   pygobject3,
   python,
   scipy,
-  sparsehash,
+  zstandard,
+
+  writableTmpDirAsHomeHook,
+
   gitUpdater,
 }:
 
 let
-  # graph-tool doesn't build against boost181 on Darwin
-  boost = boost185.override {
+  boost' = boost191.override {
     enablePython = true;
     inherit python;
   };
 in
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "graph-tool";
-  version = "2.77";
-  format = "other";
+  version = "3.6";
+  pyproject = false;
+
+  strictDeps = true;
+
+  __structuredAttrs = true;
 
   src = fetchurl {
-    url = "https://downloads.skewed.de/graph-tool/graph-tool-${version}.tar.bz2";
-    hash = "sha256-mu/6r1Uo836ZTxuIL3UdsKvuUz+H1FZY9Y3ZbEBK0LQ=";
+    url = "https://downloads.skewed.de/graph-tool/graph-tool-${finalAttrs.version}.tar.bz2";
+    hash = "sha256-KFKitvz3zFEQAi8hkvIBC0c5QTRmOJRamdV0cyMbejU=";
   };
 
-  # Remove error messages about tput during build process without adding ncurses,
-  # and replace unavailable git commit hash and date.
-  postPatch = ''
-    substituteInPlace configure.ac \
-      --replace-fail 'tput setaf $1' : \
-      --replace-fail 'tput sgr0' : \
-      --replace-fail \
-        "\"esyscmd(git show | head -n 1 | sed 's/commit //' |  grep -o -e '.\{8\}' | head -n 1 |tr -d '\n')\"" \
-        '["(nixpkgs-${version})"]' \
-      --replace-fail \
-        "\"esyscmd(git log -1 | head -n 3 | grep 'Date:' | sed s/'Date:   '// | tr -d '\n')\"" \
-        '["(unavailable)"]'
-  '';
+  postPatch =
+    # remove error messages about tput during build process without adding ncurses
+    ''
+      substituteInPlace configure \
+        --replace-fail 'tput setaf $1' : \
+        --replace-fail 'tput sgr0' :
+    ''
+    +
+    # hardcode path to graphviz library to avoid find_library, which would require setting LD_LIBRARY_PATH
+    ''
+      substituteInPlace src/graph_tool/draw/graphviz_draw.py \
+        --replace-fail \
+          'ctypes.util.find_library("gvc")' \
+          '"${lib.getLib graphviz}/lib/libgvc${stdenv.hostPlatform.extensions.sharedLibrary}"'
+    '';
 
-  configureFlags = [
-    "--with-python-module-path=$(out)/${python.sitePackages}"
-    "--with-boost-libdir=${boost}/lib"
-    "--with-cgal=${cgal}"
-  ];
+  configureFlags =
+    lib.mapAttrsToList (lib.withFeatureAs true) {
+      boost-libdir = "${lib.getLib boost'}/lib";
+      cgal = lib.getDev cgal;
+      python-module-path = "$(out)/${python.sitePackages}";
+    }
+    ++ [
+      # CXXFLAGS defaults to "-g -O2", if unset.
+      # "-g" produces debugging information, which significantly increases
+      # resource requirements during compilation, but is not necessary as we
+      # subsequently strip the binaries.
+      # "-ftemplate-backtrace-limit=1" reduces the number of template
+      # instantiation notes per warning in order to reduce the log file size.
+      # "-O3" is also used by upstream.
+      "CXXFLAGS=-ftemplate-backtrace-limit=1 -O3"
+    ]
+    ++
+      lib.optionals stdenv.cc.isGNU
+        # enable GCC's link-time optimizer in order to reduce compilation time and memory usage during compilation
+        # https://graph-tool.skewed.de/installation.html#memory-requirements-for-compilation
+        # https://git.skewed.de/count0/graph-tool/-/issues/798#note_5626
+        [ "MOD_CXXFLAGS=-flto" ];
 
   enableParallelBuilding = true;
 
-  build-system = [
-    autoreconfHook
-    pkg-config
-  ];
+  nativeBuildInputs = [ pkg-config ];
 
   # https://graph-tool.skewed.de/installation.html#manual-compilation
-  dependencies = [
-    boost
-    cairomm
+  buildInputs = [
+    boost'
+    cairomm_1_0
     cgal
     expat
-    gmp
-    gobject-introspection
+    mpfr
+  ]
+  ++ lib.optionals stdenv.cc.isClang [ llvmPackages.openmp ];
+
+  dependencies = [
     gtk3
     matplotlib
-    mpfr
     numpy
     pycairo
     pygobject3
     scipy
-    sparsehash
-  ] ++ lib.optionals stdenv.cc.isClang [ llvmPackages.openmp ];
+    zstandard
+  ];
 
-  pythonImportsCheck = [ "graph_tool" ];
+  propagatedNativeBuildInputs = [ gobject-introspection ];
+
+  nativeCheckInputs = [ writableTmpDirAsHomeHook ];
+
+  preInstallCheck =
+    # avoid warnings about Matplotlib and Fontconfig configuration issues
+    ''
+      export FONTCONFIG_FILE=${fontconfig.out}/etc/fonts/fonts.conf
+    '';
+
+  pythonImportsCheck = [ "graph_tool.all" ];
 
   passthru.updateScript = gitUpdater {
     url = "https://git.skewed.de/count0/graph-tool";
@@ -97,8 +131,8 @@ buildPythonPackage rec {
   meta = {
     description = "Python module for manipulation and statistical analysis of graphs";
     homepage = "https://graph-tool.skewed.de";
-    changelog = "https://git.skewed.de/count0/graph-tool/commits/release-${version}";
+    changelog = "https://git.skewed.de/count0/graph-tool/commits/release-${finalAttrs.version}";
     license = lib.licenses.lgpl3Plus;
     maintainers = [ lib.maintainers.mjoerg ];
   };
-}
+})

@@ -1,20 +1,18 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, callPackage
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  callPackage,
 }:
 
-let
+buildGoModule (finalAttrs: {
   pname = "elvish";
   version = "0.21.0";
-in
-buildGoModule {
-  inherit pname version;
 
   src = fetchFromGitHub {
     owner = "elves";
     repo = "elvish";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-+qkr0ziHWs3MVhBoqAxrwwbsQVvmGHRKrlqiujqBKvs=";
   };
 
@@ -25,7 +23,7 @@ buildGoModule {
   ldflags = [
     "-s"
     "-w"
-    "-X src.elv.sh/pkg/buildinfo.Version==${version}"
+    "-X src.elv.sh/pkg/buildinfo.Version==${finalAttrs.version}"
   ];
 
   strictDeps = true;
@@ -49,6 +47,6 @@ buildGoModule {
       status, it is already suitable for most daily interactive use.
     '';
     license = lib.licenses.bsd2;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
   };
-}
+})

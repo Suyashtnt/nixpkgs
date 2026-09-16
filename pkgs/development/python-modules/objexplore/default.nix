@@ -1,21 +1,18 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   setuptools,
   blessed,
   rich,
   pytestCheckHook,
-  pandas
+  pandas,
 }:
 
 buildPythonPackage {
   pname = "objexplore";
   version = "1.6.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "kylepollina";
@@ -26,7 +23,10 @@ buildPythonPackage {
     hash = "sha256-BgeuRRuvbB4p99mwCjNxm3hYEZuGua8x2GdoVssQ7eI=";
   };
 
-  pythonRelaxDeps = [ "blessed" "rich" ];
+  pythonRelaxDeps = [
+    "blessed"
+    "rich"
+  ];
 
   build-system = [ setuptools ];
 
@@ -56,6 +56,9 @@ buildPythonPackage {
     description = "Terminal UI to interactively inspect and explore Python objects";
     homepage = "https://github.com/kylepollina/objexplore";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ pbsds sigmanificient ];
+    maintainers = with lib.maintainers; [
+      pbsds
+      sigmanificient
+    ];
   };
 }

@@ -1,32 +1,50 @@
 {
   lib,
+  stdenv,
   buildBazelPackage,
   fetchFromGitHub,
-  bazel_6,
+  bazel_7,
   jdk,
   elfutils,
   libcap,
 }:
 
-buildBazelPackage rec {
+let
+  system = stdenv.hostPlatform.system;
+  registry = fetchFromGitHub {
+    owner = "bazelbuild";
+    repo = "bazel-central-registry";
+    rev = "dc643526b97838ffe421b833dd8b9c95e71702e8";
+    hash = "sha256-SLtrNU5uEt8rRJDUdV/IaI37CujsTHLlE31l2zYoRss=";
+  };
+in
+buildBazelPackage {
   pname = "perf_data_converter";
-  version = "0-unstable-2024-07-25";
+  version = "0-unstable-2026-03-10";
 
   src = fetchFromGitHub {
     owner = "google";
     repo = "perf_data_converter";
-    rev = "571052793d8c49fd3e93121af548cc8ebd8920f0";
-    hash = "sha256-yoWOCSYAfnDVDQ6uwZ30P4p3pgvfmjVQiN9gu5auusY=";
+    rev = "e2c2da7494e1c6cb8bb343c1bb3023ee3f37ab38";
+    hash = "sha256-3YaaEQBlNenJihlEkAI3s4WyjOpWpV9rsfLyvubvfMU=";
   };
 
-  bazel = bazel_6;
+  bazel = bazel_7;
   bazelFlags = [
-    "--java_runtime_version=local_jdk"
-    "--tool_java_runtime_version=local_jdk"
+    "--registry"
+    "file://${registry}"
   ];
 
   fetchAttrs = {
-    hash = "sha256-Qm6Ng9cXvKx043P7qyNHyyMvdGK9aNarX1ZKeCp3mgY=";
+    preInstall = ''
+      rm -rf $bazelOut/external/rules_shell~~sh_configure~local_config_shell
+    '';
+    hash =
+      {
+        aarch64-linux = "sha256-BlNTjS78QNuoiyIUFDmY5HeqIRJRVZQfrk5Y7+Q2DGo=";
+        x86_64-linux = "sha256-jOepM+Lor5RRIQEmdkwf3IJ1AAfbVq2VjMuwqjyfOio=";
+      }
+      .${system} or (throw "No hash for system: ${system}");
   };
 
   nativeBuildInputs = [ jdk ];
@@ -52,11 +70,11 @@ buildBazelPackage rec {
     '';
   };
 
-  meta = with lib; {
+  meta = {
     description = "Tool to convert Linux perf files to the profile.proto format used by pprof";
     homepage = "https://github.com/google/perf_data_converter";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ hzeller ];
-    platforms = platforms.linux;
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ hzeller ];
+    platforms = lib.platforms.linux;
   };
 }

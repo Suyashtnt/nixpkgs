@@ -34,9 +34,12 @@ let
         flakeIgnore = [ "E501" ]; # ignores PEP8's line length limit of 79 (black defaults to 88 characters)
       }
       (
-        builtins.replaceStrings [ "@NIX_STORE_VERITY@" ] [
-          partitionTypes.usr-verity
-        ] (builtins.readFile ./assert_uki_repart_match.py)
+        builtins.replaceStrings
+          [ "@NIX_STORE_VERITY@" ]
+          [
+            partitionTypes.usr-verity
+          ]
+          (builtins.readFile ./assert_uki_repart_match.py)
       );
 in
 {
@@ -78,49 +81,64 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    boot.initrd.systemd.dmVerity.enable = true;
+    boot.initrd = {
+      systemd.dmVerity.enable = true;
+      supportedFilesystems = {
+        ${config.image.repart.partitions.${cfg.partitionIds.store}.repartConfig.Format} =
+          lib.mkDefault true;
+      };
+    };
+
+    fileSystems."/nix/store" = lib.mkDefault {
+      device = "/usr/nix/store";
+      fsType = "none";
+      options = [ "bind" ];
+    };
 
     image.repart.partitions = {
       # dm-verity hash partition
       ${cfg.partitionIds.store-verity}.repartConfig = {
-        Type = partitionTypes.usr-verity;
+        Type = lib.mkDefault partitionTypes.usr-verity;
         Verity = "hash";
         VerityMatchKey = lib.mkDefault verityMatchKey;
         Label = lib.mkDefault "store-verity";
+        Minimize = lib.mkDefault "best";
       };
       # dm-verity data partition that contains the nix store
       ${cfg.partitionIds.store} = {
         storePaths = [ config.system.build.toplevel ];
         repartConfig = {
-          Type = partitionTypes.usr;
+          Type = lib.mkDefault partitionTypes.usr;
           Verity = "data";
           Format = lib.mkDefault "erofs";
           VerityMatchKey = lib.mkDefault verityMatchKey;
           Label = lib.mkDefault "store";
+          Minimize = lib.mkDefault "best";
         };
       };
 
     };
 
     system.build = {
+      finalImage = lib.warn "system.build.finalImage has been renamed to system.build.image" config.system.build.image;
 
       # intermediate system image without ESP
       intermediateImage =
-        (config.system.build.image.override {
+        (config.image.repart.image.override {
           # always disable compression for the intermediate image
           compression.enable = false;
         }).overrideAttrs
           (
             _: previousAttrs: {
               # make it easier to identify the intermediate image in build logs
-              pname = "${previousAttrs.pname}-intermediate";
+              name =
+                if previousAttrs ? pname then
+                  "${previousAttrs.pname}-${previousAttrs.version}-intermediate"
+                else
+                  "${previousAttrs.name}-intermediate";
 
               # do not prepare the ESP, this is done in the final image
               systemdRepartFlags = previousAttrs.systemdRepartFlags ++ [ "--defer-partitions=esp" ];
-
-              # the image will be self-contained so we can drop references
-              # to the closure that was used to build it
-              unsafeDiscardReferences.out = true;
             }
           );
 
@@ -135,8 +153,8 @@ in
           pkgs.runCommand ukiFile
             {
               nativeBuildInputs = [
-                pkgs.jq
-                pkgs.systemdUkify
+                pkgs.buildPackages.jq
+                pkgs.buildPackages.systemdUkify
               ];
             }
             ''
@@ -157,26 +175,25 @@ in
         );
 
       # final system image that is created from the intermediate image by injecting the UKI from above
-      finalImage =
-        (config.system.build.image.override {
+      image = lib.mkOverride 99 (
+        (config.image.repart.image.override {
           # continue building with existing intermediate image
           createEmpty = false;
         }).overrideAttrs
           (
-            finalAttrs: previousAttrs:
-            let
-              copyUki = "CopyFiles=${config.system.build.uki}/${config.system.boot.loader.ukiFile}:${cfg.ukiPath}";
-            in
-            {
-              nativeBuildInputs = previousAttrs.nativeBuildInputs ++ [
-                pkgs.systemdUkify
-                verityHashCheck
-              ];
+            finalAttrs: previousAttrs: {
+              # add entry to inject UKI into ESP
+              finalPartitions = lib.recursiveUpdate previousAttrs.finalPartitions {
+                ${cfg.partitionIds.esp}.contents = {
+                  "${cfg.ukiPath}".source = "${config.system.build.uki}/${config.system.boot.loader.ukiFile}";
+                };
+              };
 
-              postPatch = ''
-                # add entry to inject UKI into ESP
-                echo '${copyUki}' >> $finalRepartDefinitions/${cfg.partitionIds.esp}.conf
-              '';
+              nativeBuildInputs = previousAttrs.nativeBuildInputs ++ [
+                pkgs.buildPackages.systemdUkify
+                verityHashCheck
+                pkgs.buildPackages.jq
+              ];
 
               preBuild = ''
                 # check that we build the final image with the same intermediate image for
@@ -190,15 +207,30 @@ in
                   | assert_uki_repart_match.py "${config.system.build.intermediateImage}/repart-output.json"
 
                 # copy the uncompressed intermediate image, so that systemd-repart picks it up
-                cp -v ${config.system.build.intermediateImage}/${config.image.repart.imageFileBasename}.raw .
-                chmod +w ${config.image.repart.imageFileBasename}.raw
+                cp -v ${config.system.build.intermediateImage}/${config.image.baseName}.raw .
+                chmod +w ${config.image.baseName}.raw
               '';
 
-              # the image will be self-contained so we can drop references
-              # to the closure that was used to build it
-              unsafeDiscardReferences.out = true;
+              # replace "TBD" with the original roothash values
+              preInstall = ''
+                mv -v repart-output{.json,_orig.json}
+
+                jq --slurp --indent -1 \
+                  '.[0] as $intermediate | .[1] as $final
+                    | $intermediate | map(select(.roothash != null) | { "uuid":.uuid,"roothash":.roothash }) as $uuids
+                    | $final + $uuids
+                    | group_by(.uuid)
+                    | map(add)
+                    | sort_by(.offset)' \
+                      ${config.system.build.intermediateImage}/repart-output.json \
+                      repart-output_orig.json \
+                  > repart-output.json
+
+                rm -v repart-output_orig.json
+              '';
             }
-          );
+          )
+      );
     };
   };
 

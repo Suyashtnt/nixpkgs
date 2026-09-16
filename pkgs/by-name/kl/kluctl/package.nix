@@ -1,46 +1,95 @@
-{ lib, buildGoModule, fetchFromGitHub, testers, makeWrapper, python310, kluctl }:
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  buildNpmPackage,
+  buildPackages,
+  fetchFromGitHub,
+  installShellFiles,
+  makeWrapper,
+  python3,
+  versionCheckHook,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "kluctl";
-  version = "2.25.1";
+  version = "2.28.2";
 
   src = fetchFromGitHub {
     owner = "kluctl";
     repo = "kluctl";
-    rev = "v${version}";
-    hash = "sha256-EfzMDOIp/dfnpLTnaUkZ1sfGVtQqUgeGyHNiWIwSxQ4=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Adh2n8aE+DEBY1MC4laVPDdr5dq6FKSMEFLjbs74D4c=";
   };
 
   subPackages = [ "cmd" ];
 
-  vendorHash = "sha256-iE4fPRq2kalP53AO3YaaqbRMH4Cl6XB5UseJmepoW+4=";
+  vendorHash = "sha256-cQJRU3vL5wJ0dgYMtN4qFdvJyp367I4N7GM6PhRvW0I=";
 
-  ldflags = [ "-s" "-w" "-X main.version=v${version}" ];
+  ldflags = [
+    "-s"
+    "-X main.version=v${finalAttrs.version}"
+  ];
+
+  nativeBuildInputs = [
+    installShellFiles
+    makeWrapper
+  ];
 
   # Depends on docker
   doCheck = false;
 
-  nativeBuildInputs = [
-    makeWrapper
-  ];
+  preBuild =
+    let
+      webui = buildNpmPackage {
+        pname = "kluctl-webui";
+        inherit (finalAttrs) version src;
 
-  passthru.tests.version = testers.testVersion {
-    package = kluctl;
-    version = "v${version}";
-  };
+        sourceRoot = "source/pkg/webui/ui";
 
-  postInstall = ''
-    mv $out/bin/{cmd,kluctl}
-    wrapProgram $out/bin/kluctl \
+        npmDepsHash = "sha256-e5Ic3W1UPQn/2ggaYez7G7exXNZA6BobP4BTM6B6rlI=";
+
+        npmBuildScript = "build";
+
+        installPhase = ''
+          mkdir -p $out
+          cp -r build $out/
+        '';
+      };
+    in
+    ''
+      rm -rf pkg/webui/ui/build
+      cp -r ${webui}/build pkg/webui/ui/build
+    '';
+
+  postInstall =
+    let
+      emulator = stdenv.hostPlatform.emulator buildPackages;
+    in
+    ''
+      mv $out/bin/{cmd,kluctl}
+      wrapProgram $out/bin/kluctl \
         --set KLUCTL_USE_SYSTEM_PYTHON 1 \
-        --prefix PATH : '${lib.makeBinPath [ python310 ]}'
-  '';
+        --prefix PATH : '${lib.makeBinPath [ python3 ]}'
+      installShellCompletion --cmd kluctl \
+        --bash <(${emulator} $out/bin/kluctl completion bash) \
+        --fish <(${emulator} $out/bin/kluctl completion fish) \
+        --zsh  <(${emulator} $out/bin/kluctl completion zsh)
+    '';
 
-  meta = with lib; {
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  meta = {
     description = "Missing glue to put together large Kubernetes deployments";
     mainProgram = "kluctl";
     homepage = "https://kluctl.io/";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ sikmir netthier ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      sikmir
+      netthier
+    ];
   };
-}
+})

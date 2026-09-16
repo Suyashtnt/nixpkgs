@@ -2,10 +2,10 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
   poetry-core,
+  pyprojectVersionPatchHook,
 
   # dependencies
   aiohttp,
@@ -16,30 +16,28 @@
   # tests
   pytestCheckHook,
   aioresponses,
+  pytest-cov-stub,
   pytest-asyncio,
   syrupy,
 }:
 
 buildPythonPackage rec {
   pname = "python-homeassistant-analytics";
-  version = "0.7.0";
+  version = "0.9.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "joostlek";
     repo = "python-homeassistant-analytics";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-HPimk401tRBwszWvkyUEAcuLeYeEu0JUld16PESXkbo=";
+    tag = "v${version}";
+    hash = "sha256-Deh3pZKpqdrlgv6LQk3NHuATz3porWiM8dewjbdbR7M=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail "--cov" ""
-  '';
-
   build-system = [ poetry-core ];
+
+  nativeBuildInputs = [
+    pyprojectVersionPatchHook
+  ];
 
   dependencies = [
     aiohttp
@@ -51,18 +49,18 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     pytestCheckHook
     aioresponses
+    pytest-cov-stub
     pytest-asyncio
     syrupy
   ];
 
   pythonImportsCheck = [ "python_homeassistant_analytics" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Asynchronous Python client for Home Assistant Analytics";
     changelog = "https://github.com/joostlek/python-homeassistant-analytics/releases/tag/v${version}";
-    description = "Asynchronous Python client for Homeassistant Analytics";
-    homepage = "https://github.com/joostlek/python-homeassistant-analytics
-";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jamiemagee ];
+    homepage = "https://github.com/joostlek/python-homeassistant-analytics";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jamiemagee ];
   };
 }

@@ -4,47 +4,50 @@
   buildPythonPackage,
   fetchFromGitHub,
   webcolors,
-  pythonOlder,
+  pytest-asyncio,
   pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "flux-led";
-  version = "1.0.4";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "1.2.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Danielhiversen";
     repo = "flux_led";
-    rev = "refs/tags/${version}";
-    hash = "sha256-enYo2hZ1C8jqO+8xZhSmIOJQAyrtVUJ9S/e2Bxzhv0I=";
+    tag = version;
+    hash = "sha256-+i+/WMHdz4HPKDlRPV1Aq9QqrTo5gZiulSc7Hinn+kI=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail '"pytest-runner>=5.2",' ""
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     async-timeout
     webcolors
   ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  __darwinAllowLocalNetworking = true;
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace '"pytest-runner>=5.2",' ""
-  '';
-
-  pytestFlagsArray = [ "tests.py" ];
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "flux_led" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to communicate with the flux_led smart bulbs";
-    mainProgram = "flux_led";
     homepage = "https://github.com/Danielhiversen/flux_led";
     changelog = "https://github.com/Danielhiversen/flux_led/releases/tag/${version}";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ colemickens ];
-    platforms = platforms.linux;
+    license = lib.licenses.lgpl3Plus;
+    maintainers = [ ];
+    mainProgram = "flux_led";
   };
 }

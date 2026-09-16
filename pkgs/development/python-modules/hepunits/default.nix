@@ -4,17 +4,18 @@
   fetchPypi,
   hatch-vcs,
   hatchling,
+  pint,
   pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "hepunits";
-  version = "2.3.4";
-  format = "pyproject";
+  version = "2.4.6";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-qEK4hqZ7oFY6NHFVJ3z9yPtnAggjNmG8urnyip34zWA=";
+    hash = "sha256-vKatqTcUcWbWbp+hUlZvI3iGjXmCEcrWmQCAOZVg+jQ=";
   };
 
   nativeBuildInputs = [
@@ -22,7 +23,10 @@ buildPythonPackage rec {
     hatchling
   ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    pint
+  ];
 
   meta = {
     description = "Units and constants in the HEP system of units";

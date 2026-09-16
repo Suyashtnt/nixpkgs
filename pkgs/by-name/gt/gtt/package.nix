@@ -1,24 +1,25 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, pkg-config
-, alsa-lib
-, wl-clipboard
-, xclip
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  pkg-config,
+  alsa-lib,
+  wl-clipboard,
+  xclip,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "gtt";
-  version = "9";
+  version = "11";
 
   src = fetchFromGitHub {
     owner = "eeeXun";
     repo = "gtt";
-    rev = "v${version}";
-    hash = "sha256-WDuQ8daKA8Skto4soG9L4ChkYzV18BwVZh+AbyDyXYs=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-sgWoeBdS8HymVjaTjJZDU3KNuYLRLdC5I9k/tNEd0GA=";
   };
 
-  vendorHash = "sha256-5Uwi1apowHoUtvkSgmUV9WbfpVQFTqJ9GA2sRnC5nFw=";
+  vendorHash = "sha256-6C+++HIVwOwOmlsdwXWF/ykyK9WOlq/ktIPjRslvllk=";
 
   nativeBuildInputs = [
     pkg-config
@@ -30,13 +31,16 @@ buildGoModule rec {
     wl-clipboard
   ];
 
-  ldflags = [ "-s" "-w" ];
+  ldflags = [
+    "-s"
+    "-w"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Translate TUI (Originally). Now support Apertium, Argos, Bing, ChatGPT, DeepL, Google, Reverso";
     homepage = "https://github.com/eeeXun/gtt";
-    license = licenses.mit;
-    maintainers = with maintainers; [ linuxissuper ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ linuxissuper ];
     mainProgram = "gtt";
   };
-}
+})

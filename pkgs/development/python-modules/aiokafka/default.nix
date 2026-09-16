@@ -7,7 +7,6 @@
   fetchFromGitHub,
   gssapi,
   packaging,
-  pythonOlder,
   setuptools,
   typing-extensions,
   zlib,
@@ -15,16 +14,14 @@
 
 buildPythonPackage rec {
   pname = "aiokafka";
-  version = "0.11.0";
+  version = "0.13.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "aio-libs";
     repo = "aiokafka";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-CeEPRCsf2SFI5J5FuQlCRRtlOPcCtRiGXJUIQOAbyCc=";
+    tag = "v${version}";
+    hash = "sha256-xmrNhtyFY+3CJhECIVZRMVx0sZbZ00RLiyZzOdPNNIs=";
   };
 
   build-system = [
@@ -56,11 +53,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "aiokafka" ];
 
-  meta = with lib; {
+  meta = {
     description = "Kafka integration with asyncio";
     homepage = "https://aiokafka.readthedocs.org";
-    changelog = "https://github.com/aio-libs/aiokafka/releases/tag/v${version}";
-    license = licenses.asl20;
+    changelog = "https://github.com/aio-libs/aiokafka/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
     maintainers = [ ];
   };
 }

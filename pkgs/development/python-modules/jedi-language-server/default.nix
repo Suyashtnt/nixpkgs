@@ -1,41 +1,51 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  docstring-to-markdown,
   fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  docstring-to-markdown,
   jedi,
   lsprotocol,
-  poetry-core,
+  cattrs,
   pygls,
-  pydantic,
-  pyhamcrest,
+
+  # tests
   pytestCheckHook,
+  pyhamcrest,
   python-lsp-jsonrpc,
-  pythonOlder,
-  stdenv,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "jedi-language-server";
-  version = "0.41.4";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "0.47.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pappasam";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-RDLwL9AZ3G8CzVwDtWqFFZNH/ulpHeFBhglbWNv/ZIk=";
+    repo = "jedi-language-server";
+    tag = "v${version}";
+    hash = "sha256-UXFIVj2g/s669vgS9uLH+5qFjNFoIFhS5S6XDbzRYwU=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [
+    hatchling
+  ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "jedi"
+  ];
+
+  dependencies = [
     docstring-to-markdown
     jedi
     lsprotocol
-    pydantic
+    cattrs
     pygls
   ];
 
@@ -43,11 +53,8 @@ buildPythonPackage rec {
     pytestCheckHook
     pyhamcrest
     python-lsp-jsonrpc
+    writableTmpDirAsHomeHook
   ];
-
-  preCheck = ''
-    HOME="$(mktemp -d)"
-  '';
 
   disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [
     # https://github.com/pappasam/jedi-language-server/issues/313
@@ -57,12 +64,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "jedi_language_server" ];
 
-  meta = with lib; {
+  meta = {
     description = "Language Server for the latest version(s) of Jedi";
     mainProgram = "jedi-language-server";
     homepage = "https://github.com/pappasam/jedi-language-server";
-    changelog = "https://github.com/pappasam/jedi-language-server/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ doronbehar ];
+    changelog = "https://github.com/pappasam/jedi-language-server/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
 }

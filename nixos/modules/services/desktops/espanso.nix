@@ -1,28 +1,55 @@
-{ config, lib, pkgs, ... }:
-
-with lib;
-let cfg = config.services.espanso;
-in {
-  meta = { maintainers = with lib.maintainers; [ n8henrie numkem ]; };
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.services.espanso;
+in
+{
+  meta = {
+    maintainers = with lib.maintainers; [
+      n8henrie
+      numkem
+    ];
+  };
 
   options = {
     services.espanso = {
-      enable = mkEnableOption "Espanso";
-      wayland = mkEnableOption "use the Wayland compatible espanso package";
-      package = mkPackageOption pkgs "espanso" {
+      enable = lib.mkEnableOption "Espanso";
+      package = lib.mkPackageOption pkgs "espanso" {
         example = "pkgs.espanso-wayland";
+      };
+      extraPackages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        example = lib.literalExpression "with pkgs; [ bash curl python3 ];";
+        description = "Extra packages to be added to Espanso service path.";
       };
     };
   };
 
-  config = mkIf cfg.enable {
+  config = lib.mkIf cfg.enable {
+    security.wrappers.espanso = lib.mkIf (cfg.package.waylandSupport or false) {
+      capabilities = "cap_dac_override+p";
+      owner = "root";
+      group = "root";
+      source = lib.getExe (cfg.package.override { securityWrapperPath = config.security.wrapperDir; });
+    };
     systemd.user.services.espanso = {
       description = "Espanso daemon";
       serviceConfig = {
-        ExecStart = "${lib.getExe cfg.package} daemon";
+        ExecStart = "${
+          if (cfg.package.waylandSupport or false) then
+            "${config.security.wrapperDir}/espanso"
+          else
+            lib.getExe cfg.package
+        } daemon";
         Restart = "on-failure";
       };
-      wantedBy = [ "default.target" ];
+      wantedBy = [ "graphical-session.target" ];
+      path = cfg.extraPackages;
     };
 
     environment.systemPackages = [ cfg.package ];

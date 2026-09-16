@@ -1,36 +1,41 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitHub
-, libiconv
-, openssl
-, pkg-config
-, xclip
-, darwin
+{
+  lib,
+  stdenv,
+  rustPlatform,
+  fetchFromGitHub,
+  libiconv,
+  openssl,
+  pkg-config,
+  cmake,
+  xclip,
+  nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "gitui";
-  version = "0.26.3";
+  version = "0.28.1";
 
   src = fetchFromGitHub {
-    owner = "extrawurst";
+    owner = "gitui-org";
     repo = "gitui";
-    rev = "v${version}";
-    hash = "sha256-j3y+KjC+o9p2omf4bN8+XevwU7WqiaQ0sfPqHySD2ik=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-IyDms4ke5evtSjFZrWEy0AascA0g9rG/a9RjbBNzZwg=";
   };
 
-  cargoHash = "sha256-vVEo0kSghOQsH3T6ZTAzN7gIUku0n7rDbKwNmOM9GZc=";
+  cargoHash = "sha256-LMw5TRNe9OK6ygOOMBpniMsmrK8K3qdkQ+SmaLJa+w0=";
 
-  nativeBuildInputs = [ pkg-config ];
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+  ];
 
-  buildInputs = [ openssl ]
-    ++ lib.optional stdenv.hostPlatform.isLinux xclip
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-         libiconv
-         darwin.apple_sdk.frameworks.Security
-         darwin.apple_sdk.frameworks.AppKit
-       ];
+  buildInputs = [
+    openssl
+  ]
+  ++ lib.optional stdenv.hostPlatform.isLinux xclip
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    libiconv
+  ];
 
   postPatch = ''
     # The cargo config overrides linkers for some targets, breaking the build
@@ -43,21 +48,28 @@ rustPlatform.buildRustPackage rec {
     substituteInPlace Cargo.toml --replace-fail 'build = "build.rs"' ""
   '';
 
-  GITUI_BUILD_NAME = version;
-  # Needed to get openssl-sys to use pkg-config.
-  OPENSSL_NO_VENDOR = 1;
+  env = {
+    GITUI_BUILD_NAME = finalAttrs.version;
+    # Needed to get openssl-sys to use pkg-config.
+    OPENSSL_NO_VENDOR = 1;
+  };
 
   # Getting app_config_path fails with a permission denied
   checkFlags = [
     "--skip=keys::key_config::tests::test_symbolic_links"
   ];
 
+  passthru.updateScript = nix-update-script { };
+
   meta = {
+    changelog = "https://github.com/gitui-org/gitui/blob/v${finalAttrs.version}/CHANGELOG.md";
     description = "Blazing fast terminal-ui for Git written in Rust";
-    homepage = "https://github.com/extrawurst/gitui";
-    changelog = "https://github.com/extrawurst/gitui/blob/v${version}/CHANGELOG.md";
-    mainProgram = "gitui";
+    homepage = "https://github.com/gitui-org/gitui";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ Br1ght0ne yanganto mfrw ];
+    mainProgram = "gitui";
+    maintainers = with lib.maintainers; [
+      yanganto
+      mfrw
+    ];
   };
-}
+})

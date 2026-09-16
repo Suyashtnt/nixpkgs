@@ -1,10 +1,11 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
 }:
 
 let
-  version = "0.6.0";
+  version = "1.0.1";
 in
 buildGoModule {
   pname = "vault-unseal";
@@ -14,10 +15,10 @@ buildGoModule {
     owner = "lrstanley";
     repo = "vault-unseal";
     rev = "v${version}";
-    hash = "sha256-lryjinTzJNty2euvWP5rNyf7BZxlTD4x6zIEERF4vag=";
+    hash = "sha256-AVKQbX5xFCU9aNdDm2uTr+v2w4vnVEhTd3jfgqwXN2E=";
   };
 
-  vendorHash = "sha256-vbVUIiFBmjH1ROKNBeV19NeHI1msqgJ1RonVh/Lp/CE=";
+  vendorHash = "sha256-/ov2rvVZJgRsALgBMTaQE4CXplBJDhBrlIq2rHblO4k=";
 
   meta = {
     changelog = "https://github.com/lrstanley/vault-unseal/releases/tag/v${version}";

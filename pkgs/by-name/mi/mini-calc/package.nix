@@ -7,18 +7,18 @@
   testers,
   mini-calc,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "mini-calc";
-  version = "3.2.0";
+  version = "4.0.4";
 
   src = fetchFromGitHub {
-    owner = "coco33920";
+    owner = "vanilla-extracts";
     repo = "calc";
-    rev = version;
-    hash = "sha256-f2xmc6wzZ5MwwBDYQNoxbFmIclZWd/xOOI4/MCmrnEI=";
+    tag = finalAttrs.version;
+    hash = "sha256-GvWWFTJfgPn26BXVl4MV65pubpIg1y544oHvycTcrGo=";
   };
 
-  cargoHash = "sha256-OiAU94URgOHZ/iNbCF5rE55zfZNkW3bdjPZo05kpIRo=";
+  cargoHash = "sha256-tPrACzeUaBK/981ReGWwwfuhBki8Bfebmp7xCLPzXDo=";
 
   nativeBuildInputs = [ makeWrapper ];
   postFixup = ''
@@ -30,16 +30,16 @@ rustPlatform.buildRustPackage rec {
     package = mini-calc;
     # `mini-calc -v` does not output in the test env, fallback to pipe
     command = "echo -v | mini-calc";
-    version = "v${version}";
+    version = "v${finalAttrs.version}";
   };
 
   meta = {
     description = "Fully-featured minimalistic configurable calculator written in Rust";
-    changelog = "https://github.com/coco33920/calc/blob/${version}/CHANGELOG.md";
-    homepage = "https://calc.nwa2coco.fr";
+    changelog = "https://github.com/vanilla-extracts/calc/blob/${finalAttrs.version}/CHANGELOG.md";
+    homepage = "https://calc.charlotte-thomas.me/";
     license = lib.licenses.gpl3Plus;
     maintainers = with lib.maintainers; [ sigmanificient ];
     mainProgram = "mini-calc";
     platforms = lib.platforms.unix;
   };
-}
+})

@@ -4,7 +4,6 @@
   callPackage,
   fetchFromGitHub,
   httpx,
-  pythonOlder,
   sanic,
   setuptools,
   websockets,
@@ -15,12 +14,10 @@ buildPythonPackage rec {
   version = "24.6.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "sanic-org";
     repo = "sanic-testing";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-biUgxa0sINHAYzyKimVD8+/mPUq2dlnCl2BN+UeUaEo=";
   };
 
@@ -51,11 +48,11 @@ buildPythonPackage rec {
     pytest = callPackage ./tests.nix { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Core testing clients for the Sanic web framework";
     homepage = "https://github.com/sanic-org/sanic-testing";
     changelog = "https://github.com/sanic-org/sanic-testing/releases/tag/v${version}";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
 }

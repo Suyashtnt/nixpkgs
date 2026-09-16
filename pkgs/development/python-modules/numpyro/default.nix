@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
   fetchFromGitHub,
 
@@ -14,31 +15,36 @@
   tqdm,
 
   # tests
-  # Our current version of tensorflow (2.13.0) is too old and doesn't support python>=3.12
-  # We remove optional test dependencies that require tensorflow and skip the corresponding tests to
-  # avoid introducing a useless incompatibility with python 3.12:
-  # dm-haiku,
-  # flax,
-  # tensorflow-probability,
+  dm-haiku,
+  equinox,
+  flax,
   funsor,
   graphviz,
   optax,
   pyro-api,
+  pytest-xdist,
   pytestCheckHook,
   scikit-learn,
+  tensorflow-probability,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "numpyro";
-  version = "0.15.3";
+  version = "0.21.0";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pyro-ppl";
     repo = "numpyro";
-    rev = "refs/tags/${version}";
-    hash = "sha256-g+ep221hhLbCjQasKpiEAXkygI5A3Hglqo1tV8lv5eg=";
+    tag = finalAttrs.version;
+    hash = "sha256-4NA1m2N0AZy3ausAZc6+PPw175joGC7WwfZr0Ri0uK8=";
   };
+
+  patches = [
+    # Account for jax 0.11 hoisting tracing-time constants into `jaxpr.invars`
+    ./jax-0.11-provenance-consts.patch
+  ];
 
   build-system = [ setuptools ];
 
@@ -51,80 +57,82 @@ buildPythonPackage rec {
   ];
 
   nativeCheckInputs = [
-    # dm-haiku
-    # flax
+    dm-haiku
+    equinox
+    flax
     funsor
     graphviz
     optax
     pyro-api
+    pytest-xdist
     pytestCheckHook
     scikit-learn
-    # tensorflow-probability
+    tensorflow-probability
   ];
 
   pythonImportsCheck = [ "numpyro" ];
 
+  pytestFlags = [
+    # Tests memory consumption grows significantly with the number of parallel processes (reaches ~200GB with 80 jobs)
+    "--maxprocesses=8"
+
+    # A few tests fail with:
+    # UserWarning: There are not enough devices to run parallel chains: expected 2 but got 1.
+    # Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(2)` at the beginning of your program.
+    # You can double-check how many devices are available in your system using `jax.local_device_count()`.
+    "-Wignore::UserWarning"
+
+    # FutureWarning: In the future `np.object` will be defined as the corresponding NumPy scalar.
+    "-Wignore::FutureWarning"
+  ];
+
   disabledTests = [
+    # Failing with jax>=0.9.0
+    # TypeError: Error interpreting argument to closed_call as a JAX value
+    "test_provenance_call"
+    "test_provenance_closed_call"
+    "test_numpyrooptim_no_double_jit"
+
+    # ValueError: Found unexpected Arrays on value of type <class 'list'> in static attribute 'layers'
+    # of Pytree type '<class 'test_module.test_random_nnx_module_mcmc_sequence_params.<locals>.MLP'>'.
+    # This is an error starting from Flax version 0.12.0.
+    "test_random_nnx_module_mcmc_sequence_param"
+
+    # AssertionError, assert GLOBAL["count"] == 4 (assert 5 == 4)
+    "test_mcmc_parallel_chain"
+
     # AssertionError due to tolerance issues
-    "test_beta_binomial_log_prob"
-    "test_collapse_beta"
+    "test_bijective_transforms"
     "test_cpu"
-    "test_gamma_poisson"
-    "test_gof"
-    "test_hpdi"
-    "test_kl_dirichlet_dirichlet"
-    "test_kl_univariate"
-    "test_mean_var"
+    "test_entropy_categorical"
+    "test_gaussian_model"
 
-    # Tests want to download data
-    "data_load"
-    "test_jsb_chorales"
+    # >       with pytest.warns(UserWarning, match="Hessian of log posterior"):
+    # E       Failed: DID NOT WARN. No warnings of type (<class 'UserWarning'>,) were emitted.
+    # E        Emitted warnings: [].
+    "test_laplace_approximation_warning"
 
-    # RuntimeWarning: overflow encountered in cast
-    "test_zero_inflated_logits_probs_agree"
+    # ValueError: compiling computation that requires 2 logical devices, but only 1 XLA devices are available (num_replicas=2)
+    "test_chain"
 
-    # NameError: unbound axis name: _provenance
-    "test_model_transformation"
-
-    # require dm-haiku
-    "test_flax_state_dropout_smoke"
-    "test_flax_module"
-    "test_random_module_mcmc"
-
-    # require flax
-    "test_haiku_state_dropout_smoke"
-    "test_haiku_module"
-    "test_random_module_mcmc"
-
-    # require tensorflow-probability
-    "test_modified_bessel_first_kind_vect"
-    "test_diag_spectral_density_periodic"
-    "test_kernel_approx_periodic"
-    "test_modified_bessel_first_kind_one_dim"
-    "test_modified_bessel_first_kind_vect"
-    "test_periodic_gp_one_dim_model"
-    "test_no_tracer_leak_at_lazy_property_sample"
-
-    # flaky on darwin
-    # TODO: uncomment at next release (0.15.4) as it has been fixed:
-    # https://github.com/pyro-ppl/numpyro/pull/1863
-    "test_change_point_x64"
+    # Failed: DID NOT RAISE <class 'UserWarning'>
+    "test_interval_censored_validate_sample"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # AssertionError: Not equal to tolerance rtol=0.06, atol=0
+    "test_functional_map"
   ];
 
   disabledTestPaths = [
-    # require jaxns (unpackaged)
-    "test/contrib/test_nested_sampling.py"
-
-    # requires tensorflow-probability
-    "test/contrib/test_tfp.py"
-    "test/test_distributions.py"
+    # Require internet access
+    "test/test_example_utils.py"
   ];
 
   meta = {
     description = "Library for probabilistic programming with NumPy";
     homepage = "https://num.pyro.ai/";
-    changelog = "https://github.com/pyro-ppl/numpyro/releases/tag/${version}";
+    changelog = "https://github.com/pyro-ppl/numpyro/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -5,16 +5,16 @@
   unhide,
 }:
 
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "unhide-gui";
-  version = "20220611";
-  format = "other";
+  version = "20240510";
+  pyproject = false;
 
   src = fetchFromGitHub {
     owner = "YJesus";
     repo = "Unhide";
-    rev = "v${version}";
-    hash = "sha256-v4otbDhKKRLywH6aP+mbMR0olHbW+jk4TXTBY+iaxdo=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-CcS/rR/jPgbcF09aM4l6z52kwFhdQI1VZOyDF2/X6Us=";
   };
 
   propagatedBuildInputs = with python3Packages; [ tkinter ];
@@ -51,10 +51,10 @@ python3Packages.buildPythonApplication rec {
   meta = {
     description = "Forensic tool to find hidden processes and TCP/UDP ports by rootkits, LKMs or other hiding technique";
     homepage = "https://github.com/YJesus/Unhide";
-    changelog = "https://github.com/YJesus/Unhide/blob/${src.rev}/NEWS";
+    changelog = "https://github.com/YJesus/Unhide/blob/${finalAttrs.src.rev}/NEWS";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [ tochiaha ];
     mainProgram = "unhide-gui";
     platforms = lib.platforms.all;
   };
-}
+})

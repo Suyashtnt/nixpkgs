@@ -8,7 +8,6 @@
   pyjwt,
   pytestCheckHook,
   python-dateutil,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "1.3.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.9";
-
   src = fetchFromGitHub {
     owner = "basilfx";
     repo = "aiobiketrax";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-N0v5SCTf3NkW/TCSTQL9VkrDj7/GXEejJGFCvJY4pIc=";
   };
 
@@ -35,7 +32,6 @@ buildPythonPackage rec {
 
   build-system = [ poetry-core ];
 
-
   dependencies = [
     aiohttp
     auth0-python
@@ -47,11 +43,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "aiobiketrax" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for interacting with the PowUnity BikeTrax GPS tracker";
     homepage = "https://github.com/basilfx/aiobiketrax";
     changelog = "https://github.com/basilfx/aiobiketrax/blob/v${version}/CHANGELOG.md";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

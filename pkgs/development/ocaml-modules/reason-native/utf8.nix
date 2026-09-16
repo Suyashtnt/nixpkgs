@@ -1,4 +1,9 @@
-{ lib, buildDunePackage, reason, src }:
+{
+  lib,
+  buildDunePackage,
+  reason,
+  src,
+}:
 
 buildDunePackage {
   inherit src;
@@ -12,9 +17,9 @@ buildDunePackage {
 
   meta = {
     description = "Utf8 logic with minimal dependencies";
+    homepage = "https://github.com/reasonml/reason-native";
     downloadPage = "https://github.com/reasonml/reason-native/tree/master/src/utf8";
     license = lib.licenses.mit;
     maintainers = [ ];
   };
 }
-

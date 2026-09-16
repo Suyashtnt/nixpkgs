@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   inherit (lib)
@@ -9,7 +14,8 @@ let
     mkPackageOption
     optionalAttrs
     optional
-    types;
+    types
+    ;
 
   cfg = config.services.legit;
 
@@ -46,6 +52,7 @@ in
         for possible values.
       '';
       type = types.submodule {
+        freeformType = yaml.type;
         options.repo = {
           scanPath = mkOption {
             type = types.path;
@@ -54,12 +61,20 @@ in
           };
           readme = mkOption {
             type = types.listOf types.str;
-            default = [ ];
+            default = [
+              "readme"
+              "README"
+              "readme.md"
+              "README.md"
+            ];
             description = "Readme files to look for.";
           };
           mainBranch = mkOption {
             type = types.listOf types.str;
-            default = [ "main" "master" ];
+            default = [
+              "main"
+              "master"
+            ];
             description = "Main branch to look for.";
           };
           ignore = mkOption {
@@ -71,14 +86,14 @@ in
         options.dirs = {
           templates = mkOption {
             type = types.path;
-            default = "${pkgs.legit-web}/lib/legit/templates";
-            defaultText = literalExpression ''"''${pkgs.legit-web}/lib/legit/templates"'';
+            default = "${cfg.package}/lib/legit/templates";
+            defaultText = literalExpression ''"''${config.services.legit.package}/lib/legit/templates"'';
             description = "Directories where template files are located.";
           };
           static = mkOption {
             type = types.path;
-            default = "${pkgs.legit-web}/lib/legit/static";
-            defaultText = literalExpression ''"''${pkgs.legit-web}/lib/legit/static"'';
+            default = "${cfg.package}/lib/legit/static";
+            defaultText = literalExpression ''"''${config.services.legit.package}/lib/legit/static"'';
             description = "Directories where static files are located.";
           };
         };
@@ -142,10 +157,11 @@ in
         Restart = "always";
 
         WorkingDirectory = cfg.settings.repo.scanPath;
-        StateDirectory = [ ] ++
-          optional (cfg.settings.repo.scanPath == defaultStateDir) "legit" ++
-          optional (cfg.settings.dirs.static == defaultStaticDir) "legit/static" ++
-          optional (cfg.settings.dirs.templates == defaultTemplatesDir) "legit/templates";
+        StateDirectory =
+          [ ]
+          ++ optional (cfg.settings.repo.scanPath == defaultStateDir) "legit"
+          ++ optional (cfg.settings.dirs.static == defaultStaticDir) "legit/static"
+          ++ optional (cfg.settings.dirs.templates == defaultTemplatesDir) "legit/templates";
 
         # Hardening
         CapabilityBoundingSet = [ "" ];
@@ -168,12 +184,18 @@ in
         ProtectSystem = "strict";
         ReadWritePaths = cfg.settings.repo.scanPath;
         RemoveIPC = true;
-        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+        ];
         RestrictNamespaces = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";
-        SystemCallFilter = [ "@system-service" "~@privileged" ];
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+        ];
         UMask = "0077";
       };
     };

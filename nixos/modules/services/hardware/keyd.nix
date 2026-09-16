@@ -1,20 +1,35 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
+  inherit (lib) types;
+  inherit (lib.attrsets) mapAttrs' mapAttrsToList nameValuePair;
+  inherit (lib.generators) toINI;
+  inherit (lib.modules) mkDefault mkIf mkRemovedOptionModule;
+  inherit (lib.options) literalExpression mkEnableOption mkOption;
+  inherit (lib.strings) concatStringsSep;
+
   cfg = config.services.keyd;
 
-  keyboardOptions = { ... }: {
+  keyboardOptions = {
     options = {
-      ids = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+      ids = mkOption {
+        type = with types; listOf str;
         default = [ "*" ];
-        example = [ "*" "-0123:0456" ];
+        example = [
+          "*"
+          "-0123:0456"
+        ];
         description = ''
           Device identifiers, as shown by {manpage}`keyd(1)`.
         '';
       };
 
-      settings = lib.mkOption {
-        type = (pkgs.formats.ini { }).type;
+      settings = mkOption {
+        inherit (pkgs.formats.ini { }) type;
         default = { };
         example = {
           main = {
@@ -36,8 +51,8 @@ let
         '';
       };
 
-      extraConfig = lib.mkOption {
-        type = lib.types.lines;
+      extraConfig = mkOption {
+        type = types.lines;
         default = "";
         example = ''
           [control+shift]
@@ -55,18 +70,22 @@ in
 {
   imports = [
     (lib.mkRemovedOptionModule [ "services" "keyd" "ids" ]
-      ''Use keyboards.<filename>.ids instead. If you don't need a multi-file configuration, just add keyboards.default before the ids. See https://github.com/NixOS/nixpkgs/pull/243271.'')
+      "Use keyboards.<filename>.ids instead. If you don't need a multi-file configuration, just add keyboards.default before the ids. See https://github.com/NixOS/nixpkgs/pull/243271."
+    )
     (lib.mkRemovedOptionModule [ "services" "keyd" "settings" ]
-      ''Use keyboards.<filename>.settings instead. If you don't need a multi-file configuration, just add keyboards.default before the settings. See https://github.com/NixOS/nixpkgs/pull/243271.'')
+      "Use keyboards.<filename>.settings instead. If you don't need a multi-file configuration, just add keyboards.default before the settings. See https://github.com/NixOS/nixpkgs/pull/243271."
+    )
   ];
 
   options.services.keyd = {
-    enable = lib.mkEnableOption "keyd, a key remapping daemon";
+    enable = mkEnableOption "keyd, a key remapping daemon";
 
-    keyboards = lib.mkOption {
-      type = lib.types.attrsOf (lib.types.submodule keyboardOptions);
+    package = lib.mkPackageOption pkgs "keyd" { };
+
+    keyboards = mkOption {
+      type = with types; attrsOf (submodule keyboardOptions);
       default = { };
-      example = lib.literalExpression ''
+      example = literalExpression ''
         {
           default = {
             ids = [ "*" ];
@@ -92,22 +111,22 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = mkIf cfg.enable {
     # Creates separate files in the `/etc/keyd/` directory for each key in the dictionary
-    environment.etc = lib.mapAttrs'
-      (name: options:
-        lib.nameValuePair "keyd/${name}.conf" {
-          text = ''
-            [ids]
-            ${lib.concatStringsSep "\n" options.ids}
+    environment.etc = mapAttrs' (
+      name: options:
+      nameValuePair "keyd/${name}.conf" {
+        text = ''
+          [ids]
+          ${concatStringsSep "\n" options.ids}
 
-            ${lib.generators.toINI {} options.settings}
-            ${options.extraConfig}
-          '';
-        })
-      cfg.keyboards;
+          ${toINI { } options.settings}
+          ${options.extraConfig}
+        '';
+      }
+    ) cfg.keyboards;
 
-    hardware.uinput.enable = lib.mkDefault true;
+    hardware.uinput.enable = mkDefault true;
 
     systemd.services.keyd = {
       description = "Keyd remapping daemon";
@@ -115,20 +134,12 @@ in
 
       wantedBy = [ "multi-user.target" ];
 
-      restartTriggers = lib.mapAttrsToList
-        (name: options:
-          config.environment.etc."keyd/${name}.conf".source
-        )
-        cfg.keyboards;
-
-      # this is configurable in 2.4.2, later versions seem to remove this option.
-      # post-2.4.2 may need to set makeFlags in the derivation:
-      #
-      #     makeFlags = [ "SOCKET_PATH/run/keyd/keyd.socket" ];
-      environment.KEYD_SOCKET = "/run/keyd/keyd.sock";
+      restartTriggers = mapAttrsToList (
+        name: _options: config.environment.etc."keyd/${name}.conf".source
+      ) cfg.keyboards;
 
       serviceConfig = {
-        ExecStart = "${pkgs.keyd}/bin/keyd";
+        ExecStart = lib.getExe cfg.package;
         Restart = "always";
 
         # TODO investigate why it doesn't work propeprly with DynamicUser
@@ -142,7 +153,10 @@ in
         RuntimeDirectory = "keyd";
 
         # Hardening
-        CapabilityBoundingSet = [ "CAP_SYS_NICE" ];
+        CapabilityBoundingSet = [
+          "CAP_SYS_NICE"
+          "CAP_IPC_LOCK"
+        ];
         DeviceAllow = [
           "char-input rw"
           "/dev/uinput rw"
@@ -160,7 +174,6 @@ in
         ProtectKernelTunables = true;
         ProtectControlGroups = true;
         MemoryDenyWriteExecute = true;
-        RestrictRealtime = true;
         LockPersonality = true;
         ProtectProc = "invisible";
         SystemCallFilter = [

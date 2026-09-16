@@ -2,127 +2,145 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
   pdm-backend,
 
   # dependencies
-  fastapi-cli,
+  annotated-doc,
   starlette,
   pydantic,
   typing-extensions,
+  typing-inspection,
 
   # tests
+  anyio,
+  a2wsgi,
   dirty-equals,
   flask,
-  passlib,
+  httpx2,
+  inline-snapshot,
+  pwdlib,
   pyjwt,
-  pytest-asyncio,
+  pytest-xdist,
+  pytest-timeout,
   pytestCheckHook,
-  sqlalchemy,
-  trio,
 
   # optional-dependencies
+  fastapi-cli,
   httpx,
   jinja2,
-  python-multipart,
   itsdangerous,
+  python-multipart,
   pyyaml,
-  ujson,
-  orjson,
   email-validator,
   uvicorn,
   pydantic-settings,
   pydantic-extra-types,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fastapi";
-  version = "0.112.0";
+  version = "0.141.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "tiangolo";
     repo = "fastapi";
-    rev = "refs/tags/${version}";
-    hash = "sha256-M09yte0BGC5w3AZSwDUr9qKUrotqVklO8mwyms9B95Y=";
+    tag = finalAttrs.version;
+    hash = "sha256-5P9aDMS7gLti2CBlrucvjgl4Od1mti9ityPdqxI1RIM=";
   };
 
   build-system = [ pdm-backend ];
 
-  pythonRelaxDeps = [
-    "anyio"
-    "starlette"
-  ];
-
   dependencies = [
-    fastapi-cli
+    annotated-doc
     starlette
     pydantic
     typing-extensions
+    typing-inspection
   ];
 
-  optional-dependencies.all =
-    [
+  optional-dependencies = {
+    all = [
+      fastapi-cli
       httpx
       jinja2
       python-multipart
       itsdangerous
       pyyaml
-      ujson
-      orjson
       email-validator
       uvicorn
-    ]
-    ++ lib.optionals (lib.versionAtLeast pydantic.version "2") [
       pydantic-settings
       pydantic-extra-types
     ]
+    ++ fastapi-cli.optional-dependencies.standard
     ++ uvicorn.optional-dependencies.standard;
+    standard = [
+      fastapi-cli
+      # FIXME package fastar
+      httpx
+      jinja2
+      python-multipart
+      email-validator
+      uvicorn
+      pydantic-settings
+      pydantic-extra-types
+    ]
+    ++ fastapi-cli.optional-dependencies.standard
+    ++ uvicorn.optional-dependencies.standard;
+    standard-no-fastapi-cloud-cli = [
+      fastapi-cli
+      httpx
+      jinja2
+      python-multipart
+      email-validator
+      uvicorn
+      pydantic-settings
+      pydantic-extra-types
+    ]
+    ++ fastapi-cli.optional-dependencies.standard-no-fastapi-cloud-cli
+    ++ uvicorn.optional-dependencies.standard;
+  };
 
   nativeCheckInputs = [
+    a2wsgi
+    anyio
+    a2wsgi
     dirty-equals
     flask
-    passlib
+    httpx2
+    inline-snapshot
+    pwdlib
     pyjwt
     pytestCheckHook
-    pytest-asyncio
-    trio
-    sqlalchemy
-  ] ++ optional-dependencies.all;
-
-  pytestFlagsArray = [
-    # ignoring deprecation warnings to avoid test failure from
-    # tests/test_tutorial/test_testing/test_tutorial001.py
-    "-W ignore::DeprecationWarning"
-    "-W ignore::pytest.PytestUnraisableExceptionWarning"
-  ];
+    pytest-xdist
+    pytest-timeout
+  ]
+  ++ anyio.optional-dependencies.trio
+  ++ finalAttrs.finalPackage.passthru.optional-dependencies.all;
 
   disabledTests = [
     # Coverage test
     "test_fastapi_cli"
-    # ResourceWarning: Unclosed <MemoryObjectSendStream>
-    "test_openapi_schema"
   ];
 
   disabledTestPaths = [
     # Don't test docs and examples
     "docs_src"
-    # databases is incompatible with SQLAlchemy 2.0
-    "tests/test_tutorial/test_async_sql_databases"
-    "tests/test_tutorial/test_sql_databases"
+    "tests/test_tutorial"
+    # Infinite recursion with strawberry-graphql
+    "tests/test_tutorial/test_graphql/test_tutorial001.py"
   ];
 
   pythonImportsCheck = [ "fastapi" ];
 
-  meta = with lib; {
-    changelog = "https://github.com/tiangolo/fastapi/releases/tag/${version}";
+  meta = {
+    changelog = "https://github.com/fastapi/fastapi/releases/tag/${finalAttrs.src.tag}";
     description = "Web framework for building APIs";
-    homepage = "https://github.com/tiangolo/fastapi";
-    license = licenses.mit;
-    maintainers = with maintainers; [ wd15 ];
+    homepage = "https://github.com/fastapi/fastapi";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ wd15 ];
   };
-}
+})

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -20,7 +25,7 @@ let
 
     # Setting for internal inactivity timer to restart surf-display
     # if the user goes inactive/idle.
-    INACTIVITY_INTERVAL="${builtins.toString cfg.inactivityInterval}"
+    INACTIVITY_INTERVAL="${toString cfg.inactivityInterval}"
 
     # log to syslog instead of .xsession-errors
     LOG_TO_SYSLOG="yes"
@@ -42,7 +47,8 @@ let
     ${cfg.extraConfig}
   '';
 
-in {
+in
+{
   options = {
     services.xserver.desktopManager.surf-display = {
       enable = mkEnableOption "surf-display as a kiosk browser session";

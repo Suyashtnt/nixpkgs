@@ -1,7 +1,7 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
@@ -12,30 +12,26 @@
   numpy,
   packaging,
 
-  # checks
+  # tests
   awkward,
-  dask-awkward,
   notebook,
   numba,
   papermill,
   pytestCheckHook,
   sympy,
-
-  stdenv,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "vector";
-  version = "1.5.1";
+  version = "1.8.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "scikit-hep";
     repo = "vector";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-bTCcuJosoR0/n6QiJuCIeE9oPab9RKAbUXXA+sAkX48=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-hHoJ8GFauswG5XCsQ4+pDbVPJvzuSz6eGx8ykUUegWk=";
   };
 
   build-system = [
@@ -50,7 +46,6 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [
     awkward
-    dask-awkward
     notebook
     numba
     papermill
@@ -62,22 +57,35 @@ buildPythonPackage rec {
 
   __darwinAllowLocalNetworking = true;
 
-  disabledTests =
-    [
-      # AssertionError (unclear why)
-      "test_rhophi_eta_tau"
-      "test_xy_eta_tau"
-    ]
-    ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64) [
-      # AssertionError: assert 2.1073424255447017e-08 == 0.0
-      "test_issue_463"
-    ];
+  disabledTests = [
+    # AssertionErrors in sympy tests
+    "test_lorentz_object"
+    "test_lorentz_sympy"
+    "test_rhophi_eta_t"
+    "test_rhophi_eta_tau"
+    "test_xy_eta_t"
+    "test_xy_eta_tau"
+
+    # AssertionError: assert array([2.]) == array([-2.])
+    "test_issue_443"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    # Fatal Python error: Segmentation fault
+    # numba/typed/typeddict.py", line 185 in __setitem__
+    "test_method_transform2D"
+    "test_method_transform3D"
+    "test_method_transform4D"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64) [
+    # AssertionError: assert 2.1073424255447017e-08 == 0.0
+    "test_issue_463"
+  ];
 
   meta = {
     description = "Library for 2D, 3D, and Lorentz vectors, especially arrays of vectors, to solve common physics problems in a NumPy-like way";
     homepage = "https://github.com/scikit-hep/vector";
-    changelog = "https://github.com/scikit-hep/vector/releases/tag/v${version}";
-    license = with lib.licenses; [ bsd3 ];
+    changelog = "https://github.com/scikit-hep/vector/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ veprbl ];
   };
-}
+})

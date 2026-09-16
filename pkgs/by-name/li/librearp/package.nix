@@ -1,29 +1,49 @@
-{ stdenv, lib, fetchFromGitLab, cmake, pkg-config, cairo, libxkbcommon
-, xcbutilcursor, xcbutilkeysyms, xcbutil, libXrandr, libXinerama, libXcursor
-, alsa-lib, libjack2, lv2, gcc-unwrapped, curl}:
+{
+  stdenv,
+  lib,
+  fetchFromGitLab,
+  cmake,
+  pkg-config,
+  cairo,
+  libxkbcommon,
+  libxcb-cursor,
+  libxcb-keysyms,
+  libxcb-util,
+  libxrandr,
+  libxinerama,
+  libxcursor,
+  alsa-lib,
+  libjack2,
+  lv2,
+  gcc-unwrapped,
+  curl,
+}:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "librearp";
-  version = "2.4";
+  version = "2.5";
 
   src = fetchFromGitLab {
     owner = "LibreArp";
     repo = "LibreArp";
     rev = finalAttrs.version;
-    hash = "sha256-jEpES68NuHhelUq/L46CxEeadk3LbuPZ72JaGDbw8fg=";
+    hash = "sha256-PK6U/G7jPAgbg/Ixuk/xcFQNSYT4PpUbz0R67Je29zE=";
     fetchSubmodules = true;
   };
 
-  nativeBuildInputs = [ cmake pkg-config ];
+  nativeBuildInputs = [
+    cmake
+    pkg-config
+  ];
   buildInputs = [
     cairo
     libxkbcommon
-    xcbutilcursor
-    xcbutilkeysyms
-    xcbutil
-    libXrandr
-    libXinerama
-    libXcursor
+    libxcb-cursor
+    libxcb-keysyms
+    libxcb-util
+    libxrandr
+    libxinerama
+    libxcursor
     alsa-lib
     libjack2
     lv2
@@ -42,12 +62,11 @@ stdenv.mkDerivation (finalAttrs: {
     cp -r VST3/LibreArp.vst3 $out/lib/vst3
   '';
 
-  meta = with lib; {
-    description =
-      "A pattern-based arpeggio generator plugin";
+  meta = {
+    description = "Pattern-based arpeggio generator plugin";
     homepage = "https://librearp.gitlab.io/";
-    license = licenses.gpl3Plus;
+    license = lib.licenses.gpl3Plus;
     platforms = [ "x86_64-linux" ];
-    maintainers = with maintainers; [ magnetophon ];
+    maintainers = with lib.maintainers; [ magnetophon ];
   };
 })

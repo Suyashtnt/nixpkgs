@@ -1,34 +1,41 @@
-{ fetchFromGitHub
-, gdk-pixbuf
-, gobject-introspection
-, gtk3
-, intltool
-, meson
-, ninja
-, pkg-config
-, pulseaudio
-, python3
-, lib
-, stdenv
-, systemd
-, xkeyboard_config
-, xorg
-, wrapGAppsHook3
-, glib
+{
+  fetchFromGitHub,
+  gdk-pixbuf,
+  gobject-introspection,
+  gtk3,
+  intltool,
+  isocodes,
+  meson,
+  ninja,
+  pkg-config,
+  pulseaudio,
+  python3,
+  lib,
+  stdenv,
+  systemd,
+  xkeyboard_config,
+  libxrandr,
+  libxext,
+  libxkbfile,
+  wrapGAppsHook3,
+  glib,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "cinnamon-desktop";
-  version = "6.2.0";
+  version = "6.6.2";
 
   src = fetchFromGitHub {
     owner = "linuxmint";
-    repo = pname;
-    rev = version;
-    hash = "sha256-9uewZh0GHQAenTcZpLchgFXSt3vOhxLbaepsJIkjTdI=";
+    repo = "cinnamon-desktop";
+    tag = finalAttrs.version;
+    hash = "sha256-AcUJ9anKuvUAJKaQVHbkYShmrlSHG35gV/NIkPgJojk=";
   };
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   propagatedBuildInputs = [
     glib
@@ -38,11 +45,12 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     gdk-pixbuf
+    isocodes
     systemd
     xkeyboard_config
-    xorg.libxkbfile
-    xorg.libXext
-    xorg.libXrandr
+    libxkbfile
+    libxext
+    libxrandr
   ];
 
   nativeBuildInputs = [
@@ -58,10 +66,10 @@ stdenv.mkDerivation rec {
   postPatch = ''
     chmod +x install-scripts/meson_install_schemas.py # patchShebangs requires executable file
     patchShebangs install-scripts/meson_install_schemas.py
-    sed "s|/usr/share|/run/current-system/sw/share|g" -i ./schemas/* # NOTE: unless this causes a circular dependency, we could link it to cinnamon-common/share/cinnamon
+    sed "s|/usr/share|/run/current-system/sw/share|g" -i ./schemas/* # NOTE: unless this causes a circular dependency, we could link it to cinnamon/share/cinnamon
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/linuxmint/cinnamon-desktop";
     description = "Library and data for various Cinnamon modules";
 
@@ -73,8 +81,11 @@ stdenv.mkDerivation rec {
       gtk-doc.
     '';
 
-    license = [ licenses.gpl2 licenses.lgpl2 ];
-    platforms = platforms.linux;
-    maintainers = teams.cinnamon.members;
+    license = [
+      lib.licenses.gpl2
+      lib.licenses.lgpl2
+    ];
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.cinnamon ];
   };
-}
+})

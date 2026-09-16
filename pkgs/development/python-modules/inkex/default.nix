@@ -2,18 +2,18 @@
   lib,
   stdenv,
   buildPythonPackage,
-  inkscape,
   fetchpatch,
+  inkscape,
   poetry-core,
   cssselect,
   lxml,
   numpy,
-  packaging,
   pillow,
   pygobject3,
   pyparsing,
   pyserial,
   scour,
+  tinycss2,
   gobject-introspection,
   pytestCheckHook,
   gtk3,
@@ -22,33 +22,48 @@
 buildPythonPackage {
   pname = "inkex";
   inherit (inkscape) version;
-
-  format = "pyproject";
+  pyproject = true;
 
   inherit (inkscape) src;
 
   patches = [
-    # Fix “distribute along path” test with Python 3.12.
-    # https://gitlab.com/inkscape/extensions/-/issues/580
+    # Fix tests with newer libxml2
+    # https://gitlab.com/inkscape/extensions/-/merge_requests/712
     (fetchpatch {
-      url = "https://gitlab.com/inkscape/extensions/-/commit/c576043c195cd044bdfc975e6367afb9b655eb14.patch";
-      extraPrefix = "share/extensions/";
+      url = "https://gitlab.com/inkscape/extensions/-/commit/b04ab718b400778a264f2085bbc779faebc08368.patch";
+      hash = "sha256-BXRcfoeX7X8+x6CuKKBhrnzUHIwgnPay22Z8+rPZS54=";
       stripLen = 1;
-      hash = "sha256-D9HxBx8RNkD7hHuExJqdu3oqlrXX6IOUw9m9Gx6+Dr8=";
+      extraPrefix = "share/extensions/";
     })
+
+    # Fix binary DXF parsing on big-endian
+    # https://gitlab.com/inkscape/extensions/-/merge_requests/721
+    ./1001-dxf-fix-binary-dxf-double-parsing-on-big-endian.patch
   ];
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "lxml"
+    "numpy"
+  ];
+
+  dependencies = [
     cssselect
     lxml
     numpy
+    pillow
     pygobject3
+    pyparsing
     pyserial
+    scour
+    tinycss2
   ];
 
   pythonImportsCheck = [ "inkex" ];
+
+  # The inkex version isn't update in tandem with inkscape
+  dontCheckPythonMetadata = true;
 
   nativeCheckInputs = [
     gobject-introspection
@@ -57,22 +72,20 @@ buildPythonPackage {
 
   checkInputs = [
     gtk3
-    packaging
-    pillow
-    pyparsing
-    scour
   ];
 
-  disabledTests =
-    [
-      "test_extract_multiple"
-      "test_lookup_and"
-    ]
-    ++ lib.optional stdenv.hostPlatform.isDarwin [
-      "test_image_extract"
-      "test_path_number_nodes"
-      "test_plotter" # Hangs
-    ];
+  disabledTests = [
+    "test_extract_multiple"
+    "test_lookup_and"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    "test_image_extract"
+    "test_path_number_nodes"
+    "test_plotter" # Hangs
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isMusl [
+    "test_ellipse_arc"
+  ];
 
   disabledTestPaths = [
     # Fatal Python error: Segmentation fault
@@ -87,8 +100,7 @@ buildPythonPackage {
     cd share/extensions
 
     substituteInPlace pyproject.toml \
-      --replace-fail 'scour = "^0.37"' 'scour = ">=0.37"' \
-      --replace-fail 'lxml = "^4.5.0"' 'lxml = "^4.5.0 || ^5.0.0"'
+      --replace-fail 'scour = "^0.37"' 'scour = ">=0.37"'
   '';
 
   meta = {

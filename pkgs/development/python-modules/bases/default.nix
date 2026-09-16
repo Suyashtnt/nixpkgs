@@ -5,8 +5,6 @@
 
   pytestCheckHook,
 
-  pythonOlder,
-
   setuptools,
   wheel,
   setuptools-scm,
@@ -23,12 +21,10 @@ buildPythonPackage rec {
   version = "0.3.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "hashberg-io";
     repo = "bases";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-CRXVxT9uYud1CKRcdRAD0OX5sTAttrUO9E4BaavTe6A=";
   };
 

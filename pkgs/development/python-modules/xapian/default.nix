@@ -13,11 +13,11 @@ in
 buildPythonPackage rec {
   pname = "xapian";
   inherit (xapian) version;
-  format = "other";
+  pyproject = false;
 
   src = fetchurl {
     url = "https://oligarchy.co.uk/xapian/${version}/xapian-bindings-${version}.tar.xz";
-    hash = "sha256-VQhzVz7gQBGZ+DX+9R3ficp7wm97jRvcylnaZD+zyoE=";
+    hash = "sha256-o4zHukGIzAvSfcc2nwOQZ3IEcIehxU8bkzVdXpEDwwQ=";
   };
 
   configureFlags = [
@@ -34,17 +34,15 @@ buildPythonPackage rec {
     xapian
   ];
 
-  doCheck = true;
-
   checkPhase = ''
     ${python.interpreter} python${pythonSuffix}/pythontest.py
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Python Bindings for Xapian";
     homepage = "https://xapian.org/";
     changelog = "https://xapian.org/docs/xapian-bindings-${version}/NEWS";
-    license = licenses.gpl2Plus;
+    license = lib.licenses.gpl2Plus;
     maintainers = [ ];
   };
 }

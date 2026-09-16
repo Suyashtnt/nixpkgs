@@ -5,21 +5,18 @@
   aiohttp,
   fetchFromGitHub,
   setuptools,
-  pythonOlder,
   packaging,
 }:
 
 buildPythonPackage rec {
   pname = "pyswitchbee";
   version = "1.8.3";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.9";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jafar-atili";
     repo = "pySwitchbee";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-at/HCY6htUz1ej09XPrb2QEyoiOWhIEpgSwJange1cU=";
   };
 
@@ -36,11 +33,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "switchbee" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library to control SwitchBee smart home device";
     homepage = "https://github.com/jafar-atili/pySwitchbee/";
     changelog = "https://github.com/jafar-atili/pySwitchbee/releases/tag/${version}";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

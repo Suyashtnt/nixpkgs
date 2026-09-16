@@ -7,7 +7,6 @@
   poetry-core,
   poetry-dynamic-versioning,
   pytestCheckHook,
-  pythonOlder,
   typing-inspect,
 }:
 
@@ -16,17 +15,22 @@ buildPythonPackage rec {
   version = "0.6.7";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "lidatong";
     repo = "dataclasses-json";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-AH/T6pa/CHtQNox67fqqs/BBnUcmThvbnSHug2p33qM=";
   };
 
+  patches = [
+    ./marshmallow-4.0-compat.patch
+    # https://github.com/lidatong/dataclasses-json/pull/565
+    ./python-3.14-compat.patch
+  ];
+
   postPatch = ''
     substituteInPlace pyproject.toml \
+      --replace-fail 'documentation =' 'Documentation =' \
       --replace-fail 'version = "0.0.0"' 'version = "${version}"'
   '';
 
@@ -34,6 +38,8 @@ buildPythonPackage rec {
     poetry-core
     poetry-dynamic-versioning
   ];
+
+  pythonRelaxDeps = [ "marshmallow" ];
 
   dependencies = [
     typing-inspect
@@ -45,6 +51,11 @@ buildPythonPackage rec {
     pytestCheckHook
   ];
 
+  disabledTests = [
+    # fails to deserialize None with marshmallow 4.0
+    "test_deserialize"
+  ];
+
   disabledTestPaths = [
     # fails with the following error and avoid dependency on mypy
     # mypy_main(None, text_io, text_io, [__file__], clean_exit=True)
@@ -54,11 +65,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "dataclasses_json" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple API for encoding and decoding dataclasses to and from JSON";
     homepage = "https://github.com/lidatong/dataclasses-json";
     changelog = "https://github.com/lidatong/dataclasses-json/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ albakham ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ albakham ];
   };
 }

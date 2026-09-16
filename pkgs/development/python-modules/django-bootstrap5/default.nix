@@ -1,41 +1,40 @@
 {
   lib,
-  buildPythonPackage,
-  fetchFromGitHub,
-  pythonOlder,
-
-  # build-system
-  setuptools,
-  setuptools-scm,
-
-  # dependencies
-  django,
-
-  # tests
   beautifulsoup4,
+  buildPythonPackage,
+  django,
+  fetchFromGitHub,
+  jinja2,
   pillow,
   pytest-django,
   pytestCheckHook,
+  uv-build,
 }:
 
 buildPythonPackage rec {
   pname = "django-bootstrap5";
-  version = "24.1";
+  version = "26.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "zostera";
     repo = "django-bootstrap5";
-    rev = "v${version}";
-    hash = "sha256-JbmwEPkj34tsK3tUtb56FPjU0emwERVXEc4fzlepdXY=";
+    tag = "v${version}";
+    hash = "sha256-kLq1BHN4PKwtAH/TqHn8B697K9Nk5mNMpjUsW5cCrj4=";
   };
 
-  build-system = [
-    setuptools
-    setuptools-scm
-  ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.9.6,<0.10.0" uv_build
+  '';
+
+  build-system = [ uv-build ];
+
+  dependencies = [ django ];
+
+  optional-dependencies = {
+    jinja = [ jinja2 ];
+  };
 
   nativeCheckInputs = [
     beautifulsoup4
@@ -43,7 +42,8 @@ buildPythonPackage rec {
     pillow
     pytest-django
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   preCheck = ''
     export DJANGO_SETTINGS_MODULE=tests.app.settings
@@ -56,11 +56,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "django_bootstrap5" ];
 
-  meta = with lib; {
+  meta = {
     description = "Bootstrap 5 integration with Django";
     homepage = "https://github.com/zostera/django-bootstrap5";
-    changelog = "https://github.com/zostera/django-bootstrap5/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ netali ];
+    changelog = "https://github.com/zostera/django-bootstrap5/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ netali ];
   };
 }

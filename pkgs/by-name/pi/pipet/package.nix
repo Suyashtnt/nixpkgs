@@ -4,15 +4,15 @@
   buildGoModule,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "pipet";
-  version = "0.2.2";
+  version = "0.3.0";
 
   src = fetchFromGitHub {
     owner = "bjesus";
     repo = "pipet";
-    rev = version;
-    hash = "sha256-NhqrNehmL6LLLEOVT/s2PdQ7HtSCfoM4MST1IHVrJXE=";
+    rev = finalAttrs.version;
+    hash = "sha256-pu+2sHdLz9TvYHBwvGTtFr/oAD+CreOR8io82YQANxc=";
   };
 
   vendorHash = "sha256-jNIjF5jxcpNLAjuWo7OG/Ac4l6NpQNCKzYUgdAoL+C4=";
@@ -20,8 +20,8 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X main.version=${version}"
-    "-X main.currentSha=${src.rev}"
+    "-X main.version=${finalAttrs.version}"
+    "-X main.currentSha=${finalAttrs.src.rev}"
   ];
 
   doCheck = false; # Requires network
@@ -33,4 +33,4 @@ buildGoModule rec {
     maintainers = with lib.maintainers; [ bjesus ];
     mainProgram = "pipet";
   };
-}
+})

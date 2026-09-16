@@ -11,21 +11,19 @@
   pyasn1,
   pyasn1-modules,
   pytestCheckHook,
-  pythonOlder,
+  pyopenssl,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "service-identity";
-  version = "24.1.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "26.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pyca";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-ibi9hls/VnVePv4fF2CyxI22P1RX6QpCwyeENWVPkx4=";
+    repo = "service-identity";
+    tag = finalAttrs.version;
+    hash = "sha256-ujH0RdsdvbNbQVhlRfLnKSj3LbLE4RVwlaEsMNZmuLA=";
   };
 
   nativeBuildInputs = [
@@ -42,15 +40,17 @@ buildPythonPackage rec {
     pyasn1-modules
   ];
 
+  checkInputs = [ pyopenssl ];
+
   nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "service_identity" ];
 
-  meta = with lib; {
+  meta = {
     description = "Service identity verification for pyOpenSSL";
     homepage = "https://service-identity.readthedocs.io";
-    changelog = "https://github.com/pyca/service-identity/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/pyca/service-identity/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

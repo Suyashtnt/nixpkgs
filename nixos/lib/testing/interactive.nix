@@ -1,6 +1,12 @@
-{ config, lib, moduleType, hostPkgs, ... }:
+{
+  config,
+  lib,
+  moduleType,
+  hostPkgs,
+  ...
+}:
 let
-  inherit (lib) mkOption types;
+  inherit (lib) mkOption;
 in
 {
   options = {

@@ -1,47 +1,117 @@
 {
   lib,
-  asciitree,
   buildPythonPackage,
-  fasteners,
-  fetchPypi,
-  numcodecs,
-  msgpack,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+  hatch-vcs,
+
+  # dependencies
+  donfig,
   numpy,
+  numcodecs,
+  google-crc32c,
+  packaging,
+  typing-extensions,
+
+  # optional-dependencies
+  # remote
+  fsspec,
+  obstore ? null, # TODO: Package
+  # gpu
+  cupy,
+  # cli
+  typer,
+  # optional
+  rich,
+  universal-pathlib,
+
+  # test
+  hypothesis,
+  numpydoc,
+  pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
-  setuptools-scm,
+  tomlkit,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "zarr";
-  version = "2.18.2";
-  format = "pyproject";
+  version = "3.2.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-m7OTuKCjj7Eh27kTsEfXXbKN6YkPbWRKIXpzz0rnT0c=";
+  src = fetchFromGitHub {
+    owner = "zarr-developers";
+    repo = "zarr-python";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-WExQT/Je+esq0dv9HtPxGt7ioJgIwW8cGNuPwM+ANEc=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  # Avoid requiring pytest-benchmark - we don't care about these
+  preBuild = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"--benchmark-columns", "min,mean,stddev,outliers,rounds,iterations",' "" \
+      --replace-fail '"--benchmark-disable",' "" \
+  '';
 
-  propagatedBuildInputs = [
-    asciitree
-    numpy
-    fasteners
+  build-system = [
+    hatchling
+    hatch-vcs
+  ];
+
+  dependencies = [
+    donfig
     numcodecs
-  ] ++ numcodecs.optional-dependencies.msgpack;
+    google-crc32c
+    numpy
+    packaging
+    typing-extensions
+  ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  passthru = {
+    optional-dependencies = {
+      remote = [
+        fsspec
+        obstore
+      ];
+      gpu = [
+        cupy
+      ];
+      cli = [
+        typer
+      ];
+      optional = [
+        rich
+        universal-pathlib
+      ];
+    };
+  };
+
+  nativeCheckInputs = [
+    hypothesis
+    numpydoc
+    pytest-asyncio
+    pytestCheckHook
+    tomlkit
+  ]
+  ++ finalAttrs.finalPackage.passthru.optional-dependencies.cli;
+
+  disabledTestPaths = [
+    # requires uv and then fails at setting up python envs
+    "tests/test_examples.py::test_scripts_can_run[script_path0]"
+    # Requires zarr==2.x to generate zarr stores for the tests
+    "tests/test_regression"
+    # See also preBuild above.
+    "tests/benchmarks/"
+  ];
 
   pythonImportsCheck = [ "zarr" ];
 
-  meta = with lib; {
+  meta = {
     description = "Implementation of chunked, compressed, N-dimensional arrays for Python";
     homepage = "https://github.com/zarr-developers/zarr";
-    changelog = "https://github.com/zarr-developers/zarr-python/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = [ ];
+    changelog = "https://github.com/zarr-developers/zarr-python/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
-}
+})

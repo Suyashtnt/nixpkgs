@@ -5,7 +5,6 @@
   fetchFromGitHub,
   pytest-aiohttp,
   pytestCheckHook,
-  pythonOlder,
   requests,
   requests-mock,
   responses,
@@ -17,12 +16,10 @@ buildPythonPackage rec {
   version = "2.1.2";
   format = "setuptools";
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "jugla";
     repo = "pyKeyAtome";
-    rev = "refs/tags/V${version}";
+    tag = "V${version}";
     hash = "sha256-zRXUjekawf2/zTSlXqHVB02dDkb6HbU4NN6UBgl2rtg=";
   };
 
@@ -49,12 +46,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pykeyatome" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to get data from Atome Key";
     mainProgram = "pykeyatome";
     homepage = "https://github.com/jugla/pyKeyAtome";
     changelog = "https://github.com/jugla/pyKeyAtome/releases/tag/V${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

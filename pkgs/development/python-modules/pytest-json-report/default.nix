@@ -6,7 +6,6 @@
   pytest-metadata,
   pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
@@ -15,12 +14,10 @@ buildPythonPackage rec {
   version = "1.5.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "numirias";
     repo = "pytest-json-report";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-hMB/atDuo7CjwhHFUOxVfgJ7Qp4AA9J428iv7hyQFcs=";
   };
 
@@ -46,11 +43,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pytest_jsonreport" ];
 
-  meta = with lib; {
+  meta = {
     description = "Pytest plugin to report test results as JSON";
     homepage = "https://github.com/numirias/pytest-json-report";
     changelog = "https://github.com/numirias/pytest-json-report/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

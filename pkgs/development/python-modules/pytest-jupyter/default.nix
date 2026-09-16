@@ -24,14 +24,14 @@
 let
   self = buildPythonPackage rec {
     pname = "pytest-jupyter";
-    version = "0.10.1";
+    version = "0.11.0";
     pyproject = true;
 
     src = fetchFromGitHub {
       owner = "jupyter-server";
       repo = "pytest-jupyter";
-      rev = "refs/tags/v${version}";
-      hash = "sha256-RTpXBbVCRj0oyZ1TXXDv3M7sAI4kA6f3ouzTr0rXjwY=";
+      tag = "v${version}";
+      hash = "sha256-x3Q9Ei4WIMDjjrYfWees30eooWep60EljGYyUyypxqQ=";
     };
 
     nativeBuildInputs = [ hatchling ];
@@ -40,7 +40,7 @@ let
 
     propagatedBuildInputs = [ jupyter-core ];
 
-    passthru.optional-dependencies = {
+    optional-dependencies = {
       client = [
         jupyter-client
         nbformat
@@ -59,7 +59,8 @@ let
     nativeCheckInputs = [
       pytest-timeout
       pytestCheckHook
-    ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+    ]
+    ++ lib.concatAttrValues optional-dependencies;
 
     passthru.tests = {
       check = self.overridePythonAttrs (_: {
@@ -67,11 +68,11 @@ let
       });
     };
 
-    meta = with lib; {
-      changelog = "https://github.com/jupyter-server/pytest-jupyter/releases/tag/v${version}";
-      description = "pytest plugin for testing Jupyter core libraries and extensions";
+    meta = {
+      changelog = "https://github.com/jupyter-server/pytest-jupyter/releases/tag/${src.tag}";
+      description = "Pytest plugin for testing Jupyter core libraries and extensions";
       homepage = "https://github.com/jupyter-server/pytest-jupyter";
-      license = licenses.bsd3;
+      license = lib.licenses.bsd3;
       maintainers = [ ];
     };
   };

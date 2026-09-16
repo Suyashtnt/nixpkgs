@@ -1,18 +1,19 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, rkbin
+{
+  stdenvNoCC,
+  lib,
+  fetchFromGitHub,
+  rkbin,
 }:
 
-stdenv.mkDerivation {
+stdenvNoCC.mkDerivation {
   pname = "rkbin";
-  version = "unstable-2024.02.22";
+  version = "0-unstable-2026-06-26";
 
   src = fetchFromGitHub {
     owner = "rockchip-linux";
     repo = "rkbin";
-    rev = "a2a0b89b6c8c612dca5ed9ed8a68db8a07f68bc0";
-    hash = "sha256-U/jeUsV7bhqMw3BljmO6SI07NCDAd/+sEp3dZnyXeeA=";
+    rev = "3e288fe814e059dd06833495f845cab04ac20a5c";
+    hash = "sha256-CgGTTGsR0ptrCffYw6A1iujOeQHvVEywqtiqTnxsZjw=";
   };
 
   installPhase = ''
@@ -22,16 +23,18 @@ stdenv.mkDerivation {
   '';
 
   passthru = {
-    BL31_RK3568 = "${rkbin}/bin/rk35/rk3568_bl31_v1.44.elf";
-    TPL_RK3568 = "${rkbin}/bin/rk35/rk3568_ddr_1056MHz_v1.21.bin";
-    TPL_RK3588 = "${rkbin}/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.16.bin";
+    BL31_RK3568 = "${rkbin}/bin/rk35/rk3568_bl31_v1.46.elf";
+    BL31_RK3588 = "${rkbin}/bin/rk35/rk3588_bl31_v1.56.elf";
+    TPL_RK3566 = "${rkbin}/bin/rk35/rk3566_ddr_1056MHz_v1.26.bin";
+    TPL_RK3568 = "${rkbin}/bin/rk35/rk3568_ddr_1056MHz_v1.26.bin";
+    TPL_RK3588 = "${rkbin}/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.24.bin";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Rockchip proprietary bootloader blobs";
     homepage = "https://github.com/rockchip-linux/rkbin";
-    license = licenses.unfreeRedistributableFirmware;
-    maintainers = with maintainers; [ thefossguy ];
+    license = lib.licenses.unfreeRedistributableFirmware;
+    maintainers = with lib.maintainers; [ thefossguy ];
     platforms = lib.platforms.all;
   };
 }

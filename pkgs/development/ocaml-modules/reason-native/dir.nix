@@ -1,4 +1,10 @@
-{ lib, buildDunePackage, reason, fp, src }:
+{
+  lib,
+  buildDunePackage,
+  reason,
+  fp,
+  src,
+}:
 
 buildDunePackage {
   inherit src;
@@ -16,6 +22,7 @@ buildDunePackage {
 
   meta = {
     description = "Library that provides a consistent API for common system, user and application directories consistently on all platforms";
+    homepage = "https://github.com/reasonml/reason-native";
     downloadPage = "https://github.com/reasonml/reason-native/tree/master/src/dir";
     license = lib.licenses.mit;
     maintainers = [ ];

@@ -1,34 +1,107 @@
-{ lib
-, fetchFromGitHub
-, openssl
-, pkg-config
-, rustPlatform
+{
+  cacert,
+  fetchFromGitHub,
+  lib,
+  nix-update-script,
+  nixosTests,
+  rustPlatform,
+  versionCheckHook,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "hickory-dns";
-  version = "0.24.1";
+  version = "0.26.3";
 
   src = fetchFromGitHub {
     owner = "hickory-dns";
     repo = "hickory-dns";
-    rev = "v${version}";
-    hash = "sha256-szq21RuRmkhAfHlzhGQYpwjiIRkavFCPETOt+6TxhP4=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-zm8qMYqdDEZjtNC9arMzCAxPpBRRRwiHsb3lsP/cHIg=";
   };
-  cargoHash = "sha256-LcMjHHEuDlhSfDXGIrSMXewraSxEgRw2g2DOoH4i5RU=";
 
-  buildInputs = [ openssl ];
-  nativeBuildInputs = [ pkg-config ];
+  cargoHash = "sha256-u6Uf9lhrFgWfzIXZ3DIPk2JdDTdd1qBTkqUgmSspR9c=";
 
-  # tests expect internet connectivity to query real nameservers like 8.8.8.8
-  doCheck = false;
+  buildFeatures = [
+    "blocklist"
+    "dnssec-ring"
+    "h3-ring"
+    "https-ring"
+    "quic-ring"
+    "recursor"
+    "rustls-platform-verifier"
+    "tls-ring"
+  ];
 
-  meta = with lib; {
+  # skip tests that need network or public resolvers
+  checkFlags = [
+    "--skip=client::tests::async_client"
+    "--skip=client::tests::readme_example"
+    "--skip=client_future_tests::test_query_https"
+    "--skip=client_future_tests::test_query_tcp_ipv4"
+    "--skip=client_future_tests::test_query_udp_ipv4"
+    "--skip=client_future_tests::test_timeout_query_udp"
+    "--skip=client_tests::test_nsec3_nxdomain"
+    "--skip=client_tests::test_query_udp_edns"
+    "--skip=client_tests::test_secure_query_example_tcp"
+    "--skip=client_tests::test_timeout_query_tcp"
+    "--skip=client_tests::test_timeout_query_udp"
+    "--skip=connection_provider::tests"
+    "--skip=dnssec_client_handle_tests::test_secure_query_example_tcp"
+    "--skip=forwarder::test_lookup"
+    "--skip=h2::tests::test_https_google"
+    "--skip=h2::tests::test_https_google_with_pure_ip_address_server"
+    "--skip=h3::h3_client_stream::tests::test_h3_client_stream_clonable"
+    "--skip=h3::h3_client_stream::tests::test_h3_cloudflare"
+    "--skip=h3::h3_client_stream::tests::test_h3_google"
+    "--skip=h3::h3_client_stream::tests::test_h3_google_with_pure_ip_address_server"
+    "--skip=name_server::tests::test_name_server"
+    "--skip=name_server_pool::tests::test_multi_use_conns"
+    "--skip=named_tests::test_forward"
+    "--skip=resolver::tests::test_domain_search"
+    "--skip=resolver::tests::test_fqdn"
+    "--skip=resolver::tests::test_idna"
+    "--skip=resolver::tests::test_large_ndots"
+    "--skip=resolver::tests::test_lookup_cloudflare"
+    "--skip=resolver::tests::test_lookup_google"
+    "--skip=resolver::tests::test_ndots"
+    "--skip=resolver::tests::test_search_list"
+    "--skip=tests::readme_example"
+  ];
+
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  preCheck = ''
+    # integration tests spin up the server which needs a cert bundle
+    export SSL_CERT_FILE="${cacert}/etc/ssl/certs/ca-bundle.crt";
+
+    # skip some doctests that need network
+    substituteInPlace crates/resolver/src/lib.rs --replace-fail '//! ```rust' '//! ```rust,no_run'
+  '';
+
+  passthru = {
+    tests = {
+      inherit (nixosTests) hickory-dns;
+    };
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Rust based DNS client, server, and resolver";
     homepage = "https://hickory-dns.org/";
-    maintainers = with maintainers; [ colinsane ];
-    platforms = platforms.linux;
-    license = with licenses; [ asl20 mit ];
+    changelog = "https://github.com/hickory-dns/hickory-dns/releases/tag/v${finalAttrs.version}";
+    maintainers = with lib.maintainers; [
+      adamcstephens
+      colinsane
+      cpu
+    ];
+    platforms = lib.platforms.linux;
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
     mainProgram = "hickory-dns";
   };
-}
+})

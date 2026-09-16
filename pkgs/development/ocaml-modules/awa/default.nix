@@ -1,41 +1,58 @@
-{ lib, buildDunePackage, fetchurl
-, ppx_sexp_conv
-, mirage-crypto, mirage-crypto-ec, mirage-crypto-rng, mirage-crypto-pk
-, x509, cstruct, cstruct-unix, cstruct-sexp, sexplib, eqaf-cstruct
-, mtime, logs, fmt, cmdliner, base64
-, zarith
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  mirage-crypto,
+  mirage-crypto-ec,
+  mirage-crypto-rng,
+  mirage-crypto-pk,
+  x509,
+  ohex,
+  eqaf,
+  mtime,
+  logs,
+  fmt,
+  cmdliner,
+  base64,
+  zarith,
+  mirage-mtime,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "awa";
-  version = "0.3.1";
-
-  minimalOCamlVersion = "4.10";
+  version = "0.6.1";
 
   src = fetchurl {
-    url = "https://github.com/mirage/awa-ssh/releases/download/v${version}/awa-${version}.tbz";
-    hash = "sha256-VejHFn07B/zoEG4LjLaen24ig9kAXtERl/pRo6UZCQk=";
+    url = "https://github.com/mirage/awa-ssh/releases/download/v${finalAttrs.version}/awa-${finalAttrs.version}.tbz";
+    hash = "sha256-xis3+I4cY9gQVSZmMCavIl9qGe7njoRQKfFZ6yh1kQE=";
   };
 
-  postPatch = ''
-    substituteInPlace lib/dune --replace-warn eqaf.cstruct eqaf-cstruct
-  '';
-
   propagatedBuildInputs = [
-    mirage-crypto mirage-crypto-ec mirage-crypto-rng mirage-crypto-pk x509
-    cstruct cstruct-sexp sexplib mtime
-    logs base64 zarith
-    ppx_sexp_conv eqaf-cstruct
+    mirage-crypto
+    mirage-crypto-ec
+    mirage-crypto-rng
+    mirage-crypto-pk
+    x509
+    ohex
+    mtime
+    logs
+    base64
+    zarith
+    eqaf
   ];
 
   doCheck = true;
-  checkInputs = [ cstruct-unix cmdliner fmt ];
+  checkInputs = [
+    cmdliner
+    fmt
+    mirage-mtime
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "SSH implementation in OCaml";
     homepage = "https://github.com/mirage/awa-ssh";
-    changelog = "https://github.com/mirage/awa-ssh/raw/v${version}/CHANGES.md";
-    license = licenses.isc;
-    maintainers = [ maintainers.sternenseemann ];
+    changelog = "https://github.com/mirage/awa-ssh/raw/v${finalAttrs.version}/CHANGES.md";
+    license = lib.licenses.isc;
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

@@ -1,13 +1,14 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, autoreconfHook
-, makeWrapper
-, curl
-, ncurses
-, gtk3
-, pkg-config
-, scoreDirectory ? "$HOME/.local/share"
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  autoreconfHook,
+  makeWrapper,
+  curl,
+  ncurses,
+  gtk3,
+  pkg-config,
+  scoreDirectory ? "$HOME/.local/share",
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -33,8 +34,17 @@ stdenv.mkDerivation (finalAttrs: {
     ncurses
   ];
 
-  # remove the denied setting of setuid bit permission
-  patches = [ ./0001-remove_setuid.patch ];
+  patches = [
+    # remove the denied setting of setuid bit permission
+    ./0001-remove_setuid.patch
+    # fix compilation errors with gcc15
+    ./0002-fix_gcc15.patch
+  ];
+
+  preConfigure = ''
+    substituteInPlace po/Makefile.in.in \
+      --replace-fail '$(GMSGFMT) -c --statistics --verbose' '$(GMSGFMT) --statistics --verbose'
+  '';
 
   # run dopewars with -f so that it finds its scoreboard file in ~/.local/share
   postInstall = ''
@@ -43,12 +53,12 @@ stdenv.mkDerivation (finalAttrs: {
       --add-flags '-f ${scoreDirectory}/dopewars.sco'
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Game simulating the life of a drug dealer in New York";
     homepage = "https://dopewars.sourceforge.io";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ geri1701 ];
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ geri1701 ];
     mainProgram = "dopewars";
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
 })

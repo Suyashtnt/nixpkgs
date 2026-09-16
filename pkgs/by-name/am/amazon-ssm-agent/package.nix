@@ -1,19 +1,21 @@
-{ lib
-, writeShellScriptBin
-, buildGoModule
-, makeWrapper
-, darwin
-, fetchFromGitHub
-, coreutils
-, nettools
-, util-linux
-, stdenv
-, dmidecode
-, bashInteractive
-, nix-update-script
-, nixosTests
-, testers
-, amazon-ssm-agent
+{
+  lib,
+  writeShellScriptBin,
+  buildGoModule,
+  makeWrapper,
+  darwin,
+  fetchFromGitHub,
+  substitute,
+  coreutils,
+  unixtools,
+  util-linux,
+  stdenv,
+  dmidecode,
+  bashInteractive,
+  nix-update-script,
+  nixosTests,
+  testers,
+  amazon-ssm-agent,
 }:
 
 let
@@ -39,15 +41,15 @@ let
     "sessionworker" = "ssm-session-worker";
   };
 in
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "amazon-ssm-agent";
-  version = "3.3.859.0";
+  version = "3.3.5226.0";
 
   src = fetchFromGitHub {
     owner = "aws";
     repo = "amazon-ssm-agent";
-    rev = "refs/tags/${version}";
-    hash = "sha256-Qxzq91GXOrssBO9VaQTkLZjVqdpUYoYq3N/rakwewJs=";
+    tag = finalAttrs.version;
+    hash = "sha256-iFk5wlcw6wnc3AjCdhFXxyNrCTdAWQNIYDFis2yTIlY=";
   };
 
   vendorHash = null;
@@ -59,11 +61,24 @@ buildGoModule rec {
     # They used constants from another package that I couldn't figure
     # out how to resolve, so hardcoded the constants.
     ./0002-version-gen-don-t-use-unnecessary-constants.patch
+
+    # They run a tool on the build platform in a way that isn't quite
+    # compatible with cross (`go run`). Simplest thing is to just make
+    # the file with a hardcoded value, as we already have it from attrs.
+    (substitute {
+      src = ./0001-makefile-don-t-use-tool-to-generate-version-file.patch;
+      substitutions = [
+        "--subst-var-by"
+        "VERSION"
+        finalAttrs.version
+      ];
+    })
   ];
 
   nativeBuildInputs = [
     makeWrapper
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
     darwin.DarwinTools
   ];
 
@@ -78,14 +93,17 @@ buildGoModule rec {
     "agent/session/logging"
   ];
 
-  ldflags = [ "-s" "-w" ];
+  ldflags = [
+    "-s"
+    "-w"
+  ];
 
   postPatch = ''
     printf "#!/bin/sh\ntrue" > ./Tools/src/checkstyle.sh
 
     substituteInPlace agent/platform/platform_unix.go \
       --replace-fail "/usr/bin/uname" "${coreutils}/bin/uname" \
-      --replace-fail '"/bin", "hostname"' '"${nettools}/bin/hostname"' \
+      --replace-fail '"/bin", "hostname"' '"${unixtools.hostname}/bin/hostname"' \
       --replace-fail '"lsb_release"' '"${fake-lsb-release}/bin/lsb_release"'
 
     substituteInPlace agent/session/shell/shell_unix.go \
@@ -94,17 +112,14 @@ buildGoModule rec {
     substituteInPlace agent/rebooter/rebooter_unix.go \
       --replace-fail "/sbin/shutdown" "shutdown"
 
-    echo "${version}" > VERSION
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
+    echo "${finalAttrs.version}" > VERSION
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     substituteInPlace agent/managedInstances/fingerprint/hardwareInfo_unix.go \
       --replace-fail /usr/sbin/dmidecode ${dmidecode}/bin/dmidecode
   '';
 
   preBuild = ''
-    # Note: if this step fails, please patch the code to fix it! Please only skip
-    # tests if it is not feasible for the test to pass in a sandbox.
-    make quick-integtest
-
     make pre-release
     make pre-build
   '';
@@ -112,7 +127,11 @@ buildGoModule rec {
   installPhase = ''
     runHook preInstall
 
-    declare -A map=(${builtins.concatStringsSep " " (lib.mapAttrsToList (name: value: "[\"${name}\"]=\"${value}\"") binaries)})
+    declare -A map=(${
+      builtins.concatStringsSep " " (
+        lib.mapAttrsToList (name: value: "[\"${name}\"]=\"${value}\"") binaries
+      )
+    })
 
     for key in ''${!map[@]}; do
       install -D -m 0555 -T "$GOPATH/bin/''${key}" "$out/bin/''${map[''${key}]}"
@@ -133,10 +152,7 @@ buildGoModule rec {
     runHook postInstall
   '';
 
-  checkFlags = [
-    # Skip time dependent/flaky test
-    "-skip=TestSendStreamDataMessageWithStreamDataSequenceNumberMutexLocked"
-  ];
+  doCheck = false;
 
   postFixup = ''
     wrapProgram $out/bin/amazon-ssm-agent \
@@ -156,12 +172,15 @@ buildGoModule rec {
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  meta = {
     description = "Agent to enable remote management of your Amazon EC2 instance configuration";
-    changelog = "https://github.com/aws/amazon-ssm-agent/releases/tag/${version}";
+    changelog = "https://github.com/aws/amazon-ssm-agent/releases/tag/${finalAttrs.version}";
     homepage = "https://github.com/aws/amazon-ssm-agent";
-    license = licenses.asl20;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ copumpkin manveru anthonyroussel arianvp ];
+    license = lib.licenses.asl20;
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [
+      anthonyroussel
+      arianvp
+    ];
   };
-}
+})

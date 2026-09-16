@@ -1,8 +1,11 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.rabbitmq;
-
-  inherit (builtins) concatStringsSep;
 
   config_file_content = lib.generators.toKeyValue { } cfg.configItems;
   config_file = pkgs.writeText "rabbitmq.conf" config_file_content;
@@ -95,7 +98,7 @@ in
         description = ''
           Configuration options in RabbitMQ's new config file format,
           which is a simple key-value format that can not express nested
-          data structures. This is known as the `rabbitmq.conf` file,
+          data structures. This is known as the {file}`rabbitmq.conf` file,
           although outside NixOS that filename may have Erlang syntax, particularly
           prior to RabbitMQ 3.7.0.
 
@@ -104,8 +107,8 @@ in
           will be merged into these options by RabbitMQ at runtime to
           form the final configuration.
 
-          See https://www.rabbitmq.com/configure.html#config-items
-          For the distinct formats, see https://www.rabbitmq.com/configure.html#config-file-formats
+          See <https://www.rabbitmq.com/configure.html#config-items>
+          For the distinct formats, see <https://www.rabbitmq.com/configure.html#config-file-formats>
         '';
       };
 
@@ -114,7 +117,7 @@ in
         type = lib.types.str;
         description = ''
           Verbatim advanced configuration file contents using the Erlang syntax.
-          This is also known as the `advanced.config` file or the old config format.
+          This is also known as the {file}`advanced.config` file or the old config format.
 
           `configItems` is preferred whenever possible. However, nested
           data structures can only be expressed properly using the `config` option.
@@ -122,8 +125,8 @@ in
           The contents of this option will be merged into the `configItems`
           by RabbitMQ at runtime to form the final configuration.
 
-          See the second table on https://www.rabbitmq.com/configure.html#config-items
-          For the distinct formats, see https://www.rabbitmq.com/configure.html#config-file-formats
+          See the second table on <https://www.rabbitmq.com/configure.html#config-items>
+          For the distinct formats, see <https://www.rabbitmq.com/configure.html#config-file-formats>
         '';
       };
 
@@ -152,7 +155,6 @@ in
     };
   };
 
-
   ###### implementation
   config = lib.mkIf cfg.enable {
 
@@ -173,7 +175,8 @@ in
 
     services.rabbitmq.configItems = {
       "listeners.tcp.1" = lib.mkDefault "${cfg.listenAddress}:${toString cfg.port}";
-    } // lib.optionalAttrs cfg.managementPlugin.enable {
+    }
+    // lib.optionalAttrs cfg.managementPlugin.enable {
       "management.tcp.port" = toString cfg.managementPlugin.port;
       "management.tcp.ip" = cfg.listenAddress;
     };
@@ -184,8 +187,14 @@ in
       description = "RabbitMQ Server";
 
       wantedBy = [ "multi-user.target" ];
-      after = [ "network.target" "epmd.socket" ];
-      wants = [ "network.target" "epmd.socket" ];
+      after = [
+        "network.target"
+        "epmd.socket"
+      ];
+      wants = [
+        "network.target"
+        "epmd.socket"
+      ];
 
       path = [
         cfg.package
@@ -201,7 +210,8 @@ in
         RABBITMQ_ENABLED_PLUGINS_FILE = pkgs.writeText "enabled_plugins" ''
           [ ${lib.concatStringsSep "," cfg.plugins} ].
         '';
-      } // lib.optionalAttrs (cfg.config != "") { RABBITMQ_ADVANCED_CONFIG_FILE = advanced_config_file; };
+      }
+      // lib.optionalAttrs (cfg.config != "") { RABBITMQ_ADVANCED_CONFIG_FILE = advanced_config_file; };
 
       serviceConfig = {
         ExecStart = "${cfg.package}/sbin/rabbitmq-server";

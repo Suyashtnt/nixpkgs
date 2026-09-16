@@ -1,26 +1,35 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, meson
-, ninja
-, pkg-config
-, python3
-, zlib
-, gtest
-, eigen
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  meson,
+  ninja,
+  pkg-config,
+  python3,
+  zlib,
+  gtest,
+  eigen,
+  abseil-cpp,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "lc0";
-  version = "0.31.1";
+  version = "0.32.1";
 
   src = fetchFromGitHub {
     owner = "LeelaChessZero";
     repo = "lc0";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-VbWNc41CgsS0I64QHNp+k9cM/IEai9b3SyHorfmwvsE=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Dvq698ZfYumoax7i1nN5GwTQKXgby9+TdTZT6C7/jgc=";
     fetchSubmodules = true;
   };
+
+  postPatch = ''
+    substituteInPlace meson.build \
+      --replace-fail "absl = subproject('abseil-cpp', default_options : ['warning_level=0', 'cpp_std=c++20'])" "" \
+      --replace-fail "deps += absl.get_variable('absl_container_dep').as_system()" "deps += [dependency('absl_flat_hash_map'), dependency('absl_cleanup'), dependency('absl_base')]" \
+      --replace-fail "if eigen_dep.found() and cc.has_header('Eigen/Core')" "if eigen_dep.found()"
+  '';
 
   patchPhase = ''
     runHook prePatch
@@ -43,6 +52,7 @@ stdenv.mkDerivation rec {
     eigen
     gtest
     zlib
+    abseil-cpp
   ];
 
   mesonFlags = [
@@ -52,10 +62,11 @@ stdenv.mkDerivation rec {
     "-Dembed=false"
   ]
   # in version 31 this option will be required
-  ++ lib.optionals (lib.versionAtLeast version "0.31") [ "-Dnative_cuda=false" ];
-
+  ++ lib.optionals (lib.versionAtLeast finalAttrs.version "0.31") [ "-Dnative_cuda=false" ];
 
   enableParallelBuilding = true;
+
+  doCheck = true;
 
   meta = {
     homepage = "https://lczero.org/";
@@ -69,4 +80,4 @@ stdenv.mkDerivation rec {
     broken = stdenv.hostPlatform.isDarwin;
   };
 
-}
+})

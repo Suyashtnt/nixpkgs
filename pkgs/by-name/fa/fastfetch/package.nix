@@ -1,181 +1,217 @@
 {
   lib,
   stdenv,
-  fetchFromGitHub,
+  runCommand,
+  apple-sdk_15,
   chafa,
-  cmake,
-  darwin,
   dbus,
   dconf,
   ddcutil,
+  enlightenment,
   glib,
-  hwdata,
   imagemagick,
-  libXrandr,
   libdrm,
+  libelf,
   libglvnd,
   libpulseaudio,
-  libselinux,
-  libsepol,
+  libva,
+  libvdpau,
   libxcb,
+  libxrandr,
   makeBinaryWrapper,
-  nix-update-script,
+  moltenvk,
   ocl-icd,
-  opencl-headers,
-  overrideSDK,
-  pcre,
-  pcre2,
-  pkg-config,
-  python3,
   rpm,
   sqlite,
-  testers,
-  util-linux,
   vulkan-loader,
   wayland,
-  xfce,
-  xorg,
-  yyjson,
+  xfconf,
+  zfs,
   zlib,
+  fastfetch-unwrapped,
+
+  # Runtime dependency selectors. fastfetch-unwrapped is always built with support enabled.
+  audioSupport ? true,
+  brightnessSupport ? true,
+  codecSupport ? true,
+  dbusSupport ? true,
+  flashfetchSupport ? false,
+  terminalSupport ? true,
+  # NOTE: disabled by default until lib dependency closure is minimal
+  enlightenmentSupport ? false,
+  gnomeSupport ? true,
+  imageSupport ? true,
+  openclSupport ? true,
+  openglSupport ? true,
   rpmSupport ? false,
+  sqliteSupport ? true,
   vulkanSupport ? true,
   waylandSupport ? true,
   x11Support ? true,
+  xfceSupport ? true,
+  zfsSupport ? false,
+
+  runtimeDependencies ? null,
+  extraRuntimeDependencies ? [ ],
+  runtimePrograms ? [ ],
+  extraRuntimePrograms ? [ ],
 }:
+
 let
-  stdenv' = if stdenv.hostPlatform.isDarwin then overrideSDK stdenv "11.0" else stdenv;
-in
-stdenv'.mkDerivation (finalAttrs: {
-  pname = "fastfetch";
-  version = "2.26.1";
+  unwrapped = fastfetch-unwrapped;
 
-  src = fetchFromGitHub {
-    owner = "fastfetch-cli";
-    repo = "fastfetch";
-    rev = finalAttrs.version;
-    hash = "sha256-0TRhMK45mfCft56R07lUbnxjfQrIAXONy4f6ykpc5X8=";
-  };
-
-  outputs = [
-    "out"
-    "man"
-  ];
-
-  nativeBuildInputs = [
-    cmake
-    makeBinaryWrapper
-    pkg-config
-    python3
-  ];
-
-  buildInputs =
-    [
+  defaultRuntimeDependencies =
+    lib.optionals imageSupport [
+      # Image output as ascii art.
       chafa
+      # Images in terminal using sixel or kitty graphics protocol
       imagemagick
-      pcre
-      pcre2
+    ]
+    ++ lib.optionals sqliteSupport [
+      # linux - Needed for pkg & rpm package count.
+      # darwin - Used for fast wallpaper detection before macOS Sonoma
       sqlite
-      yyjson
     ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [
-      dbus
-      dconf
-      ddcutil
-      glib
-      hwdata
-      libdrm
-      libpulseaudio
-      libselinux
-      libsepol
-      ocl-icd
-      opencl-headers
-      util-linux
-      zlib
-    ]
-    ++ lib.optionals rpmSupport [ rpm ]
-    ++ lib.optionals vulkanSupport [ vulkan-loader ]
-    ++ lib.optionals waylandSupport [ wayland ]
-    ++ lib.optionals x11Support [
-      libXrandr
-      libglvnd
-      libxcb
-      xorg.libXau
-      xorg.libXdmcp
-      xorg.libXext
-    ]
-    ++ lib.optionals (x11Support && (!stdenv.hostPlatform.isDarwin)) [ xfce.xfconf ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin (
-      with darwin.apple_sdk_11_0.frameworks;
+    ++ lib.optionals stdenv.hostPlatform.isLinux (
       [
-        Apple80211
-        AppKit
-        AVFoundation
-        Cocoa
-        CoreDisplay
-        CoreVideo
-        CoreWLAN
-        DisplayServices
-        IOBluetooth
-        MediaRemote
-        OpenCL
-        SystemConfiguration
-        darwin.moltenvk
+        # DRM display and AMD GPU detection.
+        libdrm
       ]
-    );
-
-  cmakeFlags =
-    [
-      (lib.cmakeOptionType "filepath" "CMAKE_INSTALL_SYSCONFDIR" "${placeholder "out"}/etc")
-      (lib.cmakeBool "ENABLE_DIRECTX_HEADERS" false)
-      (lib.cmakeBool "ENABLE_DRM" false)
-      (lib.cmakeBool "ENABLE_IMAGEMAGICK6" false)
-      (lib.cmakeBool "ENABLE_OSMESA" false)
-      (lib.cmakeBool "ENABLE_SYSTEM_YYJSON" true)
-      (lib.cmakeBool "ENABLE_GLX" x11Support)
-      (lib.cmakeBool "ENABLE_RPM" rpmSupport)
-      (lib.cmakeBool "ENABLE_VULKAN" x11Support)
-      (lib.cmakeBool "ENABLE_WAYLAND" waylandSupport)
-      (lib.cmakeBool "ENABLE_X11" x11Support)
-      (lib.cmakeBool "ENABLE_XCB" x11Support)
-      (lib.cmakeBool "ENABLE_XCB_RANDR" x11Support)
-      (lib.cmakeBool "ENABLE_XFCONF" (x11Support && (!stdenv.hostPlatform.isDarwin)))
-      (lib.cmakeBool "ENABLE_XRANDR" x11Support)
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [
-      (lib.cmakeOptionType "filepath" "CUSTOM_PCI_IDS_PATH" "${hwdata}/share/hwdata/pci.ids")
-      (lib.cmakeOptionType "filepath" "CUSTOM_AMDGPU_IDS_PATH" "${libdrm}/share/libdrm/amdgpu.ids")
+      ++ lib.optionals audioSupport [
+        # Sound device detection
+        libpulseaudio
+      ]
+      ++ lib.optionals brightnessSupport [
+        # Brightness detection of external displays
+        ddcutil
+      ]
+      ++ lib.optionals codecSupport [
+        # Hardware-accelerated video codec detection
+        libva
+        libvdpau
+      ]
+      ++ lib.optionals dbusSupport [
+        # Bluetooth, wifi, player & media detection
+        dbus
+      ]
+      ++ lib.optionals enlightenmentSupport [
+        # Eet support for reading Enlightenment window manager configuration.
+        enlightenment.efl
+      ]
+      ++ lib.optionals gnomeSupport [
+        # Needed for values that are only stored in DConf + Fallback for GSettings.
+        dconf
+        glib
+      ]
+      ++ lib.optionals imageSupport [
+        # Faster image output when using kitty graphics protocol.
+        zlib
+      ]
+      ++ lib.optionals openclSupport [
+        # OpenCL module
+        ocl-icd
+      ]
+      ++ lib.optionals openglSupport [
+        # OpenGL module
+        libglvnd
+      ]
+      ++ lib.optionals rpmSupport [
+        # Slower fallback for rpm package count. Needed on openSUSE.
+        rpm
+      ]
+      ++ lib.optionals terminalSupport [
+        # Needed for st terminal font detection.
+        libelf
+      ]
+      ++ lib.optionals vulkanSupport [
+        # Vulkan module & fallback for GPU output
+        vulkan-loader
+      ]
+      ++ lib.optionals waylandSupport [
+        # Better display performance and output in wayland sessions.
+        wayland
+      ]
+      ++ lib.optionals x11Support [
+        # Better display detection and faster WM detection in X11 sessions.
+        libxrandr
+        libxcb
+      ]
+      ++ lib.optionals xfceSupport [
+        # Needed for XFWM theme and XFCE Terminal font.
+        xfconf
+      ]
+      ++ lib.optionals zfsSupport [
+        # Needed for zpool module
+        zfs
+      ]
+    )
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      apple-sdk_15
+      moltenvk
     ];
 
-  postPatch = ''
-    substituteInPlace completions/fastfetch.fish --replace-fail python3 '${python3.interpreter}'
-  '';
+  resolvedRuntimeDependencies =
+    (if runtimeDependencies == null then defaultRuntimeDependencies else runtimeDependencies)
+    ++ extraRuntimeDependencies;
 
-  postInstall = ''
-    wrapProgram $out/bin/fastfetch \
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath finalAttrs.buildInputs}"
-    wrapProgram $out/bin/flashfetch \
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath finalAttrs.buildInputs}"
-  '';
+  resolvedRuntimePrograms = runtimePrograms ++ extraRuntimePrograms;
 
-  passthru = {
-    updateScript = nix-update-script { };
-    tests.version = testers.testVersion {
-      package = finalAttrs.finalPackage;
-      command = "fastfetch -v | cut -d '(' -f 1";
-      version = "fastfetch ${finalAttrs.version}";
+  runtimeLibraryPath = lib.makeLibraryPath resolvedRuntimeDependencies;
+  runtimeProgramPath = lib.makeBinPath resolvedRuntimePrograms;
+in
+runCommand "fastfetch-${unwrapped.version}"
+  {
+    pname = "fastfetch";
+    inherit (unwrapped) version; # nixpkgs-update: no auto update
+
+    strictDeps = true;
+    __structuredAttrs = true;
+
+    outputs = [
+      "out"
+      "man"
+    ];
+
+    nativeBuildInputs = [ makeBinaryWrapper ];
+
+    passthru = (removeAttrs unwrapped.passthru [ "updateScript" ]) // {
+      inherit unwrapped;
+      runtimeDependencies = resolvedRuntimeDependencies;
+      runtimePrograms = resolvedRuntimePrograms;
+      minimal = lib.warnOnInstantiate "`fastfetch.minimal` has been renamed to `fastfetch-unwrapped`" unwrapped;
     };
-  };
 
-  meta = {
-    description = "An actively maintained, feature-rich and performance oriented, neofetch like system information tool";
-    homepage = "https://github.com/fastfetch-cli/fastfetch";
-    changelog = "https://github.com/fastfetch-cli/fastfetch/releases/tag/${finalAttrs.version}";
-    license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [
-      luftmensch-luftmensch
-      khaneliman
-    ];
-    platforms = lib.platforms.all;
-    mainProgram = "fastfetch";
-  };
-})
+    meta = unwrapped.meta // {
+      priority = (unwrapped.meta.priority or lib.meta.defaultPriority) - 1;
+      longDescription = ''
+        Fast and highly customizable system info script.
+
+        This wrapped package makes optional runtime libraries available to the
+        full-featured fastfetch-unwrapped binary.
+      '';
+    };
+
+    preferLocalBuild = true;
+  }
+  ''
+    makeWrapperArgs=(--inherit-argv0)
+
+    if [ -n "${runtimeLibraryPath}" ]; then
+      makeWrapperArgs+=(--prefix LD_LIBRARY_PATH : "${runtimeLibraryPath}")
+    fi
+
+    if [ -n "${runtimeProgramPath}" ]; then
+      makeWrapperArgs+=(--prefix PATH : "${runtimeProgramPath}")
+    fi
+
+    mkdir -p "$out/bin"
+    makeWrapper ${unwrapped}/bin/fastfetch "$out/bin/fastfetch" "''${makeWrapperArgs[@]}"
+
+    ${lib.optionalString flashfetchSupport ''
+      makeWrapper ${unwrapped}/bin/flashfetch "$out/bin/flashfetch" "''${makeWrapperArgs[@]}"
+    ''}
+
+    ln -s ${unwrapped}/share "$out/share"
+
+    ln -s ${unwrapped.man} "$man"
+  ''

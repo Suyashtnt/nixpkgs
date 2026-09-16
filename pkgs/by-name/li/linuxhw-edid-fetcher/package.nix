@@ -1,14 +1,15 @@
-{ lib
-, coreutils
-, curl
-, fetchFromGitHub
-, gawk
-, gnutar
-, stdenv
-, unixtools
-, writeShellApplication
-, nix-update-script
-, displays ? { }
+{
+  lib,
+  coreutils,
+  curl,
+  fetchFromGitHub,
+  gawk,
+  gnutar,
+  stdenv,
+  unixtools,
+  writeShellApplication,
+  nix-update-script,
+  displays ? { },
 }:
 
 # Usage:
@@ -18,30 +19,38 @@
 #     };
 #   in
 #     "${edids}/lib/firmware/edid/PG278Q_2014.bin";
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "linuxhw-edid-fetcher";
-  version = "0-unstable-2023-05-08";
+  version = "0-unstable-2026-01-08";
 
   src = fetchFromGitHub {
     owner = "linuxhw";
     repo = "EDID";
-    rev = "98bc7d6e2c0eaad61346a8bf877b562fee16efc3";
-    hash = "sha256-+Vz5GU2gGv4QlKO4A6BlKSETxE5GAcehKZL7SEbglGE=";
+    rev = "9c0c1bffc9c0f1cb2044115149a5ecb1652803f8";
+    hash = "sha256-kdGUAbdlS736iB9oGo46HLK3ne3BV4LmUv/3fliyQBA=";
   };
 
   fetch = lib.getExe (writeShellApplication {
     name = "linuxhw-edid-fetch";
-    runtimeInputs = [ gawk coreutils unixtools.xxd curl gnutar ];
+    runtimeInputs = [
+      gawk
+      coreutils
+      unixtools.xxd
+      curl
+      gnutar
+    ];
     text = ''
-      repo="''${repo:-"${src}"}"
+      repo="''${repo:-"${finalAttrs.src}"}"
       ${builtins.readFile ./linuxhw-edid-fetch.sh}
     '';
   });
 
   configurePhase = lib.pipe displays [
-    (lib.mapAttrsToList (name: patterns: ''
-      "$fetch" ${lib.escapeShellArgs patterns} > "${name}.bin"
-    ''))
+    (lib.mapAttrsToList (
+      name: patterns: ''
+        "$fetch" ${lib.escapeShellArgs patterns} > "${name}.bin"
+      ''
+    ))
     (builtins.concatStringsSep "\n")
   ];
 
@@ -63,4 +72,4 @@ stdenv.mkDerivation rec {
     platforms = lib.platforms.all;
     mainProgram = "linuxhw-edid-fetch";
   };
-}
+})

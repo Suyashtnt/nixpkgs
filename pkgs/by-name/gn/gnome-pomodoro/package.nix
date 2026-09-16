@@ -1,46 +1,52 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, substituteAll
-, meson
-, ninja
-, pkg-config
-, wrapGAppsHook3
-, desktop-file-utils
-, libcanberra
-, gst_all_1
-, vala
-, gtk3
-, gom
-, sqlite
-, libxml2
-, glib
-, gobject-introspection
-, json-glib
-, libpeas
-, gsettings-desktop-schemas
-, gettext
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  replaceVars,
+  meson,
+  ninja,
+  pkg-config,
+  wrapGAppsHook3,
+  desktop-file-utils,
+  libcanberra,
+  gst_all_1,
+  vala,
+  gtk3,
+  gom,
+  sqlite,
+  libxml2,
+  glib,
+  gobject-introspection,
+  json-glib,
+  libpeas,
+  gsettings-desktop-schemas,
+  gettext,
 }:
-
 stdenv.mkDerivation rec {
   pname = "gnome-pomodoro";
-  version = "0.24.1";
+  version = "0.28.1";
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
+    owner = "focustimerhq";
+    repo = "FocusTimer";
     rev = version;
-    hash = "sha256-Ml3znMz1Q9593rMgfAST8k9QglxMG9ocFD7W8kaFWCw=";
+    hash = "sha256-1G0Sv6uR4rE+/TZqEM57mCdBaXoJNpC0cznY4pnPEa4=";
   };
 
   patches = [
     # Our glib setup hooks moves GSettings schemas to a subdirectory to prevent conflicts.
     # We need to patch the build script so that the extension can find them.
-    (substituteAll {
-      src = ./fix-schema-path.patch;
+    (replaceVars ./fix-schema-path.patch {
       inherit pname version;
     })
   ];
+
+  # Manually compile schemas for package since meson option
+  # gnome.post_install(glib_compile_schemas) used by package tries to compile in
+  # the wrong dir.
+  preFixup = ''
+    glib-compile-schemas ${glib.makeSchemaPath "$out" "${pname}-${version}"}
+  '';
 
   nativeBuildInputs = [
     meson
@@ -68,7 +74,7 @@ stdenv.mkDerivation rec {
     sqlite
   ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://gnomepomodoro.org/";
     description = "Time management utility for GNOME based on the pomodoro technique";
     mainProgram = "gnome-pomodoro";
@@ -76,8 +82,11 @@ stdenv.mkDerivation rec {
       This GNOME utility helps to manage time according to Pomodoro Technique.
       It intends to improve productivity and focus by taking short breaks.
     '';
-    maintainers = with maintainers; [ aleksana ];
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [
+      aleksana
+      herschenglime
+    ];
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
   };
 }

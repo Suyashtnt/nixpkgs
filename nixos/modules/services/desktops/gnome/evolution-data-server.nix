@@ -1,11 +1,16 @@
 # Evolution Data Server daemon.
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
 
   meta = {
-    maintainers = lib.teams.gnome.members;
+    teams = [ lib.teams.gnome ];
   };
 
   ###### interface
@@ -36,7 +41,9 @@
 
   config =
     let
-      bundle = pkgs.evolutionWithPlugins.override { inherit (config.services.gnome.evolution-data-server) plugins; };
+      bundle = pkgs.evolutionWithPlugins.override {
+        inherit (config.services.gnome.evolution-data-server) plugins;
+      };
     in
     lib.mkMerge [
       (lib.mkIf config.services.gnome.evolution-data-server.enable {

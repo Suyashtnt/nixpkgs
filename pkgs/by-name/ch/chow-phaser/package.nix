@@ -1,8 +1,36 @@
-{ alsa-lib, at-spi2-core, cmake, curl, dbus, libepoxy, fetchFromGitHub, libglut
-, freetype, gcc-unwrapped, gtk3, lib, libGL, libXcursor, libXdmcp, libXext
-, libXinerama, libXrandr, libXtst, libdatrie, libjack2, libpsl, libselinux
-, libsepol, libsysprof-capture, libthai, libxkbcommon, pcre, pkg-config
-, python3, sqlite, stdenv }:
+{
+  alsa-lib,
+  at-spi2-core,
+  cmake,
+  curl,
+  dbus,
+  libepoxy,
+  fetchFromGitHub,
+  libglut,
+  freetype,
+  gcc-unwrapped,
+  gtk3,
+  lib,
+  libGL,
+  libxcursor,
+  libxdmcp,
+  libxext,
+  libxinerama,
+  libxrandr,
+  libxtst,
+  libdatrie,
+  libjack2,
+  libpsl,
+  libselinux,
+  libsepol,
+  libsysprof-capture,
+  libthai,
+  libxkbcommon,
+  pkg-config,
+  python3,
+  sqlite,
+  stdenv,
+}:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "chow-phaser";
@@ -11,12 +39,15 @@ stdenv.mkDerivation (finalAttrs: {
   src = fetchFromGitHub {
     owner = "jatinchowdhury18";
     repo = "ChowPhaser";
-    rev = "v${finalAttrs.version}";
+    tag = "v${finalAttrs.version}";
     fetchSubmodules = true;
     hash = "sha256-9wo7ZFMruG3QNvlpILSvrFh/Sx6J1qnlWc8+aQyS4tQ=";
   };
 
-  nativeBuildInputs = [ pkg-config cmake ];
+  nativeBuildInputs = [
+    pkg-config
+    cmake
+  ];
 
   buildInputs = [
     alsa-lib
@@ -28,12 +59,12 @@ stdenv.mkDerivation (finalAttrs: {
     freetype
     gtk3
     libGL
-    libXcursor
-    libXdmcp
-    libXext
-    libXinerama
-    libXrandr
-    libXtst
+    libxcursor
+    libxdmcp
+    libxext
+    libxinerama
+    libxrandr
+    libxtst
     libdatrie
     libjack2
     libpsl
@@ -42,7 +73,6 @@ stdenv.mkDerivation (finalAttrs: {
     libsysprof-capture
     libthai
     libxkbcommon
-    pcre
     python3
     sqlite
     gcc-unwrapped
@@ -66,12 +96,12 @@ stdenv.mkDerivation (finalAttrs: {
     cp Standalone/ChowPhaserStereo  $out/bin
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/jatinchowdhury18/ChowPhaser";
     description = "Phaser effect based loosely on the Schulte Compact Phasing 'A'";
-    license = with licenses; [ bsd3 ];
+    license = lib.licenses.bsd3;
     mainProgram = "ChowPhaserStereo";
-    maintainers = with maintainers; [ magnetophon ];
-    platforms = platforms.linux;
+    maintainers = with lib.maintainers; [ magnetophon ];
+    platforms = lib.platforms.linux;
   };
 })

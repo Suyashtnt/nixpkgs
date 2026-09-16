@@ -1,28 +1,46 @@
-{ buildOctavePackage
-, lib
-, fetchFromGitHub
-, io
+{
+  buildOctavePackage,
+  lib,
+  fetchFromGitHub,
+  io,
+  datatypes,
+  gnuplot,
+  makeFontsConf,
+  writableTmpDirAsHomeHook,
 }:
 
 buildOctavePackage rec {
   pname = "statistics";
-  version = "1.6.7";
+  version = "1.8.4";
 
   src = fetchFromGitHub {
     owner = "gnu-octave";
     repo = "statistics";
-    rev = "refs/tags/release-${version}";
-    hash = "sha256-cXAjUiv4xWPrWf7HQg9Y+JkR7ON9iefKFUGbEr9FGNA=";
+    tag = "release-${version}";
+    hash = "sha256-aFFGpdcD6ppm/5VYEKd+X2QMRKyU4SkwtJYpK4/L1qI=";
   };
 
   requiredOctavePackages = [
     io
+    datatypes
   ];
 
-  meta = with lib; {
+  nativeOctavePkgTestInputs = [
+    gnuplot
+    writableTmpDirAsHomeHook
+  ];
+
+  octavePkgTestEnv.FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ ]; };
+
+  __structuredAttrs = true;
+
+  meta = {
     homepage = "https://packages.octave.org/statistics";
-    license = with licenses; [ gpl3Plus publicDomain ];
-    maintainers = with maintainers; [ KarlJoad ];
+    license = with lib.licenses; [
+      gpl3Plus
+      publicDomain
+    ];
+    maintainers = with lib.maintainers; [ ravenjoad ];
     description = "Statistics package for GNU Octave";
   };
 }

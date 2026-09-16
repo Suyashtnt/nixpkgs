@@ -1,26 +1,32 @@
 {
   lib,
+
   buildPythonPackage,
   fetchFromGitHub,
-  cmake,
-  doxygen,
-  boost,
-  eigen,
-  jrl-cmakemodules,
-  numpy,
+  fontconfig,
+
+  # nativeBuildInputs
   scipy,
+
+  # buildInputs
+  boost,
+  jrl-cmakemodules,
+
+  # propagatedBuildInputs
+  eigen,
+  numpy,
 }:
 
 buildPythonPackage rec {
   pname = "eigenpy";
-  version = "3.10.0";
+  version = "3.13.0";
   pyproject = false; # Built with cmake
 
   src = fetchFromGitHub {
     owner = "stack-of-tasks";
     repo = "eigenpy";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-ac667pEKXcbLLzCVGKYpyCQO805qhCEf8dCnC4QwxBs=";
+    tag = "v${version}";
+    hash = "sha256-05G0U1RjVwggfnABxZH+9kxDIo7M9rgxHCcTvNgTZCQ=";
   };
 
   outputs = [
@@ -29,39 +35,46 @@ buildPythonPackage rec {
     "out"
   ];
 
-  cmakeFlags = [
+  cmakeFlags = jrl-cmakemodules.docsCmakeFlags ++ [
     "-DINSTALL_DOCUMENTATION=ON"
+    "-DBUILD_TESTING=ON"
     "-DBUILD_TESTING_SCIPY=ON"
   ];
 
   strictDeps = true;
 
-  nativeBuildInputs = [
-    cmake
-    doxygen
+  # Fontconfig error: Cannot load default config file: No such file: (null)
+  env.FONTCONFIG_FILE = "${fontconfig.out}/etc/fonts/fonts.conf";
+
+  nativeBuildInputs = jrl-cmakemodules.docsNativeBuildInputs ++ [
     scipy
   ];
 
-  buildInputs = [ boost ];
+  buildInputs = [
+    boost
+    jrl-cmakemodules
+  ];
 
   propagatedBuildInputs = [
     eigen
-    jrl-cmakemodules
     numpy
   ];
 
-  doCheck = true;
+  preInstallCheck = ''
+    make test
+  '';
+
   pythonImportsCheck = [ "eigenpy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Bindings between Numpy and Eigen using Boost.Python";
     homepage = "https://github.com/stack-of-tasks/eigenpy";
-    changelog = "https://github.com/stack-of-tasks/eigenpy/releases/tag/v${version}";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [
+    changelog = "https://github.com/stack-of-tasks/eigenpy/releases/tag/${src.tag}";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [
       nim65s
       wegank
     ];
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
 }

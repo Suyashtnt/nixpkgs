@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.services.seatd;
@@ -21,15 +26,22 @@ in
       description = "Group to own the seatd socket";
     };
     logLevel = mkOption {
-      type = types.enum [ "debug" "info" "error" "silent" ];
+      type = types.enum [
+        "debug"
+        "info"
+        "error"
+        "silent"
+      ];
       default = "info";
       description = "Logging verbosity";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [ seatd sdnotify-wrapper ];
-    users.groups.seat = lib.mkIf (cfg.group == "seat") {};
+    environment.systemPackages = with pkgs; [
+      seatd
+    ];
+    users.groups.seat = lib.mkIf (cfg.group == "seat") { };
 
     systemd.services.seatd = {
       description = "Seat management daemon";
@@ -42,7 +54,7 @@ in
         Type = "notify";
         NotifyAccess = "all";
         SyslogIdentifier = "seatd";
-        ExecStart = "${pkgs.sdnotify-wrapper}/bin/sdnotify-wrapper ${pkgs.seatd.bin}/bin/seatd -n 1 -u ${cfg.user} -g ${cfg.group} -l ${cfg.logLevel}";
+        ExecStart = "${lib.getExe' pkgs.s6 "s6-notify-socket-from-fd"} ${pkgs.seatd.bin}/bin/seatd -n 1 -u ${cfg.user} -g ${cfg.group} -l ${cfg.logLevel}";
         RestartSec = 1;
         Restart = "always";
       };

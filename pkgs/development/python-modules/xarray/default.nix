@@ -2,28 +2,59 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
   numpy,
   packaging,
   pandas,
+
+  # optional-dependencies
+  bottleneck,
+  cartopy,
+  cftime,
+  dask,
+  fsspec,
+  h5netcdf,
+  matplotlib,
+  netcdf4,
+  numba,
+  numbagg,
+  opt-einsum,
+  pooch,
+  scipy,
+  seaborn,
+  sparse,
+  zarr,
+
+  # tests
+  pytest-asyncio,
+  pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
-  setuptools,
-  setuptools-scm,
+  h5py,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "xarray";
-  version = "2024.07.0";
+  version = "2026.07.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
+  # Needed mainly for pytestFlags with spaces
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pydata";
     repo = "xarray";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-pt0qnkgf3E/QQHQAaZLommakhqEJ4NuTyjx5tdk2N1U=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-dj6V/HkHRm1kjHlAHUjN7pGCa1ioW11o1fdKUyxI8e0=";
   };
+
+  postPatch = ''
+    # don't depend on pytest-mypy-plugins
+    sed -i "/--mypy-/d" pyproject.toml
+  '';
 
   build-system = [
     setuptools
@@ -36,16 +67,76 @@ buildPythonPackage rec {
     pandas
   ];
 
+  optional-dependencies = {
+    accel = [
+      bottleneck
+      # flox
+      numba
+      numbagg
+      opt-einsum
+      scipy
+    ];
+    io = [
+      netcdf4
+      h5netcdf
+      # pydap
+      scipy
+      zarr
+      fsspec
+      cftime
+      pooch
+    ];
+    etc = [ sparse ];
+    parallel = [ dask ] ++ dask.optional-dependencies.complete;
+    viz = [
+      cartopy
+      matplotlib
+      # nc-time-axis
+      seaborn
+    ];
+    complete =
+      with finalAttrs.finalPackage.passthru.optional-dependencies;
+      accel ++ io ++ etc ++ parallel ++ viz;
+  };
+
+  preCheck = ''
+    # tests become flaky with to many cores
+    export NIX_BUILD_CORES=$((NIX_BUILD_CORES > 8 ? 8 : NIX_BUILD_CORES))
+  '';
+
   nativeCheckInputs = [
+    pytest-asyncio
+    pytest-xdist
     pytestCheckHook
+  ]
+  # Besides scipy, these are not strictly needed for the tests, but adding all
+  # of these optional-dependencies extends the amount of tests from ~17k to
+  # ~21k.
+  ++ finalAttrs.finalPackage.optional-dependencies.io
+  ++ finalAttrs.finalPackage.optional-dependencies.accel
+  ++ finalAttrs.finalPackage.optional-dependencies.etc
+  ++ finalAttrs.finalPackage.optional-dependencies.parallel
+  # Not adding optional-dependencies.viz because adding cartopy causes infinite
+  # recursion, and doesn't cause more tests to be collected.
+  ;
+  pytestFlags = lib.optionals (!h5py.hdf5.szipSupport) [
+    "-k"
+    # Our h5py is built with hdf5 that is built without szip support, so we
+    # skip these tests
+    "not szip"
   ];
 
   pythonImportsCheck = [ "xarray" ];
 
-  meta = with lib; {
-    changelog = "https://github.com/pydata/xarray/blob/${src.rev}/doc/whats-new.rst";
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
+    changelog = "https://github.com/pydata/xarray/blob/${finalAttrs.src.tag}/doc/whats-new.rst";
     description = "N-D labeled arrays and datasets in Python";
     homepage = "https://github.com/pydata/xarray";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      doronbehar
+    ];
   };
-}
+})

@@ -1,36 +1,35 @@
 {
   lib,
-  aiohttp,
   aiohttp-retry,
-  aiounittest,
+  aiohttp,
   buildPythonPackage,
   cryptography,
   django,
   fetchFromGitHub,
   mock,
   multidict,
-  pyngrok,
   pyjwt,
+  pyngrok,
   pytestCheckHook,
-  pythonOlder,
   pytz,
   requests,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "twilio";
-  version = "9.3.2";
+  version = "9.11.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "twilio";
     repo = "twilio-python";
-    rev = "refs/tags/${version}";
-    hash = "sha256-XAJmAdwBF6HM0E89gAP4AOg1vepumJ8O39V0lKr9iDw=";
+    tag = finalAttrs.version;
+    hash = "sha256-GS8Okhxd2T9BG9bFh6uZY4zPmHDYT++wpYq4A2sy1ek=";
   };
+
+  # https://github.com/twilio/twilio-python/pull/919
+  patches = [ ./remove-aiounittest.patch ];
 
   build-system = [ setuptools ];
 
@@ -43,11 +42,7 @@ buildPythonPackage rec {
     requests
   ];
 
-  # aiounittest is not supported on 3.12
-  doCheck = pythonOlder "3.12";
-
   nativeCheckInputs = [
-    aiounittest
     cryptography
     django
     mock
@@ -69,11 +64,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "twilio" ];
 
-  meta = with lib; {
+  meta = {
     description = "Twilio API client and TwiML generator";
     homepage = "https://github.com/twilio/twilio-python/";
-    changelog = "https://github.com/twilio/twilio-python/blob/${version}/CHANGES.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/twilio/twilio-python/blob/${finalAttrs.src.tag}/CHANGES.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

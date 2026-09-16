@@ -1,29 +1,37 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, bzip2
-, libdivsufsort
-, jsoncpp
-, openssl
-, mpfr
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  bzip2,
+  libdivsufsort,
+  jsoncpp,
+  openssl,
+  mpfr,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "sp800-90b-entropyassessment";
-  version = "1.1.6";
+  version = "1.1.8";
 
   src = fetchFromGitHub {
     owner = "usnistgov";
     repo = "SP800-90B_EntropyAssessment";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-KZQ7kC0PbBkjLEQZIqYakQ91OvCxruhdfUwiRHtno3w=";
+    hash = "sha256-qGJqL77IOuVx8jKDdOk4YkLPbggfn+TQtpdcYEu4hC8=";
   };
 
-  buildInputs = [ bzip2 libdivsufsort jsoncpp openssl mpfr ];
+  buildInputs = [
+    bzip2
+    libdivsufsort
+    jsoncpp
+    openssl
+    mpfr
+  ];
 
   postPatch = ''
     substituteInPlace Makefile \
-      --replace "-march=native" ""
+      --replace-fail "-march=native" "" \
+      --replace-fail "-std=c++11" "-std=c++17"
   '';
 
   sourceRoot = "${finalAttrs.src.name}/cpp";
@@ -45,6 +53,8 @@ stdenv.mkDerivation (finalAttrs: {
     description = "Implementation of min-entropy assessment methods included in Special Publication 800-90B";
     platforms = lib.platforms.linux;
     license = lib.licenses.nistSoftware;
-    maintainers = with lib.maintainers; [ orichter thillux ];
+    maintainers = with lib.maintainers; [
+      thillux
+    ];
   };
 })

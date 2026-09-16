@@ -15,12 +15,12 @@
 buildPythonPackage rec {
   pname = "starlette-wtf";
   version = "0.4.5";
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "muicss";
     repo = "starlette-wtf";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-88zU2NAsdty2OhHauwQ5+6LazuRDYPoqN9IIipI1t2Q=";
   };
 
@@ -38,11 +38,10 @@ buildPythonPackage rec {
     jinja2
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple tool for integrating Starlette and WTForms";
-    changelog = "https://github.com/muicss/starlette-wtf/blob/v${version}/CHANGELOG.md";
+    changelog = "https://github.com/amorey/starlette-wtf/releases/tag/${version}";
     homepage = "https://github.com/muicss/starlette-wtf";
-    license = licenses.mit;
-    maintainers = teams.wdz.members;
+    license = lib.licenses.mit;
   };
 }

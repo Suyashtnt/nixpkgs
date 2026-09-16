@@ -1,11 +1,12 @@
-{ lib
-, fetchFromGitHub
-, buildDunePackage
-, xxHash
-, ctypes
-, ctypes-foreign
-, dune-configurator
-, ppx_expect
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  pkgs,
+  ctypes,
+  ctypes-foreign,
+  dune-configurator,
+  ppx_expect,
 }:
 
 buildDunePackage rec {
@@ -17,7 +18,7 @@ buildDunePackage rec {
   src = fetchFromGitHub {
     owner = "314eter";
     repo = "ocaml-xxhash";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-0+ac5EWV9DCVMT4wOcXC95GVEwsUIZzFn2laSzmK6jE=";
   };
 
@@ -32,7 +33,7 @@ buildDunePackage rec {
   propagatedBuildInputs = [
     ctypes
     ctypes-foreign
-    xxHash
+    pkgs.xxhash
   ];
 
   doCheck = true;
@@ -44,7 +45,7 @@ buildDunePackage rec {
   meta = {
     homepage = "https://github.com/314eter/ocaml-xxhash";
     description = "Bindings for xxHash, an extremely fast hash algorithm";
-    license = with lib.licenses; [ mit ];
+    license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ toastal ];
   };
 }

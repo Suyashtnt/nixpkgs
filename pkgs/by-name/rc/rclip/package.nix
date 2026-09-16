@@ -1,55 +1,85 @@
-{ lib
-, python3Packages
-, fetchFromGitHub
+{
+  lib,
+  stdenv,
+  python3Packages,
+  fetchFromGitHub,
+  fetchpatch,
+  versionCheckHook,
 }:
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "rclip";
-  version = "1.10.3";
+  version = "3.3.0";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "yurijmikhalevich";
     repo = "rclip";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-MdqO6X1dbIzmDuDSjrbmKbQfPIPcyhVIbodERYu9PZU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QdyqECPzZZtphtjSJAKrWGwGKcYrlbSSkJ0GHs9+K10=";
   };
 
-  nativeBuildInputs = with python3Packages; [
-    poetry-core
+  patches = [
+    # use pillow-heif instead of pi-heif as it has been discontinued
+    # https://github.com/bigcat88/pillow_heif/pull/431
+    (fetchpatch {
+      url = "https://github.com/yurijmikhalevich/rclip/commit/7207600d8da6aef0aacb2c2b52e90a564e3018aa.patch";
+      hash = "sha256-Bua9tIpRq2mWSQLP0dcHE8S0Ef7AZKvlOS5fXAqTcQY=";
+      revert = true;
+    })
   ];
 
-  propagatedBuildInputs = with python3Packages; [
-    open-clip-torch
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.11.12,<0.12.0" uv_build
+  '';
+
+  build-system = with python3Packages; [
+    uv-build
+  ];
+
+  pythonRelaxDeps = [
+    "numpy"
+    "pillow"
+    "rawpy"
+    "regex"
+  ];
+  pythonRemoveDeps = lib.optionals stdenv.hostPlatform.isDarwin [
+    # unpackaged
+    "coremltools"
+  ];
+  dependencies = with python3Packages; [
+    ftfy
+    huggingface-hub
+    numpy
+    onnxruntime
     pillow
+    pillow-heif
+    regex
     requests
-    torch
-    torchvision
     tqdm
+    rawpy
   ];
-
-  nativeCheckInputs = with python3Packages; [ pytestCheckHook ];
-
-  pythonRelaxDeps = [ "torch" "torchvision" ];
 
   pythonImportsCheck = [ "rclip" ];
+
+  nativeCheckInputs = [
+    versionCheckHook
+    python3Packages.jinja2
+  ]
+  ++ (with python3Packages; [ pytestCheckHook ]);
 
   disabledTestPaths = [
     # requires network
     "tests/e2e/test_rclip.py"
   ];
 
-  disabledTests = [
-    # requires network
-    "test_text_model_produces_the_same_vector_as_the_main_model"
-    "test_loads_text_model_when_text_processing_only_requested_and_checkpoint_exists"
-    "test_loads_full_model_when_text_processing_only_requested_and_checkpoint_doesnt_exist"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "AI-Powered Command-Line Photo Search Tool";
     homepage = "https://github.com/yurijmikhalevich/rclip";
-    license = licenses.mit;
-    maintainers = with maintainers; [ iynaix ];
+    changelog = "https://github.com/yurijmikhalevich/rclip/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ iynaix ];
     mainProgram = "rclip";
   };
-}
+})

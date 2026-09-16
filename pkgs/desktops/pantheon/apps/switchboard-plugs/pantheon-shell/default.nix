@@ -1,36 +1,37 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, vala
-, glib
-, libadwaita
-, libgee
-, granite7
-, gexiv2
-, gnome-settings-daemon
-, elementary-settings-daemon
-, gtk4
-, gala
-, wingpanel
-, wingpanel-indicator-keyboard
-, wingpanel-quick-settings
-, switchboard
-, gettext
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  glib,
+  libadwaita,
+  libgee,
+  granite7,
+  gexiv2_0_10,
+  gnome-settings-daemon,
+  elementary-settings-daemon,
+  gtk4,
+  gala,
+  wingpanel,
+  wingpanel-indicator-keyboard,
+  wingpanel-quick-settings,
+  switchboard,
+  gettext,
 }:
 
 stdenv.mkDerivation rec {
   pname = "switchboard-plug-pantheon-shell";
-  version = "8.0.0";
+  version = "8.3.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-Cv1Ldvk0+VzNsKnDFwDtLZ5ixUOGV+PWYAqN9KV9g/s=";
+    repo = "settings-desktop";
+    tag = version;
+    hash = "sha256-qczv+G0v47SiMsLlWjDPK0ZY4J+V/CXe/l7b6pWG+WY=";
   };
 
   nativeBuildInputs = [
@@ -45,7 +46,7 @@ stdenv.mkDerivation rec {
     elementary-settings-daemon
     gnome-settings-daemon
     gala
-    gexiv2
+    gexiv2_0_10
     glib
     granite7
     gtk4
@@ -57,22 +58,15 @@ stdenv.mkDerivation rec {
     wingpanel-quick-settings # gsettings schemas
   ];
 
-  postPatch = ''
-    # Hide these before we land the new dock
-    substituteInPlace src/Views/Dock.vala \
-      --replace-fail "box.append (icon_box);" "" \
-      --replace-fail "box.append (hide_box);" ""
-  '';
-
   passthru = {
     updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Switchboard Desktop Plug";
-    homepage = "https://github.com/elementary/switchboard-plug-pantheon-shell";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    homepage = "https://github.com/elementary/settings-desktop";
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

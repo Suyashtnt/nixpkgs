@@ -4,13 +4,13 @@
   python3Packages,
   util-linux,
 }:
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "isisdl";
-  version = "1.3.20";
+  version = "1.3.21";
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-s0vGCJVSa6hf6/sIhzmaxpziP4izoRwcZfxvm//5inY=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-YyR0A7NqmUcR+hQnQlIgBdU6CxfHtDOjR3q5I21ROCI=";
   };
 
   pyproject = true;
@@ -55,4 +55,4 @@ python3Packages.buildPythonApplication rec {
     mainProgram = "isisdl";
     platforms = lib.platforms.linux;
   };
-}
+})

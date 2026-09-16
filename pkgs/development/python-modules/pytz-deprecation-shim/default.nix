@@ -2,10 +2,6 @@
   lib,
   buildPythonPackage,
   fetchPypi,
-  pythonAtLeast,
-  pythonOlder,
-  backports-zoneinfo,
-  python-dateutil,
   setuptools,
   tzdata,
   hypothesis,
@@ -17,7 +13,7 @@ buildPythonPackage rec {
   pname = "pytz-deprecation-shim";
   version = "0.1.0.post0";
 
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "pytz_deprecation_shim";
@@ -27,10 +23,7 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [ setuptools ];
 
-  propagatedBuildInputs =
-    (lib.optionals (pythonAtLeast "3.6" && pythonOlder "3.9") [ backports-zoneinfo ])
-    ++ (lib.optionals (pythonOlder "3.6") [ python-dateutil ])
-    ++ (lib.optionals (pythonAtLeast "3.6") [ tzdata ]);
+  propagatedBuildInputs = [ tzdata ];
 
   nativeCheckInputs = [
     hypothesis
@@ -43,10 +36,10 @@ buildPythonPackage rec {
   # The test suite is just very flaky and breaks all the time
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Shims to make deprecation of pytz easier";
     homepage = "https://github.com/pganssle/pytz-deprecation-shim";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

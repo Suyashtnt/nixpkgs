@@ -1,117 +1,79 @@
-{ lib
-, stdenv
-, fetchFromGitHub
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchFromGitLab,
+  fetchurl,
+  callPackage,
 
-, capstone
-, darwin
-, dbus
-, freetype
-, glfw
-, hicolor-icon-theme
-, pkg-config
-, tbb
+  coreutils,
+  cmake,
+  ninja,
+  pkg-config,
+  wayland-scanner,
 
-, withWayland ? stdenv.hostPlatform.isLinux
-, libxkbcommon
-, wayland
+  capstone,
+  dbus,
+  freetype,
+  glfw,
+  onetbb,
+
+  withGtkFileSelector ? false,
+  gtk3,
+
+  withWayland ? stdenv.hostPlatform.isLinux,
+  libglvnd,
+  libxkbcommon,
+  wayland,
+  wayland-protocols,
+  libffi,
+
+  md4c,
+  pugixml,
+  curl,
+  zstd,
+  nlohmann_json,
+  nativefiledialog-extended,
+  html-tidy,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "tracy";
-  version = "0.10";
+(import ./package-versions.nix {
+  inherit
+    lib
+    stdenv
+    fetchFromGitHub
+    fetchFromGitLab
+    fetchurl
+    callPackage
 
-  src = fetchFromGitHub {
-    owner = "wolfpld";
-    repo = "tracy";
-    rev = "v${version}";
-    hash = "sha256-DN1ExvQ5wcIUyhMAfiakFbZkDsx+5l8VMtYGvSdboPA=";
-  };
+    coreutils
+    cmake
+    ninja
+    pkg-config
+    wayland-scanner
 
-  patches = lib.optionals (stdenv.hostPlatform.isDarwin && !(lib.versionAtLeast stdenv.hostPlatform.darwinMinVersion "11")) [
-    ./0001-remove-unifiedtypeidentifiers-framework
-  ];
-
-  nativeBuildInputs = [ pkg-config ];
-
-  buildInputs = [
     capstone
+    dbus
     freetype
     glfw
-  ] ++ lib.optionals (stdenv.hostPlatform.isLinux && withWayland) [
+    onetbb
+
+    withGtkFileSelector
+    gtk3
+
+    withWayland
+    libglvnd
     libxkbcommon
     wayland
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
-    dbus
-    hicolor-icon-theme
-    tbb
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.AppKit
-    darwin.apple_sdk.frameworks.Carbon
-  ] ++ lib.optionals (stdenv.hostPlatform.isDarwin && lib.versionAtLeast stdenv.hostPlatform.darwinMinVersion "11") [
-    darwin.apple_sdk.frameworks.UniformTypeIdentifiers
-  ];
+    wayland-protocols
+    libffi
 
-  env.NIX_CFLAGS_COMPILE = toString ([ ]
-    # Apple's compiler finds a format string security error on
-    # ../../../server/TracyView.cpp:649:34, preventing building.
-    ++ lib.optional stdenv.hostPlatform.isDarwin "-Wno-format-security"
-    ++ lib.optional stdenv.hostPlatform.isLinux "-ltbb"
-    ++ lib.optional stdenv.cc.isClang "-faligned-allocation");
-
-  buildPhase = ''
-    runHook preBuild
-
-    make -j $NIX_BUILD_CORES -C capture/build/unix release
-    make -j $NIX_BUILD_CORES -C csvexport/build/unix release
-    make -j $NIX_BUILD_CORES -C import-chrome/build/unix release
-    make -j $NIX_BUILD_CORES -C library/unix release
-    make -j $NIX_BUILD_CORES -C profiler/build/unix release \
-      ${lib.optionalString (stdenv.hostPlatform.isLinux && !withWayland) "LEGACY=1"}
-    make -j $NIX_BUILD_CORES -C update/build/unix release
-
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    install -D -m 0755 capture/build/unix/capture-release $out/bin/capture
-    install -D -m 0755 csvexport/build/unix/csvexport-release $out/bin/tracy-csvexport
-    install -D -m 0755 import-chrome/build/unix/import-chrome-release $out/bin/import-chrome
-    install -D -m 0755 library/unix/libtracy-release.so $out/lib/libtracy.so
-    install -D -m 0755 profiler/build/unix/Tracy-release $out/bin/tracy
-    install -D -m 0755 update/build/unix/update-release $out/bin/update
-
-    mkdir -p $out/include/Tracy/client
-    mkdir -p $out/include/Tracy/common
-    mkdir -p $out/include/Tracy/tracy
-
-    cp -p public/client/*.{h,hpp} $out/include/Tracy/client
-    cp -p public/common/*.{h,hpp} $out/include/Tracy/common
-    cp -p public/tracy/*.{h,hpp} $out/include/Tracy/tracy
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
-    substituteInPlace extra/desktop/tracy.desktop \
-      --replace Exec=/usr/bin/tracy Exec=tracy
-
-    install -D -m 0644 extra/desktop/application-tracy.xml $out/share/mime/packages/application-tracy.xml
-    install -D -m 0644 extra/desktop/tracy.desktop $out/share/applications/tracy.desktop
-    install -D -m 0644 icon/application-tracy.svg $out/share/icons/hicolor/scalable/apps/application-tracy.svg
-    install -D -m 0644 icon/icon.png $out/share/icons/hicolor/256x256/apps/tracy.png
-    install -D -m 0644 icon/icon.svg $out/share/icons/hicolor/scalable/apps/tracy.svg
-  '' + ''
-    runHook postInstall
-  '';
-
-  postFixup = lib.optionalString stdenv.hostPlatform.isDarwin ''
-    install_name_tool -change libcapstone.4.dylib ${capstone}/lib/libcapstone.4.dylib $out/bin/tracy
-  '';
-
-  meta = with lib; {
-    description = "Real time, nanosecond resolution, remote telemetry frame profiler for games and other applications";
-    homepage = "https://github.com/wolfpld/tracy";
-    platforms = platforms.linux ++ platforms.darwin;
-    license = licenses.bsd3;
-    mainProgram = "tracy";
-    maintainers = with maintainers; [ mpickering nagisa paveloom ];
-  };
-}
+    md4c
+    pugixml
+    curl
+    zstd
+    nlohmann_json
+    nativefiledialog-extended
+    html-tidy
+    ;
+}).tracy_latest

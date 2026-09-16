@@ -3,6 +3,7 @@
   buildPythonPackage,
   certifi,
   click,
+  cryptography,
   dotmap,
   ecs-logging,
   elastic-transport,
@@ -12,25 +13,22 @@
   mock,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   pyyaml,
   requests,
-  six,
+  tiered-debug,
   voluptuous,
 }:
 
 buildPythonPackage rec {
   pname = "es-client";
-  version = "8.14.4";
+  version = "9.0.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "untergeek";
     repo = "es_client";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-CJhiSDmIlhTWV7LLWd2ZCzuj5cWXwgh0lkKJvhmaDFw=";
+    tag = "v${version}";
+    hash = "sha256-83EBDmbZuOAVT2oYn98s6XTZrB38lx03nozAkBqHfgg=";
   };
 
   pythonRelaxDeps = true;
@@ -40,12 +38,13 @@ buildPythonPackage rec {
   dependencies = [
     certifi
     click
+    cryptography
     dotmap
     ecs-logging
     elastic-transport
     elasticsearch8
     pyyaml
-    six
+    tiered-debug
     voluptuous
   ];
 
@@ -59,25 +58,22 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "es_client" ];
 
   disabledTests = [
-    # Tests require network access
+    # Tests require local Elasticsearch instance
     "test_bad_version_raises"
     "test_basic_operation"
-    "test_basic_operation"
     "test_client_info"
-    "test_logging_options_ecs"
-    "test_logging_options_json"
+    "test_client_info"
+    "test_exit_if_not_master"
     "test_multiple_hosts_raises"
-    "test_non_dict_passed"
     "test_skip_version_check"
-    # es_client.exceptions.ConfigurationError: Must populate both username and password, or leave both empty
-    "test_exit_if_not_master "
+    "TestCLIExample"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Module for building Elasticsearch client objects";
     homepage = "https://github.com/untergeek/es_client";
-    changelog = "https://github.com/untergeek/es_client/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/untergeek/es_client/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

@@ -1,75 +1,108 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, makeWrapper
-, git
-, bash
-, coreutils
-, compressDrvWeb
-, gitea
-, gzip
-, openssh
-, sqliteSupport ? true
-, nixosTests
-, buildNpmPackage
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  makeWrapper,
+  git,
+  bash,
+  coreutils,
+  compressDrvWeb,
+  gitea,
+  gzip,
+  nodejs,
+  openssh,
+  fetchPnpmDeps,
+  pnpmConfigHook,
+  pnpm_11,
+  stdenv,
+  sqliteSupport ? true,
+  nixosTests,
 }:
 
 let
-  frontend = buildNpmPackage {
+  pnpm = pnpm_11;
+
+  frontend = stdenv.mkDerivation (finalAttrs: {
     pname = "gitea-frontend";
     inherit (gitea) src version;
 
-    npmDepsHash = "sha256-Sp3xBe5IXys2Qro4x4HKs9dQOnlbstAmtIG6xOOktEk=";
+    pnpmDeps = fetchPnpmDeps {
+      inherit (finalAttrs) pname version src;
+      inherit pnpm;
+      fetcherVersion = 4;
+      hash = "sha256-rduD3GqgdUlF95HTnKe8smToyHop4RrO6QDTRzh2RCk=";
+    };
 
-    # use webpack directly instead of 'make frontend' as the packages are already installed
+    nativeBuildInputs = [
+      nodejs
+      pnpmConfigHook
+      pnpm
+    ];
+
+    __darwinAllowLocalNetworking = true;
+
     buildPhase = ''
-      BROWSERSLIST_IGNORE_OLD_DATA=true npx webpack
+      make frontend
     '';
 
     installPhase = ''
       mkdir -p $out
       cp -R public $out/
     '';
-  };
-in buildGoModule rec {
+  });
+in
+buildGoModule (finalAttrs: {
   pname = "gitea";
-  version = "1.22.2";
+  version = "1.27.3";
 
   src = fetchFromGitHub {
     owner = "go-gitea";
     repo = "gitea";
-    rev = "v${gitea.version}";
-    hash = "sha256-PwA23cbRgw5crzZmngDjAAIODMtguwBCqc9NqWMjF3o=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-91hF7VpMDHyBj1dBlsVC/b3IhNAnUwK/qhZb77GPEnc=";
   };
 
   proxyVendor = true;
 
-  vendorHash = "sha256-rMTKmztQNse/9CK1qFGWmSwqunwh918EvcuIHk6BSTY=";
+  vendorHash = "sha256-YRBMGWKIZgMxOXaXG2bIBj1XzkhSwiMyfRy+yQGw+Bo=";
 
-  outputs = [ "out" "data" ];
+  outputs = [
+    "out"
+    "data"
+  ];
 
   patches = [ ./static-root-path.patch ];
 
   # go-modules derivation doesn't provide $data
   # so we need to wait until it is built, and then
   # at that time we can then apply the substituteInPlace
-  overrideModAttrs = _: { postPatch = null; };
+  overrideModAttrs = _: {
+    postPatch = ''
+      substituteInPlace go.mod \
+        --replace-fail "go 1.26.4" "go 1.26.0"
+    '';
+  };
 
   postPatch = ''
     substituteInPlace modules/setting/server.go --subst-var data
+    substituteInPlace go.mod \
+      --replace-fail "go 1.26.4" "go 1.26.0"
   '';
 
   subPackages = [ "." ];
 
   nativeBuildInputs = [ makeWrapper ];
 
-  tags = lib.optionals sqliteSupport [ "sqlite" "sqlite_unlock_notify" ];
+  tags = lib.optionals sqliteSupport [
+    "sqlite"
+    "sqlite_unlock_notify"
+  ];
 
   ldflags = [
     "-s"
     "-w"
-    "-X main.Version=${version}"
-    "-X 'main.Tags=${lib.concatStringsSep " " tags}'"
+    "-X main.Version=${finalAttrs.version}"
+    "-X 'main.Tags=${lib.concatStringsSep " " finalAttrs.tags}'"
   ];
 
   postInstall = ''
@@ -79,21 +112,38 @@ in buildGoModule rec {
     mkdir -p $out
     cp -R ./options/locale $out/locale
 
+    mv $out/bin/gitea{.dev,}
     wrapProgram $out/bin/gitea \
-      --prefix PATH : ${lib.makeBinPath [ bash coreutils git gzip openssh ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          bash
+          coreutils
+          git
+          gzip
+          openssh
+        ]
+      }
   '';
 
   passthru = {
-    data-compressed = lib.warn "gitea.passthru.data-compressed is deprecated. Use \"compressDrvWeb gitea.data\"." (compressDrvWeb gitea.data {});
+    data-compressed =
+      lib.warn "gitea.passthru.data-compressed is deprecated. Use \"compressDrvWeb gitea.data\"."
+        (compressDrvWeb gitea.data { });
 
-    tests = nixosTests.gitea;
+    tests = {
+      inherit (nixosTests) gitea gitea-actions-runner;
+    };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Git with a cup of tea";
     homepage = "https://about.gitea.com";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ma27 techknowlogick SuperSandro2000 ];
+    changelog = "https://github.com/go-gitea/gitea/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      techknowlogick
+      SuperSandro2000
+    ];
     mainProgram = "gitea";
   };
-}
+})

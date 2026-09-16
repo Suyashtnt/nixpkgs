@@ -13,12 +13,12 @@
 buildPythonPackage rec {
   pname = "aioruuvigateway";
   version = "0.1.0";
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "akx";
     repo = "aioruuvigateway";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-Etv+kPFYEK79hpDeNmDfuyNj1vJ6udry1u+TRO5gLV4=";
   };
 
@@ -37,10 +37,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "aioruuvigateway" ];
 
-  meta = with lib; {
+  meta = {
     description = "Asyncio-native library for requesting data from a Ruuvi Gateway";
     homepage = "https://github.com/akx/aioruuvigateway";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
 }

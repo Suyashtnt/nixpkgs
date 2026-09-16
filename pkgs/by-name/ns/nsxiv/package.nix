@@ -1,36 +1,41 @@
-{ lib
-, stdenv
-, fetchFromGitea
-, giflib
-, imlib2
-, libXft
-, libexif
-, libwebp
-, libinotify-kqueue
-, conf ? null
+{
+  lib,
+  stdenv,
+  fetchFromCodeberg,
+  giflib,
+  imlib2Full,
+  libxft,
+  libexif,
+  libwebp,
+  libinotify-kqueue,
+  conf ? null,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "nsxiv";
-  version = "32";
+  version = "34";
 
-  src = fetchFromGitea {
-    domain = "codeberg.org";
+  src = fetchFromCodeberg {
     owner = "nsxiv";
     repo = "nsxiv";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-UWaet7hVtgfuWTiNY4VcsMWTfS6L9r5w1fb/0dWz8SI=";
+    hash = "sha256-Yv5Px72iZWLtix0K7Tbzhkar7ZBSb121cBzMhkAZhak=";
   };
 
-  outputs = [ "out" "man" "doc" ];
+  outputs = [
+    "out"
+    "man"
+    "doc"
+  ];
 
   buildInputs = [
     giflib
-    imlib2
-    libXft
+    imlib2Full
+    libxft
     libexif
     libwebp
-  ] ++ lib.optional stdenv.hostPlatform.isDarwin libinotify-kqueue;
+  ]
+  ++ lib.optional stdenv.hostPlatform.isDarwin libinotify-kqueue;
 
   postPatch = lib.optionalString (conf != null) ''
     cp ${(builtins.toFile "config.def.h" conf)} config.def.h
@@ -64,7 +69,7 @@ stdenv.mkDerivation (finalAttrs: {
     '';
     changelog = "https://codeberg.org/nsxiv/nsxiv/src/tag/${finalAttrs.src.rev}/etc/CHANGELOG.md";
     license = lib.licenses.gpl2Plus;
-    maintainers = with lib.maintainers; [ AndersonTorres sikmir ];
+    maintainers = with lib.maintainers; [ sikmir ];
     platforms = lib.platforms.unix;
   };
 })

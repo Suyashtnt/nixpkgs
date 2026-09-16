@@ -1,43 +1,40 @@
 {
   lib,
   aiohttp,
-  aresponses,
+  aioresponses,
   awesomeversion,
-  backoff,
   buildPythonPackage,
-  cachetools,
   fetchFromGitHub,
   mashumaro,
   orjson,
   poetry-core,
   pytest-asyncio,
+  pytest-cov-stub,
   pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
+  python-backoff,
+  syrupy,
   typer,
   yarl,
   zeroconf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "wled";
-  version = "0.20.2";
+  version = "0.23.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "frenck";
     repo = "python-wled";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-7P/V83dGkfJJjZxZtiEwQXIY7CeBZ/fmvTdEjDirKj0=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-1JLW3wze4W3Uva9xIeSAmYw8f9tDfGxe9rueixVedms=";
   };
 
   postPatch = ''
     # Upstream doesn't set a version for the pyproject.toml
     substituteInPlace pyproject.toml \
-      --replace-fail "0.0.0" "${version}" \
-      --replace-fail "--cov" ""
+      --replace-fail "0.0.0" "${finalAttrs.version}"
   '';
 
   build-system = [ poetry-core ];
@@ -45,14 +42,13 @@ buildPythonPackage rec {
   dependencies = [
     aiohttp
     awesomeversion
-    backoff
-    cachetools
     mashumaro
     orjson
+    python-backoff
     yarl
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     cli = [
       typer
       zeroconf
@@ -60,19 +56,29 @@ buildPythonPackage rec {
   };
 
   nativeCheckInputs = [
-    aresponses
+    aioresponses
     pytest-asyncio
+    pytest-cov-stub
     pytest-xdist
     pytestCheckHook
+    syrupy
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  disabledTests = [
+    # wled release table rendering is inconsistent
+    "test_releases_command"
+    # outdated snapshots
+    "test_device_version_fixture"
   ];
 
   pythonImportsCheck = [ "wled" ];
 
-  meta = with lib; {
+  meta = {
     description = "Asynchronous Python client for WLED";
     homepage = "https://github.com/frenck/python-wled";
-    changelog = "https://github.com/frenck/python-wled/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+    changelog = "https://github.com/frenck/python-wled/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-}
+})

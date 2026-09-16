@@ -1,27 +1,31 @@
-{ lib
-, fetchFromGitHub
-, buildGoModule
-, unixODBC
-, icu
-, nix-update-script
-, testers
-, usql
+{
+  lib,
+  fetchFromGitHub,
+  buildGo126Module,
+  unixodbc,
+  icu,
+  nix-update-script,
+  testers,
+  usql,
 }:
 
-buildGoModule rec {
+buildGo126Module (finalAttrs: {
   pname = "usql";
-  version = "0.19.3";
+  version = "0.21.4";
 
   src = fetchFromGitHub {
     owner = "xo";
     repo = "usql";
-    rev = "v${version}";
-    hash = "sha256-VenqDYkBJ4XJ2zV7kaVvwlgDyCaTY77zQ5hPq5cOZKg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-8T3/IuTf7ui/yj9yy/HIOD5/8IQx1Zoodd7nmmGhla8=";
   };
 
-  buildInputs = [ unixODBC icu ];
+  buildInputs = [
+    unixodbc
+    icu
+  ];
 
-  vendorHash = "sha256-KdLUxgNGMkkWBhUpXSecu0m3fsKl7Qj8Aw3z8WcdnSs=";
+  vendorHash = "sha256-GxU3NLLUJgMTrdtnlyDGivKdf8xjRekpz5gHm7CrWqY=";
   proxyVendor = true;
 
   # Exclude drivers from the bad group
@@ -40,7 +44,6 @@ buildGoModule rec {
     "sqlite_json1"
     "sqlite_math_functions"
     "sqlite_stat4"
-    "sqlite_userauth"
     "sqlite_vtable"
     "no_adodb"
   ];
@@ -48,7 +51,7 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/xo/usql/text.CommandVersion=${version}"
+    "-X github.com/xo/usql/text.CommandVersion=${finalAttrs.version}"
   ];
 
   # All the checks currently require docker instances to run the databases.
@@ -57,19 +60,22 @@ buildGoModule rec {
   passthru = {
     updateScript = nix-update-script { };
     tests.version = testers.testVersion {
-      inherit version;
+      inherit (finalAttrs) version;
       package = usql;
       command = "usql --version";
     };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Universal command-line interface for SQL databases";
     homepage = "https://github.com/xo/usql";
-    changelog = "https://github.com/xo/usql/releases/tag/v${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/xo/usql/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
     mainProgram = "usql";
-    maintainers = with maintainers; [ georgyo anthonyroussel ];
-    platforms = with platforms; linux ++ darwin;
+    maintainers = with lib.maintainers; [
+      georgyo
+      anthonyroussel
+    ];
+    platforms = with lib.platforms; linux ++ darwin;
   };
-}
+})

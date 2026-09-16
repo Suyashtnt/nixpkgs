@@ -10,20 +10,19 @@ let
             lib,
             cmake,
             fetchFromGitHub,
-            hyprland,
             mkHyprlandPlugin,
           }:
           let
-            version = "0.43.0";
+            version = "0.56.0";
 
             hyprland-plugins-src = fetchFromGitHub {
               owner = "hyprwm";
               repo = "hyprland-plugins";
-              rev = "refs/tags/v${version}";
-              hash = "sha256-dPcWAeRJoG5CyWC32X3XX+Og0v/k1/S1N0T5dQWT32k=";
+              tag = "v${version}";
+              hash = "sha256-piRpwar7VZI3YviYo0a/UMFz9+rLesfv3nRLGKxjVGg=";
             };
           in
-          mkHyprlandPlugin hyprland {
+          mkHyprlandPlugin {
             pluginName = name;
             inherit version;
 
@@ -33,11 +32,7 @@ let
               homepage = "https://github.com/hyprwm/hyprland-plugins";
               description = "Hyprland ${description} plugin";
               license = lib.licenses.bsd3;
-              maintainers = with lib.maintainers; [
-                fufexan
-                johnrtitor
-              ];
-              inherit (hyprland.meta) platforms;
+              teams = [ lib.teams.hyprland ];
             };
           }
         )
@@ -46,9 +41,7 @@ let
         borders-plus-plus = "multiple borders";
         csgo-vulkan-fix = "CS:GO/CS2 Vulkan fix";
         hyprbars = "window title";
-        hyprexpo = "workspaces overview";
-        hyprtrails = "smooth trails behind moving windows";
-        hyprwinwrap = "xwinwrap-like";
+        hyprfocus = "flashfocus";
       };
 in
 hyprland-plugins

@@ -1,24 +1,23 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, pkg-config
-, openssl
-, stdenv
-, darwin
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  pkg-config,
+  openssl,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "ord";
-  version = "0.20.0";
+  version = "0.29.0";
 
   src = fetchFromGitHub {
     owner = "ordinals";
     repo = "ord";
-    rev = version;
-    hash = "sha256-qTTAViVZEw4XgYADoonsVZPulp43lFFkX2xE5OFbL3s=";
+    rev = finalAttrs.version;
+    hash = "sha256-0jcp8zOWeLjIOpop15DE5ue8axSHJiy7Jnv8oQiPbmo=";
   };
 
-  cargoHash = "sha256-QSeAAaT1LbcWLmML8i2sgRtTnimZfKgLq6qhnpQr8cc=";
+  cargoHash = "sha256-HPMRibZTYxKeaXRNmlriXaU3NyCMgm6Yitl2tBbOX8c=";
 
   nativeBuildInputs = [
     pkg-config
@@ -26,9 +25,6 @@ rustPlatform.buildRustPackage rec {
 
   buildInputs = [
     openssl
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.Security
-    darwin.apple_sdk.frameworks.SystemConfiguration
   ];
 
   dontUseCargoParallelTests = true;
@@ -37,12 +33,12 @@ rustPlatform.buildRustPackage rec {
     "--skip=subcommand::server::tests::status" # test fails if it built from source tarball
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Index, block explorer, and command-line wallet for Ordinals";
     homepage = "https://github.com/ordinals/ord";
-    changelog = "https://github.com/ordinals/ord/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.cc0;
-    maintainers = with maintainers; [ xrelkd ];
+    changelog = "https://github.com/ordinals/ord/blob/${finalAttrs.src.rev}/CHANGELOG.md";
+    license = lib.licenses.cc0;
+    maintainers = with lib.maintainers; [ xrelkd ];
     mainProgram = "ord";
   };
-}
+})

@@ -1,13 +1,17 @@
-{ lib, stdenv, fetchFromGitHub }:
-stdenv.mkDerivation rec {
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+}:
+stdenv.mkDerivation (finalAttrs: {
   pname = "pdpmake";
-  version = "1.4.3";
+  version = "2.0.4";
 
   src = fetchFromGitHub {
     owner = "rmyorston";
     repo = "pdpmake";
-    rev = version;
-    hash = "sha256-drHo8IUC3xQ/O6T4xCMQSK9m+O/6hTOJSw0OMl1W9WA=";
+    rev = finalAttrs.version;
+    hash = "sha256-ivRXZxm9RAWSmNfiV7BhVzVFsBKuMMpKjub8ADinYyc=";
   };
 
   makeFlags = [ "PREFIX=$(out)" ];
@@ -17,13 +21,13 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/rmyorston/pdpmake";
     description = "Public domain POSIX make";
-    license = licenses.unlicense;
-    maintainers = with maintainers; [ eownerdead ];
+    license = lib.licenses.unlicense;
+    maintainers = with lib.maintainers; [ eownerdead ];
     mainProgram = "pdpmake";
-    platforms = platforms.all;
-    badPlatforms = platforms.darwin; # Requires `uimensat`
+    platforms = lib.platforms.all;
+    badPlatforms = lib.platforms.darwin; # Requires `uimensat`
   };
-}
+})

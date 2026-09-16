@@ -14,42 +14,45 @@
   python-decouple,
   python-fsutil,
   python-slugify,
-  pythonOlder,
   pyyaml,
   requests,
+  pydantic,
   setuptools,
-  toml,
+  tomli-w,
+  typing-extensions,
+  useful-types,
   xlrd,
   xmltodict,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-benedict";
-  version = "0.33.2";
+  version = "0.38.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "fabiocaccamo";
     repo = "python-benedict";
-    rev = "refs/tags/${version}";
-    hash = "sha256-1/eLJFXACn1W5Yz43BIhdqqUVk3t9285d8aLwH+VmAE=";
+    tag = finalAttrs.version;
+    hash = "sha256-1YZqc0Ytqx4a1WGaqz5y0r2hw3okvax0/r267YTTGCE=";
   };
 
-  pythonRelaxDeps = [ "boto3" ];
-
-  nativeBuildInputs = [
-    setuptools
+  pythonRelaxDeps = [
+    "boto3"
+    "typing_extensions"
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     python-fsutil
     python-slugify
     requests
+    useful-types
+    typing-extensions
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     all = [
       beautifulsoup4
       boto3
@@ -57,9 +60,10 @@ buildPythonPackage rec {
       mailchecker
       openpyxl
       phonenumbers
+      pydantic
       python-dateutil
       pyyaml
-      toml
+      tomli-w
       xlrd
       xmltodict
     ];
@@ -71,7 +75,7 @@ buildPythonPackage rec {
       beautifulsoup4
       openpyxl
       pyyaml
-      toml
+      tomli-w
       xlrd
       xmltodict
     ];
@@ -82,7 +86,8 @@ buildPythonPackage rec {
       python-dateutil
     ];
     s3 = [ boto3 ];
-    toml = [ toml ];
+    schema = [ pydantic ];
+    toml = [ tomli-w ];
     xls = [
       openpyxl
       xlrd
@@ -95,7 +100,8 @@ buildPythonPackage rec {
     orjson
     pytestCheckHook
     python-decouple
-  ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   disabledTests = [
     # Tests require network access
@@ -114,11 +120,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "benedict" ];
 
-  meta = with lib; {
+  meta = {
     description = "Module with keylist/keypath support";
     homepage = "https://github.com/fabiocaccamo/python-benedict";
-    changelog = "https://github.com/fabiocaccamo/python-benedict/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/fabiocaccamo/python-benedict/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

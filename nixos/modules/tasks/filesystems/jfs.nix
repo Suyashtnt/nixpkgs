@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -13,7 +18,7 @@ in
     boot.initrd.kernelModules = mkIf inInitrd [ "jfs" ];
 
     boot.initrd.extraUtilsCommands = mkIf (inInitrd && !config.boot.initrd.systemd.enable) ''
-      copy_bin_and_libs ${pkgs.jfsutils}/sbin/fsck.jfs
+      copy_bin_and_libs ${lib.getBin pkgs.jfsutils}/sbin/fsck.jfs
     '';
 
     boot.initrd.systemd.initrdBin = mkIf inInitrd [ pkgs.jfsutils ];

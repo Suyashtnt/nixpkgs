@@ -1,13 +1,14 @@
 {
   lib,
-  beautifulsoup4,
-  buildPythonPackage,
-  fetchFromGitHub,
   base58,
+  beautifulsoup4,
   bech32,
+  buildPythonPackage,
   cashaddress,
   cbor,
+  docx2python,
   eth-hash,
+  fetchFromGitHub,
   intervaltree,
   langdetect,
   lxml,
@@ -15,32 +16,31 @@
   phonenumbers,
   python-magic,
   readabilipy,
-  pythonOlder,
   setuptools,
+  solders,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "iocsearcher";
-  version = "1.0.0";
+  version = "3.1.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "malicialab";
     repo = "iocsearcher";
-    rev = "5f7b87761f2195eb358006f3492f0beac7ecc4b0";
-    hash = "sha256-SYh0+JEZa95iBznNzXut/9Vwof6VFeSlt0/g+XmMPC0=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-93pHjm8FZ4qZMLQ5SftUamRMJJFhU8uHNacOPEAZcT4=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     base58
     beautifulsoup4
     bech32
     cashaddress
     cbor
+    docx2python
     eth-hash
     intervaltree
     langdetect
@@ -49,19 +49,21 @@ buildPythonPackage rec {
     phonenumbers
     python-magic
     readabilipy
-  ] ++ eth-hash.optional-dependencies.pycryptodome;
+    solders
+  ]
+  ++ eth-hash.optional-dependencies.pycryptodome;
 
   # Module has no tests
   doCheck = false;
 
   pythonImportsCheck = [ "iocsearcher" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library and command line tool for extracting indicators of compromise (IOCs)";
-    mainProgram = "iocsearcher";
     homepage = "https://github.com/malicialab/iocsearcher";
-    changelog = "https://github.com/malicialab/iocsearcher/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/malicialab/iocsearcher/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "iocsearcher";
   };
-}
+})

@@ -11,12 +11,12 @@
 buildPythonPackage rec {
   pname = "http-parser";
   version = "0.9.0";
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "benoitc";
-    repo = pname;
-    rev = "refs/tags/${version}";
+    repo = "http-parser";
+    tag = version;
     hash = "sha256-WHimvSaNcncwzLwwk5+ZNg7BbHF+hPr39SfidEDYfhU=";
   };
 

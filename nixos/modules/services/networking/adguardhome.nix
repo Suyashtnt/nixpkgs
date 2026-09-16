@@ -1,30 +1,46 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.adguardhome;
   settingsFormat = pkgs.formats.yaml { };
 
-  args = lib.concatStringsSep " " ([
-    "--no-check-update"
-    "--pidfile /run/AdGuardHome/AdGuardHome.pid"
-    "--work-dir /var/lib/AdGuardHome/"
-    "--config /var/lib/AdGuardHome/AdGuardHome.yaml"
-  ] ++ cfg.extraArgs);
+  args = lib.concatStringsSep " " (
+    [
+      "--no-check-update"
+      "--pidfile /run/AdGuardHome/AdGuardHome.pid"
+      "--work-dir /var/lib/AdGuardHome/"
+      "--config /var/lib/AdGuardHome/AdGuardHome.yaml"
+    ]
+    ++ cfg.extraArgs
+  );
 
-  settings = if (cfg.settings != null) then
-    cfg.settings // (if cfg.settings.schema_version < 23 then {
-      bind_host = cfg.host;
-      bind_port = cfg.port;
-    } else {
-      http.address = "${cfg.host}:${toString cfg.port}";
-    })
-  else
-    null;
+  settings =
+    if (cfg.settings != null) then
+      lib.recursiveUpdate cfg.settings (
+        if cfg.settings.schema_version < 23 then
+          {
+            bind_host = cfg.host;
+            bind_port = cfg.port;
+          }
+        else
+          {
+            http = (cfg.settings.http or { }) // {
+              address = "${cfg.host}:${toString cfg.port}";
+            };
+          }
+      )
+    else
+      null;
 
-  configFile =
-    (settingsFormat.generate "AdGuardHome.yaml" settings).overrideAttrs (_: {
-      checkPhase = "${cfg.package}/bin/adguardhome -c $out --check-config";
-    });
-in {
+  configFile = (settingsFormat.generate "AdGuardHome.yaml" settings).overrideAttrs (_: {
+    checkPhase = "${cfg.package}/bin/AdGuardHome -c $out --check-config";
+  });
+in
+{
   options.services.adguardhome = with lib.types; {
     enable = lib.mkEnableOption "AdGuard Home network-wide ad blocker";
 
@@ -130,24 +146,24 @@ in {
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.settings != null
-          -> !(lib.hasAttrByPath [ "bind_host" ] cfg.settings);
+        assertion = cfg.settings != null -> !(lib.hasAttrByPath [ "bind_host" ] cfg.settings);
         message = "AdGuard option `settings.bind_host' has been superseded by `services.adguardhome.host'";
       }
       {
-        assertion = cfg.settings != null
-          -> !(lib.hasAttrByPath [ "bind_port" ] cfg.settings);
+        assertion = cfg.settings != null -> !(lib.hasAttrByPath [ "bind_port" ] cfg.settings);
         message = "AdGuard option `settings.bind_port' has been superseded by `services.adguardhome.port'";
       }
       {
-        assertion = settings != null -> cfg.mutableSettings
-          || lib.hasAttrByPath [ "dns" "bootstrap_dns" ] settings;
+        assertion =
+          settings != null -> cfg.mutableSettings || lib.hasAttrByPath [ "dns" "bootstrap_dns" ] settings;
         message = "AdGuard setting dns.bootstrap_dns needs to be configured for a minimal working configuration";
       }
       {
-        assertion = settings != null -> cfg.mutableSettings
-          || lib.hasAttrByPath [ "dns" "bootstrap_dns" ] settings
-          && lib.isList settings.dns.bootstrap_dns;
+        assertion =
+          settings != null
+          ->
+            cfg.mutableSettings
+            || lib.hasAttrByPath [ "dns" "bootstrap_dns" ] settings && lib.isList settings.dns.bootstrap_dns;
         message = "AdGuard setting dns.bootstrap_dns needs to be a list";
       }
     ];
@@ -161,32 +177,73 @@ in {
         StartLimitBurst = 10;
       };
 
-      preStart = lib.optionalString (settings != null) ''
-        if    [ -e "$STATE_DIRECTORY/AdGuardHome.yaml" ] \
-           && [ "${toString cfg.mutableSettings}" = "1" ]; then
-          # First run a schema_version update on the existing configuration
-          # This ensures that both the new config and the existing one have the same schema_version
-          # Note: --check-config has the side effect of modifying the file at rest!
-          ${lib.getExe cfg.package} -c "$STATE_DIRECTORY/AdGuardHome.yaml" --check-config
+      preStart =
+        let
+          installFresh = ''
+            cp --force "${configFile}" "$STATE_DIRECTORY/AdGuardHome.yaml"
+            chmod 600 "$STATE_DIRECTORY/AdGuardHome.yaml"
+          '';
+        in
+        lib.optionalString (settings != null) (
+          if cfg.mutableSettings then
+            ''
+              if [ -e "$STATE_DIRECTORY/AdGuardHome.yaml" ]; then
+                # First run a schema_version update on the existing configuration
+                # This ensures that both the new config and the existing one have the same schema_version
+                # Note: --check-config has the side effect of modifying the file at rest!
+                ${lib.getExe cfg.package} -c "$STATE_DIRECTORY/AdGuardHome.yaml" --check-config
 
-          # Writing directly to AdGuardHome.yaml results in empty file
-          ${lib.getExe pkgs.yaml-merge} "$STATE_DIRECTORY/AdGuardHome.yaml" "${configFile}" > "$STATE_DIRECTORY/AdGuardHome.yaml.tmp"
-          mv "$STATE_DIRECTORY/AdGuardHome.yaml.tmp" "$STATE_DIRECTORY/AdGuardHome.yaml"
-        else
-          cp --force "${configFile}" "$STATE_DIRECTORY/AdGuardHome.yaml"
-          chmod 600 "$STATE_DIRECTORY/AdGuardHome.yaml"
-        fi
-      '';
+                # sed operation needed to fix protection_disabled_until value changed by yaml-merge
+                ${lib.getExe pkgs.yaml-merge} "$STATE_DIRECTORY/AdGuardHome.yaml" "${configFile}" \
+                | sed -E "s/(protection_disabled_until: [0-9]{4}-[0-9]{2}-[0-9]{2}) /\1T/" > "$STATE_DIRECTORY/AdGuardHome.yaml.tmp"
+                mv "$STATE_DIRECTORY/AdGuardHome.yaml.tmp" "$STATE_DIRECTORY/AdGuardHome.yaml"
+              else
+                ${installFresh}
+              fi
+            ''
+          else
+            installFresh
+        );
 
       serviceConfig = {
         DynamicUser = true;
         ExecStart = "${lib.getExe cfg.package} ${args}";
-        AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ]
-          ++ lib.optionals cfg.allowDHCP [ "CAP_NET_RAW" ];
+        CapabilityBoundingSet = [ "CAP_NET_BIND_SERVICE" ] ++ lib.optionals cfg.allowDHCP [ "CAP_NET_RAW" ];
+        AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ] ++ lib.optionals cfg.allowDHCP [ "CAP_NET_RAW" ];
         Restart = "always";
         RestartSec = 10;
         RuntimeDirectory = "AdGuardHome";
         StateDirectory = "AdGuardHome";
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+          "~@resources"
+        ];
+        SystemCallArchitectures = "native";
+        DevicePolicy = "closed";
+        LockPersonality = true;
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
+        PrivateMounts = true;
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectSystem = "strict";
+        RemoveIPC = true;
+        RestrictAddressFamilies = [
+          "AF_NETLINK"
+          "AF_INET"
+          "AF_INET6"
+        ]
+        ++ lib.optionals cfg.allowDHCP [ "AF_PACKET" ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        UMask = "0077";
       };
     };
 

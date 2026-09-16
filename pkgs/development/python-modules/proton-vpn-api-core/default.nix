@@ -2,57 +2,110 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  setuptools,
-  proton-core,
-  proton-vpn-connection,
-  proton-vpn-logger,
-  proton-vpn-killswitch,
-  proton-vpn-session,
-  sentry-sdk,
+  aiohttp,
+  cryptography,
   distro,
-  pytestCheckHook,
+  fido2,
+  gobject-introspection,
+  iproute2,
+  jinja2,
+  networkmanager,
+  packaging,
+  proton-core,
+  proton-vpn-local-agent,
+  pycairo,
+  pygobject3,
+  pynacl,
+  pyopenssl,
+  pytest-asyncio,
   pytest-cov-stub,
+  pytestCheckHook,
+  pyxdg,
+  requests,
+  sentry-sdk,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "proton-vpn-api-core";
-  version = "0.32.2";
+  version = "5.2.5";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ProtonVPN";
     repo = "python-proton-vpn-api-core";
     rev = "v${version}";
-    hash = "sha256-n4TZkp2ZMSJ1w1wQUMsAhX8kmWu59udlsXXEhIM83mI=";
+    hash = "sha256-OGbms0FP0UjHjqvzlFpJIZo3bPFirVcwtVgvAvA9QZA=";
   };
 
-  build-system = [ setuptools ];
+  postPatch = ''
+    substituteInPlace proton/vpn/backend/networkmanager/killswitch/wireguard/killswitch_connection_handler.py \
+      --replace-fail '["/usr/sbin/ip", "route"]' '["${iproute2}/bin/ip", "route"]'
+  '';
+
+  nativeBuildInputs = [
+    # Needed to recognize the NM namespace
+    gobject-introspection
+  ];
+
+  propagatedBuildInputs = [
+    # Needed here for the NM namespace
+    networkmanager
+  ];
+
+  build-system = [
+    setuptools
+  ];
 
   dependencies = [
+    cryptography
     distro
+    fido2
+    jinja2
+    packaging
     proton-core
-    proton-vpn-connection
-    proton-vpn-logger
-    proton-vpn-killswitch
-    proton-vpn-session
+    proton-vpn-local-agent
+    pycairo
+    pygobject3
+    pynacl
+    pyxdg
     sentry-sdk
   ];
 
-  pythonImportsCheck = [ "proton.vpn.core" ];
+  pythonImportsCheck = [
+    "proton.vpn.backend.networkmanager.core"
+    "proton.vpn.backend.networkmanager.killswitch.default"
+    "proton.vpn.backend.networkmanager.killswitch.wireguard"
+    "proton.vpn.backend.networkmanager.protocol.openvpn"
+    "proton.vpn.backend.networkmanager.protocol.wireguard"
+    "proton.vpn.connection"
+    "proton.vpn.core"
+    "proton.vpn.killswitch.interface"
+    "proton.vpn.logging"
+    "proton.vpn.session"
+    "proton.vpn.split_tunneling"
+  ];
 
   nativeCheckInputs = [
+    aiohttp
+    pyopenssl
+    pytest-asyncio
+    requests
     pytestCheckHook
     pytest-cov-stub
   ];
 
-  preCheck = ''
+  # Needed for `pythonImportsCheck`, `postInstall` happens between `pythonImportsCheckPhase` and `pytestCheckPhase`.
+  postInstall = ''
     # Needed for Permission denied: '/homeless-shelter'
     export HOME=$(mktemp -d)
+    export XDG_RUNTIME_DIR=$(mktemp -d)
   '';
 
   disabledTests = [
     # Permission denied: '/run'
     "test_ensure_configuration_file_is_created"
+    "test_ovpnconfig_with_certificate"
     "test_ovpnconfig_with_settings"
     "test_wireguard_config_content_generation"
     "test_wireguard_with_non_certificate"
@@ -65,6 +118,10 @@ buildPythonPackage rec {
     description = "Acts as a facade to the other Proton VPN components, exposing a uniform API to the available Proton VPN services";
     homepage = "https://github.com/ProtonVPN/python-proton-vpn-api-core";
     license = lib.licenses.gpl3Only;
-    maintainers = with lib.maintainers; [ sebtm ];
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [
+      anthonyroussel
+      rapiteanu
+    ];
   };
 }

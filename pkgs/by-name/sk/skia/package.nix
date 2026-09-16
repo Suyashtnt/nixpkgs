@@ -1,24 +1,29 @@
-{ lib
-, stdenv
-, fetchgit
-, expat
-, fontconfig
-, freetype
-, harfbuzzFull
-, icu
-, gn
-, libGL
-, libjpeg
-, libwebp
-, libX11
-, ninja
-, python3
-, testers
-, vulkan-headers
-, vulkan-memory-allocator
-, xcbuild
+{
+  lib,
+  stdenv,
+  fetchgit,
+  fetchpatch2,
+  expat,
+  fontconfig,
+  freetype,
+  harfbuzzFull,
+  icu,
+  gn,
+  libGL,
+  libjpeg,
+  libwebp,
+  libx11,
+  ninja,
+  python3,
+  testers,
+  vulkan-headers,
+  vulkan-memory-allocator,
+  xcbuild,
+  cctools,
+  zlib,
+  fixDarwinDylibNames,
 
-, enableVulkan ? !stdenv.hostPlatform.isDarwin
+  enableVulkan ? !stdenv.hostPlatform.isDarwin,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -26,19 +31,30 @@ stdenv.mkDerivation (finalAttrs: {
   # Version from https://skia.googlesource.com/skia/+/refs/heads/main/RELEASE_NOTES.md
   # or https://chromiumdash.appspot.com/releases
   # plus date of the tip of the corresponding chrome/m$version branch
-  version = "129-unstable-2024-09-18";
+  version = "144-unstable-2025-12-02";
 
   src = fetchgit {
     url = "https://skia.googlesource.com/skia.git";
     # Tip of the chrome/m$version branch
-    rev = "dda581d538cb6532cda841444e7b4ceacde01ec9";
-    hash = "sha256-NZiZFsABebugszpYsBusVlTYnYda+xDIpT05cZ8Jals=";
+    rev = "ee20d565acb08dece4a32e3f209cdd41119015ca";
+    hash = "sha256-0LiFK/8873gei70iVhNGRlcFeGIp7tjDEfxTBz1LYv8=";
   };
 
+  patches = [
+    # A tiny patch to fix build errors on loongarch64-linux using GCC (Clang works fine).
+    # https://skia-review.googlesource.com/c/skia/+/1199836
+    (fetchpatch2 {
+      url = "https://salsa.debian.org/fonts-team/libskia/-/raw/6574ca599eab076a9cd5b8667f81aef0f67b3eeb/debian/patches/loong-build";
+      hash = "sha256-6dUCQixmll2K8fqRGwhay7ee8gvdRq1NJjUHBHxIFvo=";
+    })
+  ];
+
   postPatch = ''
+    substituteInPlace BUILD.gn \
+      --replace-fail 'rebase_path("//bin/gn")' '"gn"'
     # System zlib detection bug workaround
     substituteInPlace BUILD.gn \
-      --replace-fail 'deps = [ "//third_party/zlib" ]' 'deps = []'
+      --replace-fail '"//third_party/zlib",' ""
   '';
 
   strictDeps = true;
@@ -46,7 +62,13 @@ stdenv.mkDerivation (finalAttrs: {
     gn
     ninja
     python3
-  ] ++ lib.optional stdenv.hostPlatform.isDarwin xcbuild;
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    xcbuild
+    cctools.libtool
+    zlib
+    fixDarwinDylibNames
+  ];
 
   buildInputs = [
     expat
@@ -57,40 +79,55 @@ stdenv.mkDerivation (finalAttrs: {
     libGL
     libjpeg
     libwebp
-    libX11
-  ] ++ lib.optionals enableVulkan [
+    libx11
+  ]
+  ++ lib.optionals enableVulkan [
     vulkan-headers
     vulkan-memory-allocator
   ];
 
-  gnFlags = let
-    cpu = {
-      "x86_64" = "x64";
-      "i686" = "x86";
-      "arm" = "arm";
-      "aarch64" = "arm64";
-    }.${stdenv.hostPlatform.parsed.cpu.name};
-  in [
-    # Build in release mode
-    "is_official_build=true"
-    "is_component_build=true"
-    # Don't use missing tools
-    "skia_use_dng_sdk=false"
-    "skia_use_wuffs=false"
-    # Use system dependencies
-    "extra_cflags=[\"-I${harfbuzzFull.dev}/include/harfbuzz\"]"
-    "cc=\"${stdenv.cc.targetPrefix}cc\""
-    "cxx=\"${stdenv.cc.targetPrefix}c++\""
-    "ar=\"${stdenv.cc.targetPrefix}ar\""
-    "target_cpu=\"${cpu}\""
-  ] ++ map (lib: "skia_use_system_${lib}=true") [
-    "zlib"
-    "harfbuzz"
-    "libpng"
-    "libwebp"
-  ] ++ lib.optionals enableVulkan [
-    "skia_use_vulkan=true"
-  ];
+  gnFlags =
+    let
+      cpu =
+        {
+          "x86_64" = "x64";
+          "i686" = "x86";
+          "arm" = "arm";
+          "aarch64" = "arm64";
+          "loongarch64" = "loong64";
+        }
+        .${stdenv.hostPlatform.parsed.cpu.name};
+    in
+    [
+      # Build in release mode
+      "is_official_build=true"
+      "is_component_build=true"
+      # Don't use missing tools
+      "skia_use_dng_sdk=false"
+      "skia_use_wuffs=false"
+      # Use system dependencies
+      "extra_cflags=[\"-I${harfbuzzFull.dev}/include/harfbuzz\"]"
+      "cc=\"${stdenv.cc.targetPrefix}cc\""
+      "cxx=\"${stdenv.cc.targetPrefix}c++\""
+      "ar=\"${stdenv.cc.targetPrefix}ar\""
+      "target_cpu=\"${cpu}\""
+    ]
+    ++ map (lib: "skia_use_system_${lib}=true") [
+      "zlib"
+      "harfbuzz"
+      "libpng"
+      "libwebp"
+    ]
+    ++ lib.optionals enableVulkan [
+      "skia_use_vulkan=true"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      "skia_use_fontconfig=true"
+      "skia_use_freetype=true"
+      "skia_use_metal=true"
+    ];
+
+  env.NIX_LDFLAGS = lib.optionalString stdenv.hostPlatform.isDarwin "-lz";
 
   # Somewhat arbitrary, but similar to what other distros are doing
   installPhase = ''
@@ -98,7 +135,7 @@ stdenv.mkDerivation (finalAttrs: {
 
     # Libraries
     mkdir -p $out/lib
-    cp *.so *.a $out/lib
+    cp *.so *.a *.dylib $out/lib
 
     # Includes
     pushd ../../include
@@ -142,9 +179,7 @@ stdenv.mkDerivation (finalAttrs: {
     homepage = "https://skia.org/";
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ fgaz ];
-    platforms = with lib.platforms; arm ++ aarch64 ++ x86 ++ x86_64;
+    platforms = with lib.platforms; arm ++ aarch64 ++ x86 ++ x86_64 ++ loongarch64;
     pkgConfigModules = [ "skia" ];
-    # https://github.com/NixOS/nixpkgs/pull/325871#issuecomment-2220610016
-    broken = stdenv.hostPlatform.isDarwin;
   };
 })

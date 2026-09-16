@@ -9,22 +9,24 @@
 
 buildPythonPackage rec {
   pname = "amaranth-soc";
-  version = "0.1a-unstable-2024-06-10";
+  version = "0.1a-unstable-2026-05-23";
   pyproject = true;
   # from `pdm show`
-  realVersion = let
-     tag = builtins.elemAt (lib.splitString "-" version) 0;
-     rev = lib.substring 0 7 src.rev;
-    in "${tag}1.dev1+g${rev}";
+  realVersion =
+    let
+      tag = builtins.elemAt (lib.splitString "-" version) 0;
+      rev = lib.substring 0 7 src.rev;
+    in
+    "${tag}1.dev1+g${rev}";
 
   src = fetchFromGitHub {
     owner = "amaranth-lang";
     repo = "amaranth-soc";
-    rev = "e1b842800533f44924f21c3867bc2290084d100f";
-    hash = "sha256-GAGQEncONY566v8hLjGeZ7CRlOt36vHg+0a5xcB+g1Y=";
+    rev = "3e3d8b7241c1c7e80e0cd12937d288d0ad4a6cba";
+    hash = "sha256-GuunBRGQpMSJWWU6ukr9FYTpPDIxsTyLz7j9iQgN900=";
   };
 
-  nativeBuildInputs = [ pdm-backend ];
+  build-system = [ pdm-backend ];
   dependencies = [ amaranth ];
 
   preBuild = ''
@@ -33,11 +35,11 @@ buildPythonPackage rec {
 
   passthru.updateScript = unstableGitUpdater { tagPrefix = "v"; };
 
-  meta = with lib; {
+  meta = {
     description = "System on Chip toolkit for Amaranth HDL";
     homepage = "https://github.com/amaranth-lang/amaranth-soc";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [
       thoughtpolice
       pbsds
     ];

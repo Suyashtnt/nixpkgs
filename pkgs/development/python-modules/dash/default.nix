@@ -22,28 +22,31 @@
   nest-asyncio,
 
   celery,
+  kombu,
   redis,
   diskcache,
   multiprocess,
   psutil,
   flask-compress,
 
+  flaky,
+  numpy,
   pytestCheckHook,
   pytest-mock,
   mock,
   pyyaml,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "dash";
-  version = "2.18.1";
+  version = "3.4.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "plotly";
     repo = "dash";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-2LwM1lrJNdekoDN+wDHgaSlGOnpK618r65UHj7cP59E=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-8LR0iNc8lJBKzbJuvZ8jzta1G3TbQ9yIBSXFvvyeqmI=";
   };
 
   nativeBuildInputs = [
@@ -52,8 +55,8 @@ buildPythonPackage rec {
   ];
 
   yarnOfflineCache = fetchYarnDeps {
-    yarnLock = "${src}/@plotly/dash-jupyterlab/yarn.lock";
-    hash = "sha256-L/or8jO6uEypI5krwy/ElIxa6jJrXGsCRZ9mh+0kcGA=";
+    yarnLock = "${finalAttrs.src}/@plotly/dash-jupyterlab/yarn.lock";
+    hash = "sha256-Nvm9BS55q/HW9ArpHD01F5Rmx8PLS3yqaz1yDK8Sg68=";
   };
 
   # as of writing this yarnConfigHook has no parameter that changes in which directory it will be run
@@ -88,11 +91,18 @@ buildPythonPackage rec {
     nest-asyncio
   ];
 
+  pythonRelaxDeps = [
+    "werkzeug"
+    "flask"
+  ];
+
   optional-dependencies = {
     celery = [
       celery
+      kombu
       redis
-    ];
+    ]
+    ++ celery.optional-dependencies.redis;
     diskcache = [
       diskcache
       multiprocess
@@ -102,28 +112,32 @@ buildPythonPackage rec {
   };
 
   nativeCheckInputs = [
+    flaky
+    numpy
+    psutil
     pytestCheckHook
     pytest-mock
     mock
     pyyaml
+    redis
+  ];
+
+  enabledTestPaths = [
+    "tests/unit"
   ];
 
   disabledTestPaths = [
     "tests/unit/test_browser.py"
     "tests/unit/test_app_runners.py" # Uses selenium
-    "tests/integration"
   ];
 
   pythonImportsCheck = [ "dash" ];
 
   meta = {
-    changelog = "https://github.com/plotly/dash/blob/${src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/plotly/dash/blob/${finalAttrs.src.rev}/CHANGELOG.md";
     description = "Python framework for building analytical web applications";
     homepage = "https://dash.plot.ly/";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [
-      antoinerg
-      tomasajt
-    ];
+    maintainers = with lib.maintainers; [ tomasajt ];
   };
-}
+})

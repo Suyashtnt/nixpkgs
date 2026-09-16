@@ -6,13 +6,13 @@
 }:
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "plasma-plugin-blurredwallpaper";
-  version = "3.1.0";
+  version = "3.6.0";
 
   src = fetchFromGitHub {
     owner = "bouteillerAlan";
     repo = "blurredwallpaper";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-+MjnVsGHqitQytxiAH39Kx9SXuTEFfIC14Ayzu4yE4I=";
+    hash = "sha256-/Iit74EAHnB8LBF8/Pcg5RZ/Bb4QZkiWvVGkg9Z+GOo=";
   };
 
   installPhase = ''

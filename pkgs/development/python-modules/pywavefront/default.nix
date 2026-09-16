@@ -22,7 +22,7 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [ setuptools ];
 
-  passthru.optional-dependencies.visualization = [ pyglet ];
+  optional-dependencies.visualization = [ pyglet ];
 
   nativeCheckInputs = [
     pytestCheckHook
@@ -31,11 +31,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pywavefront" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for importing Wavefront .obj files";
     homepage = "https://github.com/pywavefront/PyWavefront";
     changelog = "https://github.com/pywavefront/PyWavefront/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ pbsds ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ pbsds ];
   };
 }

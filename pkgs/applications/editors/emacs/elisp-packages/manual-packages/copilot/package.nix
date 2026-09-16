@@ -4,33 +4,40 @@
   editorconfig,
   f,
   fetchFromGitHub,
+  jsonrpc,
   nodejs,
   s,
   melpaBuild,
+  copilot-language-server,
 }:
-melpaBuild {
+melpaBuild (finalAttrs: {
   pname = "copilot";
-  version = "0-unstable-2024-05-01";
+  version = "0.9.0";
 
   src = fetchFromGitHub {
     owner = "copilot-emacs";
     repo = "copilot.el";
-    rev = "733bff26450255e092c10873580e9abfed8a81b8";
-    sha256 = "sha256-Knp36PtgA73gtYO+W1clQfr570bKCxTFsGW3/iH86A0=";
+    rev = "v${finalAttrs.version}";
+    sha256 = "sha256-x2Lzhz8Yi3/EsahkJZ/pJoaJuVb1xIHgNt50qi0ndeo=";
   };
 
   files = ''(:defaults "dist")'';
+
+  postPatch = ''
+    substituteInPlace copilot.el \
+      --replace-fail "defcustom copilot-server-executable \"copilot-language-server\"" \
+                     "defcustom copilot-server-executable \"${lib.getExe copilot-language-server}\""
+  '';
 
   packageRequires = [
     dash
     editorconfig
     f
+    jsonrpc
     s
   ];
 
   propagatedUserEnvPkgs = [ nodejs ];
-
-  ignoreCompilationError = false;
 
   meta = {
     description = "Unofficial copilot plugin for Emacs";
@@ -40,9 +47,8 @@ melpaBuild {
     platforms = [
       "aarch64-darwin"
       "aarch64-linux"
-      "x86_64-darwin"
       "x86_64-linux"
       "x86_64-windows"
     ];
   };
-}
+})

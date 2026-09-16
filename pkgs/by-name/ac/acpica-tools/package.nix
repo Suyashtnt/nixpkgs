@@ -1,22 +1,30 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, bison
-, flex
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  bison,
+  flex,
+  nix-update-script,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "acpica-tools";
-  version = "20240827";
+  version = "20260408";
+
+  strictDeps = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "acpica";
     repo = "acpica";
-    rev = "refs/tags/version-${version}";
-    hash = "sha256-RlhKBvydesUdBaFUHk3sSM6SRIZ7q5IqnibX+hps+Tc=";
+    tag = finalAttrs.version;
+    hash = "sha256-m6xugPmjwa/67IB8GiOd0Rasfry/vMbX0lC6OIEbyvU=";
   };
 
-  nativeBuildInputs = [ bison flex ];
+  nativeBuildInputs = [
+    bison
+    flex
+  ];
 
   buildFlags = [
     "acpibin"
@@ -29,28 +37,47 @@ stdenv.mkDerivation rec {
     "iasl"
   ];
 
-  env.NIX_CFLAGS_COMPILE = toString ([
-    "-O3"
-  ]);
+  env = {
+    NIX_CFLAGS_COMPILE = toString [
+      "-O3"
+    ];
+
+    # ACPICA emits packed structs that produce unaligned pointers. Apple's
+    # arm64 linker rejects these under chained fixups; opt back into the
+    # legacy fixup format so the link succeeds.
+    NIX_LDFLAGS = lib.optionalString (
+      stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64
+    ) "-no_fixup_chains";
+
+    # i686 builds fail with hardening enabled (due to -Wformat-overflow). Disable
+    # -Werror altogether to make this derivation less fragile to toolchain
+    # updates.
+    NOWERROR = "TRUE";
+
+    # We can handle stripping ourselves.
+    # Unless we are on Darwin. Upstream makefiles degrade coreutils install to cp if _APPLE is detected.
+    INSTALLFLAGS = lib.optionalString (!stdenv.hostPlatform.isDarwin) "-m 555";
+  };
 
   enableParallelBuilding = true;
 
-  # i686 builds fail with hardening enabled (due to -Wformat-overflow). Disable
-  # -Werror altogether to make this derivation less fragile to toolchain
-  # updates.
-  NOWERROR = "TRUE";
-
-  # We can handle stripping ourselves.
-  # Unless we are on Darwin. Upstream makefiles degrade coreutils install to cp if _APPLE is detected.
-  INSTALLFLAGS = lib.optionals (!stdenv.hostPlatform.isDarwin) "-m 555";
-
   installFlags = [ "PREFIX=${placeholder "out"}" ];
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     homepage = "https://www.acpica.org/";
     description = "ACPICA Tools";
-    license = with licenses; [ iasl gpl2Only bsd3 ];
-    maintainers = with maintainers; [ tadfisher felixsinger ];
-    platforms = platforms.linux ++ platforms.darwin;
+    changelog = "https://github.com/acpica/acpica/releases/tag/${finalAttrs.version}";
+    license = with lib.licenses; [
+      iasl
+      gpl2Only
+      bsd3
+    ];
+    maintainers = with lib.maintainers; [
+      tadfisher
+      felixsinger
+    ];
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
   };
-}
+})

@@ -1,6 +1,10 @@
-{ config, lib, pkgs, ... }:
 {
-  meta.maintainers = with lib.maintainers; [ grahamc ];
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
   options = {
 
     hardware.mcelog = {

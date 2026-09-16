@@ -1,38 +1,64 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, installShellFiles
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  versionCheckHook,
+  nix-update-script,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "gosmee";
-  version = "0.22.1";
+  version = "0.32.0";
 
   src = fetchFromGitHub {
     owner = "chmouel";
     repo = "gosmee";
-    rev = "v${version}";
-    hash = "sha256-UnGzPkbw7x8l1+9xEXFiJZFzJT5yu7MCgPKkKzaFqkk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Qdp36Z6p+4mSafPjJjF/gswpWpglzinYsMyApGd3k3Q=";
   };
+
   vendorHash = null;
 
   nativeBuildInputs = [ installShellFiles ];
 
+  __darwinAllowLocalNetworking = true;
+
+  checkFlags =
+    let
+      # Skip tests that require network access
+      skippedTests = [
+        "TestRunExecCommand"
+      ];
+    in
+    [ "-skip=^${builtins.concatStringsSep "$|^" skippedTests}$" ];
+
   postPatch = ''
-    printf ${version} > gosmee/templates/version
+    printf ${finalAttrs.version} > gosmee/templates/version
   '';
 
-  postInstall = ''
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     installShellCompletion --cmd gosmee \
       --bash <($out/bin/gosmee completion bash) \
       --fish <($out/bin/gosmee completion fish) \
       --zsh <($out/bin/gosmee completion zsh)
   '';
 
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  passthru.updateScript = nix-update-script { };
+
   meta = {
     description = "Command line server and client for webhooks deliveries (and https://smee.io)";
     homepage = "https://github.com/chmouel/gosmee";
+    changelog = "https://github.com/chmouel/gosmee/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ vdemeester chmouel ];
+    maintainers = with lib.maintainers; [
+      vdemeester
+      chmouel
+    ];
+    mainProgram = "gosmee";
   };
-}
+})

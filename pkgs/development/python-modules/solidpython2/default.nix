@@ -1,21 +1,22 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, lib
-, ply
-, setuptools
-, poetry-core
-, withOpenSCAD ? false
-, openscad
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  ply,
+  setuptools,
+  poetry-core,
+  withOpenSCAD ? false,
+  openscad,
 }:
 buildPythonPackage rec {
   pname = "solidpython2";
-  version = "2.1.0";
+  version = "2.1.3";
   pyproject = true;
   src = fetchFromGitHub {
     owner = "jeff-dh";
     repo = "SolidPython";
-    rev = "v${version}";
-    hash = "sha256-Tq3hrsC2MmueCqChk6mY/u/pCjF/pFuU2o3K+qw7ImY=";
+    tag = "v${version}";
+    hash = "sha256-3A1vYqIHFUiOH2cEx/XSOien3PmNpMAhLOe3T1yubx4=";
   };
 
   # NOTE: this patch makes tests runnable outside the source-tree
@@ -24,7 +25,7 @@ buildPythonPackage rec {
   # - drop the openscad image geneneration tests, these don't work on the nix sandbox due to the need for xserver
   patches = [ ./difftool_tests.patch ];
 
-  propagatedBuildInputs = lib.optionals withOpenSCAD [openscad];
+  propagatedBuildInputs = lib.optionals withOpenSCAD [ openscad ];
 
   build-system = [
     poetry-core
@@ -40,10 +41,10 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/jeff-dh/SolidPython";
-    description = "A python frontend for solid modelling that compiles to OpenSCAD";
-    license = licenses.lgpl2Plus;
-    maintainers = with maintainers; [ jonboh ];
+    description = "Python frontend for solid modelling that compiles to OpenSCAD";
+    license = lib.licenses.lgpl2Plus;
+    maintainers = with lib.maintainers; [ jonboh ];
   };
 }

@@ -1,41 +1,43 @@
 {
-  fetchFromGitHub,
   lib,
+  commitlint-rs,
+  fetchFromGitHub,
   nix-update-script,
   rustPlatform,
   testers,
-  commitlint-rs,
 }:
-rustPlatform.buildRustPackage rec {
+
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "commitlint-rs";
-  version = "0.1.11";
+  version = "0.2.4";
 
   src = fetchFromGitHub {
     owner = "KeisukeYamashita";
     repo = "commitlint-rs";
-    rev = "v${version}";
-    hash = "sha256-FrYXEh75H0u1rE1YNDL/B1gMYMG43jPDJGUMv9y5/3g=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Z9DQfUXYjPWMfCv2jHsXwr3Fg2tEfkD5dU1t8+Kw7eA=";
   };
-  cargoHash = "sha256-W6HkLCUoylgQQc2fFprmJeLH8KtpVUD4+BXWbNECVZ4=";
+
+  cargoHash = "sha256-s8prPnyiYCyaR+jMo1DXpBi9FgD/2ovF3dffZQuMNmo=";
 
   passthru = {
-    updateScript = nix-update-script { };
     tests.version = testers.testVersion { package = commitlint-rs; };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Lint commit messages with conventional commit messages";
     homepage = "https://keisukeyamashita.github.io/commitlint-rs";
-    changelog = "https://github.com/KeisukeYamashita/commitlint-rs/releases/tag/${src.rev}";
-    license = with licenses; [
+    changelog = "https://github.com/KeisukeYamashita/commitlint-rs/releases/tag/${finalAttrs.src.rev}";
+    license = with lib.licenses; [
       mit
       asl20
     ];
-    mainProgram = "commitlint";
-    platforms = with platforms; unix ++ windows;
-    maintainers = with maintainers; [
+    maintainers = with lib.maintainers; [
       croissong
       getchoo
     ];
+    mainProgram = "commitlint";
+    platforms = with lib.platforms; unix ++ windows;
   };
-}
+})

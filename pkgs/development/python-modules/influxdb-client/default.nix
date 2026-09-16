@@ -9,7 +9,6 @@
   numpy,
   pandas,
   python-dateutil,
-  pythonOlder,
   reactivex,
   setuptools,
   urllib3,
@@ -17,16 +16,14 @@
 
 buildPythonPackage rec {
   pname = "influxdb-client";
-  version = "1.46.0";
+  version = "1.50.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "influxdata";
     repo = "influxdb-client-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-oq6VXsCizqs7ZGocFWvD6SK1HRgQerlAEDW6+SBoM+A=";
+    tag = "v${version}";
+    hash = "sha256-39ioVlTgvICHArTNhfXZQ+WrUda2B5LxLtMwXWp6krU=";
   };
 
   build-system = [ setuptools ];
@@ -35,11 +32,10 @@ buildPythonPackage rec {
     certifi
     python-dateutil
     reactivex
-    setuptools
     urllib3
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     async = [
       aiocsv
       aiohttp
@@ -56,11 +52,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "influxdb_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "InfluxDB client library";
     homepage = "https://github.com/influxdata/influxdb-client-python";
-    changelog = "https://github.com/influxdata/influxdb-client-python/blob/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ mic92 ];
+    changelog = "https://github.com/influxdata/influxdb-client-python/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mic92 ];
   };
 }

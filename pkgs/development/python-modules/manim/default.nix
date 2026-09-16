@@ -2,24 +2,21 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  poetry-core,
-  pytest-xdist,
-  pytestCheckHook,
-  pythonOlder,
-
-  cairo,
-  ffmpeg,
   texliveInfraOnly,
 
+  # build-system
+  uv-build,
+
+  # buildInputs
+  cairo,
+
+  # dependencies
+  av,
+  beautifulsoup4,
   click,
-  click-default-group,
   cloup,
-  colour,
-  grpcio,
-  grpcio-tools,
-  importlib-metadata,
+  decorator,
   isosurfaces,
-  jupyterlab,
   manimpango,
   mapbox-earcut,
   moderngl,
@@ -37,7 +34,22 @@
   srt,
   svgelements,
   tqdm,
+  typing-extensions,
   watchdog,
+  pythonAtLeast,
+  audioop-lts,
+
+  # optional-dependencies
+  jupyterlab,
+  notebook,
+  typst,
+
+  # tests
+  ffmpeg,
+  pytest-cov-stub,
+  pytest-xdist,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
 let
@@ -46,7 +58,7 @@ let
   #
   #   https://community.chocolatey.org/packages/manim-latex#files
   #
-  # which includes another cutom distribution called tinytex, for which the
+  # which includes another custom distribution called tinytex, for which the
   # package list can be found at
   #
   #   https://github.com/yihui/tinytex/blob/master/tools/pkgs-custom.txt
@@ -155,7 +167,6 @@ let
       everysel
       preview
       doublestroke
-      ms
       setspace
       rsfs
       relsize
@@ -175,50 +186,46 @@ let
     ]
   );
 in
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "manim";
+  version = "0.21.0";
   pyproject = true;
-  version = "0.18.1";
-  disabled = pythonOlder "3.9";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "ManimCommunity";
     repo = "manim";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-o+Wl3NMK6yopcsRVFtZuUE9c1GABa5d8rbQNHDJ4OiQ=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-K6+U+ri/bBf760JmyhpkzQsQqp+ofve5zBByZPVdc1w=";
   };
-
-  nativeBuildInputs = [
-    poetry-core
-  ];
-
-  pythonRelaxDeps = [
-    "cloup"
-    "isosurfaces"
-    "pillow"
-    "skia-pathops"
-    "watchdog"
-  ];
 
   patches = [ ./pytest-report-header.patch ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace "--no-cov-on-fail --cov=manim --cov-report xml --cov-report term" ""
-  '';
+  postPatch =
+    # nixpkgs still ships uv-build < 0.12.1
+    ''
+      substituteInPlace pyproject.toml \
+        --replace-fail \
+          "uv_build>=0.12.1,<0.13.0" \
+          "uv_build"
+    '';
+
+  build-system = [
+    uv-build
+  ];
 
   buildInputs = [ cairo ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "skia-pathops"
+  ];
+  dependencies = [
+    av
+    beautifulsoup4
     click
-    click-default-group
     cloup
-    colour
-    grpcio
-    grpcio-tools
-    importlib-metadata
+    decorator
     isosurfaces
-    jupyterlab
     manimpango
     mapbox-earcut
     moderngl
@@ -236,8 +243,24 @@ buildPythonPackage rec {
     srt
     svgelements
     tqdm
+    typing-extensions
     watchdog
+  ]
+  ++ lib.optionals (pythonAtLeast "3.13") [
+    audioop-lts
   ];
+
+  optional-dependencies = {
+    jupyterlab = [
+      jupyterlab
+      notebook
+    ];
+    # TODO package dearpygui
+    # gui = [ dearpygui ];
+    typst = [
+      typst
+    ];
+  };
 
   makeWrapperArgs = [
     "--prefix"
@@ -252,16 +275,19 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     ffmpeg
     manim-tinytex
+    pytest-cov-stub
     pytest-xdist
     pytestCheckHook
+    typst
+    versionCheckHook
   ];
 
-  # about 55 of ~600 tests failing mostly due to demand for display
+  # about 45 of ~1050 tests failing mostly due to demand for display
   disabledTests = import ./failing_tests.nix;
 
   pythonImportsCheck = [ "manim" ];
 
-  meta = with lib; {
+  meta = {
     description = "Animation engine for explanatory math videos - Community version";
     longDescription = ''
       Manim is an animation engine for explanatory math videos. It's used to
@@ -269,8 +295,13 @@ buildPythonPackage rec {
       3Blue1Brown on YouTube. This is the community maintained version of
       manim.
     '';
+    mainProgram = "manim";
+    changelog = "https://github.com/ManimCommunity/manim/releases/tag/${finalAttrs.src.tag}";
     homepage = "https://github.com/ManimCommunity/manim";
-    license = licenses.mit;
-    maintainers = [ ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      osbm
+      ivyfanchiang
+    ];
   };
-}
+})

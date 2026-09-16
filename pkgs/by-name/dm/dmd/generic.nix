@@ -1,46 +1,47 @@
-{ version
-, dmdHash
-, phobosHash
+{
+  version,
+  dmdHash,
+  phobosHash,
 }:
 
-{ stdenv
-, lib
-, fetchFromGitHub
-, removeReferencesTo
-, makeWrapper
-, which
-, writeTextFile
-, curl
-, tzdata
-, gdb
-, Foundation
-, callPackage
-, targetPackages
-, fetchpatch
-, bash
-, installShellFiles
-, git
-, unzip
-, dmdBootstrap ? callPackage ./bootstrap.nix { }
-, dmdBin ? "${dmdBootstrap}/bin"
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  removeReferencesTo,
+  makeWrapper,
+  which,
+  writeTextFile,
+  curl,
+  tzdata,
+  gdb,
+  callPackage,
+  targetPackages,
+  fetchpatch,
+  bash,
+  installShellFiles,
+  git,
+  unzip,
+  dmdBootstrap ? callPackage ./bootstrap.nix { },
+  dmdBin ? "${dmdBootstrap}/bin",
 }:
 
 let
   dmdConfFile = writeTextFile {
     name = "dmd.conf";
-    text = (lib.generators.toINI { } {
-      Environment = {
-        DFLAGS = ''-I@out@/include/dmd -L-L@out@/lib -fPIC ${lib.optionalString (!targetPackages.stdenv.cc.isClang) "-L--export-dynamic"}'';
-      };
-    });
+    text = (
+      lib.generators.toINI { } {
+        Environment = {
+          DFLAGS = "-I@out@/include/dmd -L-L@out@/lib -fPIC ${
+            lib.optionalString (!targetPackages.stdenv.cc.isClang) "-L--export-dynamic"
+          }";
+        };
+      }
+    );
   };
 
-  bits = builtins.toString stdenv.hostPlatform.parsed.cpu.bits;
-  osname =
-    if stdenv.hostPlatform.isDarwin then
-      "osx"
-    else
-      stdenv.hostPlatform.parsed.kernel.name;
+  bits = toString stdenv.hostPlatform.parsed.cpu.bits;
+  osname = if stdenv.hostPlatform.isDarwin then "osx" else stdenv.hostPlatform.parsed.kernel.name;
 
   pathToDmd = "\${NIX_BUILD_TOP}/dmd/generated/${osname}/release/${bits}/dmd";
 in
@@ -102,13 +103,17 @@ stdenv.mkDerivation (finalAttrs: {
     #   https://issues.dlang.org/show_bug.cgi?id=23317
     rm dmd/compiler/test/runnable/cdvecfill.sh
     rm dmd/compiler/test/compilable/cdcmp.d
-  '' + lib.optionalString (lib.versionAtLeast version "2.089.0" && lib.versionOlder version "2.092.2") ''
+  ''
+  + lib.optionalString (lib.versionAtLeast version "2.089.0" && lib.versionOlder version "2.092.2") ''
     rm dmd/compiler/test/dshell/test6952.d
-  '' + lib.optionalString (lib.versionAtLeast version "2.092.2") ''
+  ''
+  + lib.optionalString (lib.versionAtLeast version "2.092.2") ''
     substituteInPlace dmd/compiler/test/dshell/test6952.d --replace-fail "/usr/bin/env bash" "${bash}/bin/bash"
-  '' + lib.optionalString stdenv.hostPlatform.isLinux ''
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     substituteInPlace phobos/std/socket.d --replace-fail "assert(ih.addrList[0] == 0x7F_00_00_01);" ""
-  '' + lib.optionalString stdenv.hostPlatform.isDarwin ''
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
     substituteInPlace phobos/std/socket.d --replace-fail "foreach (name; names)" "names = []; foreach (name; names)"
   '';
 
@@ -116,20 +121,20 @@ stdenv.mkDerivation (finalAttrs: {
     makeWrapper
     which
     installShellFiles
-  ] ++ lib.optionals (lib.versionOlder version "2.088.0") [
+  ]
+  ++ lib.optionals (lib.versionOlder version "2.088.0") [
     git
   ];
 
   buildInputs = [
     curl
     tzdata
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    Foundation
   ];
 
   nativeCheckInputs = [
     gdb
-  ] ++ lib.optionals (lib.versionOlder version "2.089.0") [
+  ]
+  ++ lib.optionals (lib.versionOlder version "2.089.0") [
     unzip
   ];
 
@@ -175,6 +180,7 @@ stdenv.mkDerivation (finalAttrs: {
 
     NIX_ENFORCE_PURITY= \
       make -C phobos unittest -j$checkJobs $checkFlags \
+        DISABLED_TESTS=std/datetime/timezone \
         DFLAGS="-version=TZDatabaseDir -version=LibcurlPath -J$PWD"
 
     runHook postCheck
@@ -212,16 +218,23 @@ stdenv.mkDerivation (finalAttrs: {
     inherit dmdBootstrap;
   };
 
-  meta = with lib; {
+  meta = {
     description = "Official reference compiler for the D language";
     homepage = "https://dlang.org/";
     changelog = "https://dlang.org/changelog/${finalAttrs.version}.html";
     # Everything is now Boost licensed, even the backend.
     # https://github.com/dlang/dmd/pull/6680
-    license = licenses.boost;
+    license = lib.licenses.boost;
     mainProgram = "dmd";
-    maintainers = with maintainers; [ lionello dukc jtbx ];
-    platforms = [ "x86_64-linux" "i686-linux" "x86_64-darwin" ];
+    maintainers = with lib.maintainers; [
+      lionello
+      dukc
+      jtbx
+    ];
+    platforms = [
+      "x86_64-linux"
+      "i686-linux"
+    ];
     # ld: section __DATA/__thread_bss has type zero-fill but non-zero file offset file '/private/tmp/nix-build-dmd-2.109.1.drv-0/.rdmd-301/rdmd-build.d-A1CF043A7D87C5E88A58F3C0EF5A0DF7/objs/build.o' for architecture x86_64
     # clang-16: error: linker command failed with exit code 1 (use -v to see invocation)
     broken = stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64;

@@ -2,130 +2,162 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
-  poetry-core,
-
-  # buildInputs
-  bash,
+  hatchling,
 
   # dependencies
-  aiohttp,
   langchain-core,
-  langchain-text-splitters,
-  langsmith,
+  langgraph,
   pydantic,
-  pyyaml,
-  requests,
-  sqlalchemy,
-  tenacity,
-  async-timeout,
 
-  # optional-dependencies
-  numpy,
+  # Optional dependencies
+  langchain-anthropic,
+  langchain-aws,
+  langchain-community,
+  langchain-deepseek,
+  langchain-fireworks,
+  langchain-google-genai,
+  langchain-groq,
+  langchain-huggingface,
+  langchain-mistralai,
+  langchain-ollama,
+  langchain-openai,
+  langchain-perplexity,
+  langchain-xai,
+
+  # runtime
+  runtimeShell,
 
   # tests
-  freezegun,
-  httpx,
-  lark,
-  pandas,
+  blockbuster,
+  langchain-tests,
   pytest-asyncio,
   pytest-mock,
   pytest-socket,
+  pytest-xdist,
   pytestCheckHook,
-  requests-mock,
-  responses,
   syrupy,
   toml,
+
+  # passthru
+  gitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "langchain";
-  version = "0.3.0";
+  version = "1.3.14";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "langchain-ai";
     repo = "langchain";
-    rev = "refs/tags/langchain==${version}";
-    hash = "sha256-2dHsZWn1MN/gLnUdYp84gbtWkvB0j0iieij4W9tzPzY=";
+    tag = "langchain==${finalAttrs.version}";
+    hash = "sha256-SmbqK8/AmUYfp+hUEnuwl18K+A/6csLxMUTv0oQHhEs=";
   };
 
-  sourceRoot = "${src.name}/libs/langchain";
+  sourceRoot = "${finalAttrs.src.name}/libs/langchain_v1";
 
-  build-system = [ poetry-core ];
+  postPatch = ''
+    substituteInPlace langchain/agents/middleware/shell_tool.py \
+      --replace-fail '"/bin/bash"' '"${runtimeShell}"'
+  '';
 
-  buildInputs = [ bash ];
+  build-system = [ hatchling ];
 
   dependencies = [
-    aiohttp
     langchain-core
-    langchain-text-splitters
-    langsmith
+    langgraph
     pydantic
-    pyyaml
-    requests
-    sqlalchemy
-    tenacity
-  ] ++ lib.optionals (pythonOlder "3.11") [ async-timeout ];
+  ];
 
   optional-dependencies = {
-    numpy = [ numpy ];
+    anthropic = [ langchain-anthropic ];
+    aws = [ langchain-aws ];
+    # azure-ai = [langchain-azure-ai];
+    community = [ langchain-community ];
+    deepseek = [ langchain-deepseek ];
+    fireworks = [ langchain-fireworks ];
+    google-genai = [ langchain-google-genai ];
+    # google-vertexai = [langchain-google-vertexai];
+    groq = [ langchain-groq ];
+    huggingface = [ langchain-huggingface ];
+    mistralai = [ langchain-mistralai ];
+    ollama = [ langchain-ollama ];
+    openai = [ langchain-openai ];
+    perplexity = [ langchain-perplexity ];
+    # together = [langchain-together];
+    xai = [ langchain-xai ];
   };
 
   nativeCheckInputs = [
-    freezegun
-    httpx
-    lark
-    pandas
+    blockbuster
+    langchain-tests
+    # langchain-openai -- causes recursion error
     pytest-asyncio
     pytest-mock
     pytest-socket
+    pytest-xdist
     pytestCheckHook
-    requests-mock
-    responses
     syrupy
     toml
   ];
 
-  pytestFlagsArray = [
-    # integration_tests require network access, database access and require `OPENAI_API_KEY`, etc.
-    "tests/unit_tests"
+  pytestFlags = [
     "--only-core"
   ];
 
+  # Note: Not testing with optional dependencies due to mutual recursion
+  enabledTestPaths = [
+    # integration_tests require network access, database access and require `OPENAI_API_KEY`, etc.
+    "tests/unit_tests"
+  ];
+
+  # All pass with sandbox=false
   disabledTests = [
-    # These tests have database access
-    "test_table_info"
-    "test_sql_database_run"
-    # These tests have network access
-    "test_socket_disabled"
-    "test_openai_agent_with_streaming"
-    "test_openai_agent_tools_agent"
-    # This test may require a specific version of langchain-community
-    "test_compatible_vectorstore_documentation"
-    # AssertionErrors
-    "test_callback_handlers"
-    "test_generic_fake_chat_model"
-    # Test is outdated
-    "test_serializable_mapping"
-    "test_person"
-    "test_aliases_hidden"
+    # Depends on shell's truncation style
+    "test_truncation_indicator_present"
+    "test_truncation_by_bytes"
+    # Depends on the sleep shell command
+    "test_timeout_returns_error"
+    # Can't see the shell session results when sandboxed
+    "test_startup_and_shutdown_commands"
+    # Timing sensitive tests
+    "test_tool_retry_constant_backoff"
+    # AttributeError: 'ImportErrorProfileModel' object has no attribute 'profile'
+    # https://github.com/langchain-ai/langchain/issues/36312
+    "test_summarization_middleware_missing_profile"
+  ];
+
+  disabledTestPaths = [
+    # Their configuration tests don't place nicely with nixpkgs
+    "tests/unit_tests/test_pytest_config.py"
+
+    # Timing sensitive tests
+    "tests/unit_tests/agents/middleware/implementations/test_model_retry.py"
   ];
 
   pythonImportsCheck = [ "langchain" ];
 
   passthru = {
-    updateScript = langchain-core.updateScript;
+    skipBulkUpdate = true;
+    updateScript = gitUpdater {
+      rev-prefix = "langchain==";
+      ignoredVersions = "a|b|dev|rc";
+    };
   };
+
+  __darwinAllowLocalNetworking = true;
 
   meta = {
     description = "Building applications with LLMs through composability";
     homepage = "https://github.com/langchain-ai/langchain";
-    changelog = "https://github.com/langchain-ai/langchain/releases/tag/v${version}";
+    changelog = "https://github.com/langchain-ai/langchain/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ natsukium ];
-    mainProgram = "langchain-server";
+    maintainers = with lib.maintainers; [
+      natsukium
+      sarahec
+    ];
   };
-}
+})

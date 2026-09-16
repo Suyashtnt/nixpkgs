@@ -1,6 +1,10 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "pom";
   version = "0.1.0-unstable-2024-05-17";
 
@@ -13,13 +17,19 @@ buildGoModule rec {
 
   vendorHash = "sha256-xJNcFX+sZjZwXFTNrhsDnj3eR/r8+NH6tzpEJOhtkeY=";
 
-  ldflags = [ "-s" "-w" "-X=main.Version=${version}" ];
+  ldflags = [
+    "-s"
+    "-w"
+    "-X=main.Version=${finalAttrs.version}"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Pomodoro timer in your terminal";
     homepage = "https://github.com/maaslalani/pom";
-    license = licenses.mit;
-    maintainers = with maintainers; [ maaslalani redyf  ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      redyf
+    ];
     mainProgram = "pom";
   };
-}
+})

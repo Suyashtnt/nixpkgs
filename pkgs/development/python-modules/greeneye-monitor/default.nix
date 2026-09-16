@@ -3,42 +3,55 @@
   aiohttp,
   buildPythonPackage,
   fetchFromGitHub,
+  poetry-core,
+  pytest-socket,
   pytestCheckHook,
-  pythonOlder,
-  setuptools,
   siobrultech-protocols,
 }:
 
 buildPythonPackage rec {
   pname = "greeneye-monitor";
   version = "5.0.2";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.10";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jkeljo";
     repo = "greeneye-monitor";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-7EDuQ+wECcTzxkEufMpg3WSzosWeiwfxcVIVtQi+0BI=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  postPatch = ''
+    cat >> pyproject.toml << EOF
+    [build-system]
+    requires = ["poetry-core"]
+    build-backend = "poetry.core.masonry.api"
+    EOF
+  '';
 
-  propagatedBuildInputs = [
+  build-system = [ poetry-core ];
+
+  pythonRelaxDeps = [
+    "siobrultech-protocols"
+  ];
+
+  dependencies = [
     aiohttp
     siobrultech-protocols
   ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    pytest-socket
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "greeneye.monitor" ];
 
-  meta = with lib; {
+  meta = {
     description = "Receive data packets from GreenEye Monitor";
     homepage = "https://github.com/jkeljo/greeneye-monitor";
     changelog = "https://github.com/jkeljo/greeneye-monitor/blob/v${version}/CHANGELOG.rst";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

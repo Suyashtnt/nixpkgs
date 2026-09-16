@@ -1,20 +1,30 @@
 # D-Bus configuration and system bus daemon.
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
 
   cfg = config.services.dbus;
 
-  homeDir = "/run/dbus";
-
-  configDir = pkgs.makeDBusConf {
+  configDir = pkgs.makeDBusConf.override {
     inherit (cfg) apparmor;
+    dbus = cfg.dbusPackage;
     suidHelper = "${config.security.wrapperDir}/dbus-daemon-launch-helper";
     serviceDirectories = cfg.packages;
   };
 
-  inherit (lib) mkOption mkEnableOption mkIf mkMerge types;
+  inherit (lib)
+    mkOption
+    mkEnableOption
+    mkIf
+    mkMerge
+    types
+    ;
 
 in
 
@@ -22,7 +32,19 @@ in
   options = {
 
     boot.initrd.systemd.dbus = {
-      enable = mkEnableOption "dbus in stage 1";
+      enable = mkEnableOption "dbus in stage 1" // {
+        # TODO: This isn't really necessary, but it avoids a very
+        # common red herring error message:
+        #
+        # $ systemctl ...
+        # Failed to connect to system scope bus via local transport: No such file or directory.
+        #
+        # When systemctl tries and fails to control the system manager
+        # over dbus, it fals back to a private bus socket after
+        # printing this message. It works, but users often think it is
+        # the source of their problem when it isn't.
+        default = true;
+      };
     };
 
     services.dbus = {
@@ -37,16 +59,22 @@ in
         '';
       };
 
+      dbusPackage = lib.mkPackageOption pkgs "dbus" { };
+
+      brokerPackage = lib.mkPackageOption pkgs "dbus-broker" { };
+
       implementation = mkOption {
-        type = types.enum [ "dbus" "broker" ];
-        default = "dbus";
+        type = types.enum [
+          "dbus"
+          "broker"
+        ];
+        default = "broker";
         description = ''
           The implementation to use for the message bus defined by the D-Bus specification.
           Can be either the classic dbus daemon or dbus-broker, which aims to provide high
           performance and reliability, while keeping compatibility to the D-Bus
           reference implementation.
         '';
-
       };
 
       packages = mkOption {
@@ -67,7 +95,11 @@ in
       };
 
       apparmor = mkOption {
-        type = types.enum [ "enabled" "disabled" "required" ];
+        type = types.enum [
+          "enabled"
+          "disabled"
+          "required"
+        ];
         description = ''
           AppArmor mode for dbus.
 
@@ -84,6 +116,8 @@ in
 
   config = mkIf cfg.enable (mkMerge [
     {
+      system.switch.inhibitors.dbus-implementation = cfg.implementation;
+
       environment.etc."dbus-1".source = configDir;
 
       environment.pathsToLink = [
@@ -94,7 +128,7 @@ in
       users.users.messagebus = {
         uid = config.ids.uids.messagebus;
         description = "D-Bus system message bus daemon user";
-        home = homeDir;
+        home = "/run/dbus";
         homeMode = "0755";
         group = "messagebus";
       };
@@ -103,16 +137,16 @@ in
 
       # Install dbus for dbus tools even when using dbus-broker
       environment.systemPackages = [
-        pkgs.dbus
+        cfg.dbusPackage
       ];
 
       # You still need the dbus reference implementation installed to use dbus-broker
       systemd.packages = [
-        pkgs.dbus
+        cfg.dbusPackage
       ];
 
       services.dbus.packages = [
-        pkgs.dbus
+        cfg.dbusPackage
         config.system.path
       ];
 
@@ -125,24 +159,35 @@ in
       boot.initrd.systemd = {
         users.messagebus = { };
         groups.messagebus = { };
-        contents."/etc/dbus-1".source = pkgs.makeDBusConf {
+        contents."/etc/dbus-1".source = pkgs.makeDBusConf.override {
           inherit (cfg) apparmor;
+          dbus = cfg.dbusPackage;
           suidHelper = "/bin/false";
-          serviceDirectories = [ pkgs.dbus config.boot.initrd.systemd.package ];
+          serviceDirectories = [
+            cfg.dbusPackage
+            config.boot.initrd.systemd.package
+          ];
         };
-        packages = [ pkgs.dbus ];
+        packages = [ cfg.dbusPackage ];
         storePaths = [
-          "${pkgs.dbus}/bin/dbus-daemon"
+          "${cfg.dbusPackage}/bin/dbus-daemon"
           "${config.boot.initrd.systemd.package}/share/dbus-1/system-services"
           "${config.boot.initrd.systemd.package}/share/dbus-1/system.d"
         ];
         targets.sockets.wants = [ "dbus.socket" ];
+
+        # Otherwise, dbus waits on cryptsetup, and systemctl says the
+        # bus couldn't be found. This isn't an error (systemctl will
+        # fall back to a private bus with PID 1), but it's confusing
+        # to unaware users.
+        services.dbus.unitConfig.DefaultDependencies = false;
+        sockets.dbus.unitConfig.DefaultDependencies = false;
       };
     })
 
     (mkIf (cfg.implementation == "dbus") {
       security.wrappers.dbus-daemon-launch-helper = {
-        source = "${pkgs.dbus}/libexec/dbus-daemon-launch-helper";
+        source = "${cfg.dbusPackage}/libexec/dbus-daemon-launch-helper";
         owner = "root";
         group = "messagebus";
         setuid = true;
@@ -181,11 +226,11 @@ in
 
     (mkIf (cfg.implementation == "broker") {
       environment.systemPackages = [
-        pkgs.dbus-broker
+        cfg.brokerPackage
       ];
 
       systemd.packages = [
-        pkgs.dbus-broker
+        cfg.brokerPackage
       ];
 
       # Just to be sure we don't restart through the unit alias

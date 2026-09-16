@@ -2,24 +2,37 @@
   lib,
   buildGoModule,
   fetchFromGitHub,
-  git,
+  gitMinimal,
   python3,
+  versionCheckHook,
+  nix-update-script,
 }:
-
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "databricks-cli";
-  version = "0.228.1";
+  version = "1.16.0";
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "databricks";
     repo = "cli";
-    rev = "v${version}";
-    hash = "sha256-zQ39PwVjyxOTo6P+RA4F20/28loMbu3Bprd4C3jgu5A=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-zb+hKKMscCOX4yJBwLmBFln5FFZIiwvZPf/80kP21g4=";
   };
 
-  vendorHash = "sha256-SOeVIwMbx1eRzBvyfT3aaJOL7BCb745yezn1QYrf5vU=";
+  vendorHash = "sha256-v4ntZgT89NV1wzMEMuRjeLmQql+fQ+XcMkidAVsxwXE=";
 
-  excludedPackages = [ "bundle/internal" ];
+  subPackages = [ "." ];
+
+  ldflags = [
+    "-X github.com/databricks/cli/internal/build.buildVersion=${finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildTag=v${finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildSummary=v${finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildMajor=${lib.versions.major finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildMinor=${lib.versions.minor finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildPatch=${lib.versions.patch finalAttrs.version}"
+    "-X github.com/databricks/cli/internal/build.buildIsSnapshot=false"
+  ];
 
   postBuild = ''
     mv "$GOPATH/bin/cli" "$GOPATH/bin/databricks"
@@ -29,14 +42,29 @@ buildGoModule rec {
     "-skip="
     + (lib.concatStringsSep "|" [
       # Need network
+      "TestConsistentDatabricksSdkVersion"
       "TestTerraformArchiveChecksums"
-      "TestExpandPipelineGlobPaths"
+      "TestExpandGlobPathsInPipelines"
       "TestRelativePathTranslationDefault"
       "TestRelativePathTranslationOverride"
+      "TestWorkspaceVerifyProfileForHost"
+      "TestWorkspaceVerifyProfileForHost/default_config_file_with_match"
+      "TestWorkspaceResolveProfileFromHost"
+      "TestWorkspaceResolveProfileFromHost/no_config_file"
+      "TestWorkspaceClientNormalizesHostBeforeProfileResolution"
+      "TestClearWorkspaceClient"
+      "TestValidateFolderPermissions"
+      "TestFilesToSync"
+      # Use uv venv which doesn't work with nix
+      # https://github.com/astral-sh/uv/issues/4450
+      "TestVenvSuccess"
+      "TestPatchWheel"
+      # Requires HOME to be set
+      "TestCacheDirEnvVar"
     ]);
 
   nativeCheckInputs = [
-    git
+    gitMinimal
     (python3.withPackages (
       ps: with ps; [
         setuptools
@@ -51,12 +79,27 @@ buildGoModule rec {
     git remote add origin https://github.com/databricks/cli.git
   '';
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  versionCheckProgram = "${placeholder "out"}/bin/databricks";
+  doInstallCheck = true;
+
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Databricks CLI";
     mainProgram = "databricks";
     homepage = "https://github.com/databricks/cli";
-    changelog = "https://github.com/databricks/cli/releases/tag/v${version}";
-    license = licenses.databricks;
-    maintainers = with maintainers; [ kfollesdal ];
+    changelog = "https://github.com/databricks/cli/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.databricks;
+    maintainers = with lib.maintainers; [
+      kfollesdal
+      taranarmo
+    ];
   };
-}
+})

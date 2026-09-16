@@ -11,13 +11,13 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "giza";
-  version = "1.4.1";
+  version = "2.0.0";
 
   src = fetchFromGitHub {
     owner = "danieljprice";
     repo = "giza";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-spb46IoySf6DM454adcWmqqLlzNA2HK9z29TzOCECJ4=";
+    hash = "sha256-72eeV0OmUoiebJ0IEBdvPKzEbm33Q1sfQ7PyteA+tzA=";
   };
 
   nativeBuildInputs = [

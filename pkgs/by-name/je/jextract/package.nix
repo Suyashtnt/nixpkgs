@@ -1,21 +1,22 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, makeBinaryWrapper
-, gradle
-, jdk22
-, llvmPackages
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  makeBinaryWrapper,
+  gradle,
+  jdk25,
+  llvmPackages,
 }:
 
 stdenv.mkDerivation {
   pname = "jextract";
-  version = "unstable-2024-03-13";
+  version = "0-unstable-2025-11-12";
 
   src = fetchFromGitHub {
     owner = "openjdk";
     repo = "jextract";
-    rev = "b9ec8879cff052b463237fdd76382b3a5cd8ff2b";
-    hash = "sha256-+4AM8pzXPIO/CS3+Rd/jJf2xDvAo7K7FRyNE8rXvk5U=";
+    rev = "91fc954c46fac907cae6cd1417d835208c9df150";
+    hash = "sha256-RAK7A0BCFaYe/q1nCdvXk091bhSj9DKxg2uQfABk4eo=";
   };
 
   nativeBuildInputs = [
@@ -24,8 +25,12 @@ stdenv.mkDerivation {
   ];
 
   gradleFlags = [
-    "-Pllvm_home=${llvmPackages.libclang.lib}"
-    "-Pjdk22_home=${jdk22}"
+    "-Pllvm_home=${lib.getLib llvmPackages.libclang}"
+    "-Pjdk_home=${jdk25}"
+  ];
+
+  patches = [
+    ./copy_lib_clang.patch
   ];
 
   doCheck = true;
@@ -42,12 +47,15 @@ stdenv.mkDerivation {
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Tool which mechanically generates Java bindings from a native library headers";
     mainProgram = "jextract";
     homepage = "https://github.com/openjdk/jextract";
-    platforms = jdk22.meta.platforms;
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ jlesquembre sharzy ];
+    platforms = jdk25.meta.platforms;
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [
+      jlesquembre
+      sharzy
+    ];
   };
 }

@@ -8,13 +8,13 @@
 
 stdenvNoCC.mkDerivation {
   pname = "librime-lua";
-  version = "0-unstable-2024-08-19";
+  version = "0-unstable-2026-08-31";
 
   src = fetchFromGitHub {
     owner = "hchunhui";
     repo = "librime-lua";
-    rev = "fa6563cf7b40f3bfbf09e856420bff8de6820558";
-    hash = "sha256-jv5TZSp36UGbaRiXv9iUNLu3DE/yrWANQhY6TWLPD8c=";
+    rev = "ad1e4a6c98abf634dd34242a747f9b1d5d069fbe";
+    hash = "sha256-Zi5VyFyLk4n34+TEDvV2HEYQKL60mEiVVLFKb6hWFdE=";
   };
 
   propagatedBuildInputs = [ lua ];
@@ -35,6 +35,9 @@ stdenvNoCC.mkDerivation {
     description = "Extending RIME with Lua scripts";
     homepage = "https://github.com/hchunhui/librime-lua";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ linj xddxdd ];
+    maintainers = with lib.maintainers; [
+      linj
+      xddxdd
+    ];
   };
 }

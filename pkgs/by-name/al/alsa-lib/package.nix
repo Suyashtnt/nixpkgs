@@ -1,18 +1,20 @@
-{ lib
-, stdenv
-, fetchurl
-, alsa-topology-conf
-, alsa-ucm-conf
-, testers
+{
+  lib,
+  stdenv,
+  fetchurl,
+  alsa-topology-conf,
+  alsa-ucm-conf,
+  testers,
+  directoryListingUpdater,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "alsa-lib";
-  version = "1.2.11";
+  version = "1.2.16.1";
 
   src = fetchurl {
     url = "mirror://alsa/lib/alsa-lib-${finalAttrs.version}.tar.bz2";
-    hash = "sha256-nz8vabmV+a03NZBy+8aaOoi/uggfyD6b4w4UZieVu00=";
+    hash = "sha256-90Dbf0iCVZRP/UQoQW7jOQqWdChWkWQz30aMKBQ2SA4=";
   };
 
   patches = [
@@ -30,12 +32,21 @@ stdenv.mkDerivation (finalAttrs: {
     ln -s ${alsa-topology-conf}/share/alsa/topology $out/share/alsa
   '';
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
-  passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+  passthru = {
+    tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+    updateScript = directoryListingUpdater {
+      url = "https://www.alsa-project.org/files/pub/lib/";
+    };
+  };
 
-  meta = with lib; {
+  meta = {
     homepage = "http://www.alsa-project.org/";
+    changelog = "https://github.com/alsa-project/alsa-lib/releases/tag/v${finalAttrs.version}";
     description = "ALSA, the Advanced Linux Sound Architecture libraries";
     mainProgram = "aserver";
 
@@ -44,9 +55,14 @@ stdenv.mkDerivation (finalAttrs: {
       MIDI functionality to the Linux-based operating system.
     '';
 
-    license = licenses.lgpl21Plus;
-    pkgConfigModules = [ "alsa" "alsa-topology" ];
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ l-as ];
+    license = lib.licenses.lgpl21Plus;
+    pkgConfigModules = [
+      "alsa"
+      "alsa-topology"
+    ];
+    platforms = with lib.platforms; linux ++ freebsd;
+    maintainers = with lib.maintainers; [
+      nick-linux
+    ];
   };
 })

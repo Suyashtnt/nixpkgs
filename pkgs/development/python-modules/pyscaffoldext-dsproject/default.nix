@@ -39,7 +39,7 @@ buildPythonPackage rec {
     pyscaffoldext-markdown
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     testing = [
       configupdater
       pre-commit
@@ -54,10 +54,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pyscaffoldext.dsproject" ];
 
-  meta = with lib; {
+  meta = {
     description = "PyScaffold extension for Data Science projects";
     homepage = "https://pypi.org/project/pyscaffoldext-dsproject/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ matthewcroughan ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ matthewcroughan ];
   };
 }

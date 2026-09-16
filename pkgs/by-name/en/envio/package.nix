@@ -1,44 +1,51 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, darwin
-, gpgme
-, libgpg-error
-, pkg-config
-, rustPlatform
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  installShellFiles,
+  gpgme,
+  dbus,
+  libgpg-error,
+  pkg-config,
+  rustPlatform,
+  nix-update-script,
 }:
 
-let
-  inherit (darwin.apple_sdk.frameworks) Security;
-in
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "envio";
-  version = "0.5.1";
+  version = "0.8.0";
 
   src = fetchFromGitHub {
-    owner = "envio-cli";
+    owner = "humblepenguinn";
     repo = "envio";
-    rev = "v${version}";
-    hash = "sha256-KhjHd+1IeKdASeYP2rPtyTmtkPcBbaruylmOwTPtFgo=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-3bcIGQ+4abdG7Xw4Sta+I8a1XllO8h7V09egwuogcxk=";
   };
 
-  cargoHash = "sha256-qmJUARwsGln07RAX1Ab0cNDgJq7NkezuT0tZsyd48Mw=";
+  cargoHash = "sha256-QwuGpIhPS0p+TsbWdGknXcN655IP/AzE44a6m9HY8K0=";
 
-  nativeBuildInputs = [ pkg-config ];
+  nativeBuildInputs = [
+    pkg-config
+    installShellFiles
+  ];
 
-  buildInputs = [ libgpg-error gpgme ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ Security ];
+  buildInputs = [
+    libgpg-error
+    gpgme
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    dbus
+  ];
 
-  # Remove postPatch when updating to the next envio release
-  # For details see https://github.com/envio-cli/envio/pull/31
-  postPatch = ''
-    substituteInPlace build.rs\
-      --replace 'fn get_version() -> String {' 'fn get_version() -> String { return "${version}".to_string();'
+  postInstall = ''
+    installManPage man/*.1
   '';
 
-  meta = with lib; {
-    homepage    = "https://envio-cli.github.io/home";
-    changelog   = "https://github.com/envio-cli/envio/blob/${version}/CHANGELOG.md";
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
+    homepage = "https://github.com/humblepenguinn/envio";
+    changelog = "https://github.com/humblepenguinn/envio/blob/v${finalAttrs.version}/CHANGELOG.md";
     description = "Modern and secure CLI tool for managing environment variables";
     mainProgram = "envio";
     longDescription = ''
@@ -47,8 +54,11 @@ rustPlatform.buildRustPackage rec {
       switch between different configurations and apply them to their current
       environment.
     '';
-    license     = with licenses; [ mit asl20 ];
-    platforms   = platforms.unix;
-    maintainers = with maintainers; [ afh ];
+    license = with lib.licenses; [
+      mit
+      asl20
+    ];
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [ afh ];
   };
-}
+})

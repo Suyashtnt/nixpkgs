@@ -1,43 +1,46 @@
-{ lib, fetchurl, buildDunePackage, ounit2, dune-configurator, eqaf-cstruct, pkg-config
-, withFreestanding ? false
-, ocaml-freestanding
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  ohex,
+  ounit2,
+  dune-configurator,
+  eqaf,
 }:
 
-buildDunePackage rec {
-  minimalOCamlVersion = "4.08";
+buildDunePackage (finalAttrs: {
+  minimalOCamlVersion = "4.13";
 
   pname = "mirage-crypto";
-  version = "0.11.3";
+  version = "2.4.1";
 
   src = fetchurl {
-    url = "https://github.com/mirage/mirage-crypto/releases/download/v${version}/mirage-crypto-${version}.tbz";
-    sha256 = "sha256-v7Uw+hac2QXrx+JEnzQHz71nAjrAspG4tvShQ3pdlbE=";
+    url = "https://github.com/mirage/mirage-crypto/releases/download/v${finalAttrs.version}/mirage-crypto-${finalAttrs.version}.tbz";
+    hash = "sha256-MyiGw2XGA1B3485namPaj3UAwVoWKLPAfhObDlUfH28=";
   };
 
   doCheck = true;
-  checkInputs = [ ounit2 ];
-
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ dune-configurator  ];
-  propagatedBuildInputs = [
-    eqaf-cstruct
-  ] ++ lib.optionals withFreestanding [
-    ocaml-freestanding
+  checkInputs = [
+    ohex
+    ounit2
   ];
 
-  # Compatibility with eqaf 0.10
-  postPatch = ''
-    substituteInPlace src/dune --replace-warn eqaf.cstruct eqaf-cstruct
-  '';
+  buildInputs = [ dune-configurator ];
+  propagatedBuildInputs = [
+    eqaf
+  ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/mirage/mirage-crypto";
     description = "Simple symmetric cryptography for the modern age";
-    license = [
-      licenses.isc  # default license
-      licenses.bsd2 # mirage-crypto-rng-mirage
-      licenses.mit  # mirage-crypto-ec
+    changelog = "https://raw.githubusercontent.com/mirage/mirage-crypto/refs/tags/v${finalAttrs.version}/CHANGES.md";
+    license = with lib.licenses; [
+      isc # default license
+      bsd2 # mirage-crypto-rng-mirage
+      mit # mirage-crypto-ec
     ];
-    maintainers = with maintainers; [ sternenseemann ];
+    maintainers = with lib.maintainers; [
+      sternenseemann
+    ];
   };
-}
+})

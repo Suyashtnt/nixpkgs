@@ -9,7 +9,7 @@
   fetchurl,
   lib,
   stdenv,
-  xorg,
+  libx11,
   glib,
   libGL,
   glibcLocales,
@@ -45,10 +45,10 @@ let
   downloadUrl =
     arch: "https://download.sublimetext.com/sublime_merge_build_${buildVersion}_${arch}.tar.xz";
   versionUrl = "https://www.sublimemerge.com/${if dev then "dev" else "download"}";
-  versionFile = builtins.toString ./default.nix;
+  versionFile = toString ./default.nix;
 
   neededLibraries = [
-    xorg.libX11
+    libx11
     glib
     gtk3
     cairo
@@ -85,7 +85,7 @@ let
       for binary in ${builtins.concatStringsSep " " binaries}; do
         patchelf \
           --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-          --set-rpath ${lib.makeLibraryPath neededLibraries}:${libGL}/lib:${stdenv.cc.cc.lib}/lib${lib.optionalString stdenv.hostPlatform.is64bit "64"} \
+          --set-rpath ${lib.makeLibraryPath neededLibraries}:${libGL}/lib:${lib.getLib stdenv.cc.cc}/lib${lib.optionalString stdenv.hostPlatform.is64bit "64"} \
           $binary
       done
 
@@ -138,42 +138,43 @@ let
     };
   };
 in
-stdenv.mkDerivation (rec {
+stdenv.mkDerivation rec {
   pname = pnameBase;
   version = buildVersion;
 
   dontUnpack = true;
 
-  ${primaryBinary} = binaryPackage;
-
   nativeBuildInputs = [
     makeWrapper
   ];
 
-  installPhase =
-    ''
-      mkdir -p "$out/bin"
-      makeWrapper "''$${primaryBinary}/${primaryBinary}" "$out/bin/${primaryBinary}"
-    ''
-    + builtins.concatStringsSep "" (
-      map (binaryAlias: "ln -s $out/bin/${primaryBinary} $out/bin/${binaryAlias}\n") primaryBinaryAliases
-    )
-    + ''
-      mkdir -p "$out/share/applications"
+  installPhase = ''
+    runHook preInstall
+    mkdir -p "$out/bin"
+    makeWrapper "${binaryPackage}/${primaryBinary}" "$out/bin/${primaryBinary}"
+  ''
+  + builtins.concatStringsSep "" (
+    map (binaryAlias: "ln -s $out/bin/${primaryBinary} $out/bin/${binaryAlias}\n") primaryBinaryAliases
+  )
+  + ''
+    mkdir -p "$out/share/applications"
 
-      substitute \
-        "''$${primaryBinary}/${primaryBinary}.desktop" \
-        "$out/share/applications/${primaryBinary}.desktop" \
-        --replace-fail "/opt/${primaryBinary}/${primaryBinary}" "${primaryBinary}"
+    substitute \
+      "${binaryPackage}/${primaryBinary}.desktop" \
+      "$out/share/applications/${primaryBinary}.desktop" \
+      --replace-fail "/opt/${primaryBinary}/${primaryBinary}" "${primaryBinary}"
 
-      for directory in ''$${primaryBinary}/Icon/*; do
-        size=$(basename $directory)
-        mkdir -p "$out/share/icons/hicolor/$size/apps"
-        ln -s ''$${primaryBinary}/Icon/$size/* $out/share/icons/hicolor/$size/apps
-      done
-    '';
+    for directory in ${binaryPackage}/Icon/*; do
+      size=$(basename $directory)
+      mkdir -p "$out/share/icons/hicolor/$size/apps"
+      ln -s ${binaryPackage}/Icon/$size/* $out/share/icons/hicolor/$size/apps
+    done
+    runHook postInstall
+  '';
 
   passthru = {
+    unwrapped = binaryPackage;
+
     updateScript =
       let
         script = writeShellScript "${packageAttribute}-update-script" ''
@@ -195,7 +196,7 @@ stdenv.mkDerivation (rec {
           fi
 
           for platform in ${lib.escapeShellArgs meta.platforms}; do
-              update-source-version "${packageAttribute}.${primaryBinary}" "$latestVersion" --ignore-same-version --file="$versionFile" --version-key=buildVersion --source-key="sources.$platform"
+              update-source-version "${packageAttribute}".unwrapped "$latestVersion" --ignore-same-version --file="$versionFile" --version-key=buildVersion --source-key="sources.$platform"
           done
         '';
       in
@@ -205,15 +206,16 @@ stdenv.mkDerivation (rec {
       ];
   };
 
-  meta = with lib; {
+  meta = {
     description = "Git client from the makers of Sublime Text";
     homepage = "https://www.sublimemerge.com";
-    maintainers = with maintainers; [ zookatron ];
+    mainProgram = "sublime_merge";
+    maintainers = with lib.maintainers; [ zookatron ];
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
-    license = licenses.unfree;
+    license = lib.licenses.unfree;
     platforms = [
       "aarch64-linux"
       "x86_64-linux"
     ];
   };
-})
+}

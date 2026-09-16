@@ -2,7 +2,6 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  makeWrapper,
   cmake,
   pkg-config,
   gtest,
@@ -14,29 +13,31 @@
   graphicsmagick,
   ffmpeg,
   zlib,
-  libSM,
-  libICE,
   stb,
   openssl,
+  xxhash,
+  pugixml,
+  onnxruntime,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "lms";
-  version = "3.58.0";
+  version = "3.80.0";
 
   src = fetchFromGitHub {
     owner = "epoupon";
     repo = "lms";
-    rev = "v${version}";
-    hash = "sha256-sWlD/n9Qjwiu/UfZrxRxwv2rc4XwRZN35fyjIriGZPY=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-TXtSsQ6qsZd5WpW9d9o/ELcvkGEMj9Sih376AoyyaFA=";
   };
 
   strictDeps = true;
+
   nativeBuildInputs = [
     cmake
     pkg-config
-    makeWrapper
   ];
+
   buildInputs = [
     gtest
     boost
@@ -44,46 +45,34 @@ stdenv.mkDerivation rec {
     taglib
     libconfig
     libarchive
-    graphicsmagick
     ffmpeg
     zlib
-    libSM
-    libICE
     stb
     openssl
+    xxhash
+    pugixml
+    onnxruntime
   ];
 
   postPatch = ''
-    substituteInPlace src/lms/main.cpp --replace-fail "/etc/lms.conf" "$out/share/lms/lms.conf"
-    substituteInPlace src/tools/recommendation/LmsRecommendation.cpp --replace-fail "/etc/lms.conf" "$out/share/lms/lms.conf"
-    substituteInPlace src/tools/db-generator/LmsDbGenerator.cpp --replace-fail "/etc/lms.conf" "$out/share/lms/lms.conf"
-    substituteInPlace src/tools/cover/LmsCover.cpp --replace-fail "/etc/lms.conf" "$out/share/lms/lms.conf"
+    substituteInPlace src/libs/core/include/core/SystemPaths.hpp --replace-fail "/etc" "$out/share/lms"
   '';
 
   postInstall = ''
-    substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/bin/ffmpeg" "${ffmpeg}/bin/ffmpeg"
+    substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/bin/ffmpeg" "${lib.getExe ffmpeg}"
     substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/share/Wt/resources" "${wt}/share/Wt/resources"
-    substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/share/lms/docroot" "$out/share/lms/docroot"
-    substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/share/lms/approot" "$out/share/lms/approot"
+    substituteInPlace $out/share/lms/lms.conf --replace-fail "/usr/share/lms" "$out/share/lms"
     substituteInPlace $out/share/lms/default.service --replace-fail "/usr/bin/lms" "$out/bin/lms"
     install -Dm444 $out/share/lms/default.service -T $out/lib/systemd/system/lmsd.service
   '';
 
-  preFixup = ''
-    wrapProgram $out/bin/lms \
-      --prefix LD_LIBRARY_PATH : "${lib.strings.makeLibraryPath [libSM libICE]}"
-    wrapProgram $out/bin/lms-metadata \
-      --prefix LD_LIBRARY_PATH : "${lib.strings.makeLibraryPath [libSM libICE]}"
-    wrapProgram $out/bin/lms-recommendation \
-      --prefix LD_LIBRARY_PATH : "${lib.strings.makeLibraryPath [libSM libICE]}"
-  '';
-
   meta = {
     homepage = "https://github.com/epoupon/lms";
+    changelog = "https://github.com/epoupon/lms/releases/tag/${finalAttrs.src.rev}";
     description = "Lightweight Music Server - Access your self-hosted music using a web interface";
     license = lib.licenses.gpl3Plus;
     platforms = lib.platforms.linux;
     mainProgram = "lms";
     maintainers = with lib.maintainers; [ mksafavi ];
   };
-}
+})

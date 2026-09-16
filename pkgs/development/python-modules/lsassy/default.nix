@@ -6,22 +6,19 @@
   netaddr,
   poetry-core,
   pypykatz,
-  pythonOlder,
   rich,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "lsassy";
-  version = "3.1.12";
+  version = "3.1.16";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "Hackndo";
     repo = "lsassy";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-Idel52GAzir+SVgKfMU+e8Z0EkMf+PBdIcaQd0o8qJE=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-lPbZnoR6qWfVBSRAbTJsKpjBieidNsYgAXI3CXHEt1w=";
   };
 
   pythonRelaxDeps = [
@@ -29,7 +26,6 @@ buildPythonPackage rec {
     "netaddr"
     "rich"
   ];
-
 
   build-system = [ poetry-core ];
 
@@ -45,12 +41,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "lsassy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to extract data from Local Security Authority Subsystem Service (LSASS)";
     homepage = "https://github.com/Hackndo/lsassy";
-    changelog = "https://github.com/Hackndo/lsassy/releases/tag/v${version}";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/Hackndo/lsassy/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
     mainProgram = "lsassy";
   };
-}
+})

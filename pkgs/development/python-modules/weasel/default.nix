@@ -1,51 +1,49 @@
 {
   lib,
   buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  click,
   cloudpathlib,
   confection,
-  fetchFromGitHub,
-  packaging,
+  httpx,
   pydantic,
-  pytestCheckHook,
-  pythonOlder,
-  requests,
-  setuptools,
   smart-open,
   srsly,
   typer,
   wasabi,
+
+  # tests
+  pytestCheckHook,
+
+  # passthru
+  nix-update-script,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "weasel";
-  version = "0.3.4";
+  version = "1.0.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "explosion";
     repo = "weasel";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-6Ck8R10/YW2Nc6acNk2bzgyqSg+OPqwyJjhUgXP/umw=";
+    tag = "release-v${finalAttrs.version}";
+    hash = "sha256-yiLoLdnDfKby1Ez1hKGL9DxazQto57Zn0DlRmGLurOs=";
   };
 
-  pythonRelaxDeps = [
-    "cloudpathlib"
-    "smart-open"
-    "typer"
-  ];
+  build-system = [ setuptools ];
 
-  nativeBuildInputs = [
-    setuptools
-  ];
-
-  propagatedBuildInputs = [
+  dependencies = [
+    click
     cloudpathlib
     confection
-    packaging
+    httpx
     pydantic
-    requests
     smart-open
     srsly
     typer
@@ -54,19 +52,37 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "weasel" ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
-
-  disabledTests = [
-    # This test requires internet access
-    "test_project_assets"
+  nativeCheckInputs = [
+    pytestCheckHook
   ];
 
-  meta = with lib; {
-    description = "Small and easy workflow system";
-    mainProgram = "weasel";
-    homepage = "https://github.com/explosion/weasel/";
-    changelog = "https://github.com/explosion/weasel/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ GaetanLepage ];
+  disabledTests = [
+    # These tests require internet access
+    "test_project_assets"
+    "test_project_git_dir_asset"
+    "test_project_git_file_asset"
+
+    # configparser.InterpolationMissingOptionError: Bad value substitution: option 'commands' in
+    # section 'project' contains an interpolation key 'vars.b.e' which is not a valid option name.
+    # Raw value: '[{"name": "x", "script": ["hello ${vars.a} ${vars.b.e}"]}]'
+    "test_project_config_interpolation"
+  ];
+
+  passthru = {
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--version-regex"
+        "release-v(.*)"
+      ];
+    };
   };
-}
+
+  meta = {
+    description = "Small and easy workflow system";
+    homepage = "https://github.com/explosion/weasel/";
+    changelog = "https://github.com/explosion/weasel/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
+    mainProgram = "weasel";
+  };
+})

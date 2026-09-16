@@ -1,36 +1,46 @@
-{ stdenv
-, lib
-, fetchurl
-, docbook_xsl
-, docbook_xsl_ns
-, gettext
-, libxslt
-, glibcLocales
-, docbook_xml_dtd_45
-, docbook_sgml_dtd_41
-, opensp
-, bash
-, perl
-, buildPerlPackage
-, ModuleBuild
-, TextWrapI18N
-, LocaleGettext
-, SGMLSpm
-, UnicodeLineBreak
-, PodParser
-, YAMLTiny
-, SyntaxKeywordTry
-, writeShellScriptBin
+{
+  stdenv,
+  lib,
+  fetchurl,
+  docbook_xsl,
+  docbook_xsl_ns,
+  gettext,
+  libxml2,
+  libxslt,
+  glibcLocales,
+  docbook_xml_dtd_45,
+  docbook_sgml_dtd_41,
+  opensp,
+  bash,
+  perl,
+  buildPerlPackage,
+  ModuleBuild,
+  TextWrapI18N,
+  LocaleGettext,
+  SGMLSpm,
+  UnicodeLineBreak,
+  PodParser,
+  YAMLTiny,
+  SyntaxKeywordTry,
+  writeShellScriptBin,
 }:
 
 buildPerlPackage rec {
   pname = "po4a";
-  version = "0.71";
+  version = "0.74";
 
   src = fetchurl {
     url = "https://github.com/mquinson/po4a/releases/download/v${version}/po4a-${version}.tar.gz";
-    hash = "sha256-xXJAHknMEXV8bTBgkW/ftagzJR7R1K65ibZnBLzyg/k=";
+    hash = "sha256-JfwyPyuje71Iw68Ov0mVJkSw5GgmH5hjPpEhmoOP58I=";
   };
+
+  patches = [
+    # Fix compatibility with gettext >= 1.0, whose msginit merges into
+    # existing files instead of overwriting, producing broken PO headers
+    # when the output file already exists but is empty.
+    # https://github.com/mquinson/po4a/issues/636
+    ./gettext-1.0-msginit-compat.patch
+  ];
 
   strictDeps = true;
 
@@ -38,13 +48,17 @@ buildPerlPackage rec {
     # the tests for the tex-format use kpsewhich -- texlive's file finding utility.
     # We don't want to depend on texlive here, so we replace it with a minimal
     # shellscript that suffices for the tests in t/fmt/tex/, i.e. it looks up
-    # article.cls to an existing file, but doesn't find article-wrong.cls.
+    # subtext.tex and article.cls to appropriate files, but doesn't find article-wrong.cls.
     let
-      kpsewhich-stub = writeShellScriptBin "kpsewhich"
-        ''[[ $1 = "article.cls" ]] && echo /dev/null'';
+      kpsewhich-stub = writeShellScriptBin "kpsewhich" ''
+        srcdir="$NIX_BUILD_TOP/${lib.strings.removeSuffix ".tar.gz" src.name}"
+        [[ $1 = "article.cls" ]] && echo /dev/null
+        [[ $1 = "subtext.tex" ]] && echo "$srcdir/t/fmt/tex/subtext.tex"
+      '';
     in
     [
       gettext
+      libxml2
       libxslt
       docbook_xsl
       docbook_xsl_ns
@@ -57,21 +71,25 @@ buildPerlPackage rec {
     ];
 
   # TODO: TermReadKey was temporarily removed from propagatedBuildInputs to unfreeze the build
-  propagatedBuildInputs = lib.optionals (!stdenv.hostPlatform.isMusl) [
-    TextWrapI18N
-  ] ++ [
-    LocaleGettext
-    SGMLSpm
-    UnicodeLineBreak
-    PodParser
-    YAMLTiny
-    SyntaxKeywordTry
-  ];
+  propagatedBuildInputs =
+    lib.optionals (!stdenv.hostPlatform.isMusl) [
+      TextWrapI18N
+    ]
+    ++ [
+      LocaleGettext
+      SGMLSpm
+      UnicodeLineBreak
+      PodParser
+      YAMLTiny
+      SyntaxKeywordTry
+    ];
 
   buildInputs = [ bash ];
 
-  LC_ALL = "en_US.UTF-8";
-  SGML_CATALOG_FILES = "${docbook_xml_dtd_45}/xml/dtd/docbook/catalog.xml";
+  env = {
+    LC_ALL = "en_US.UTF-8";
+    SGML_CATALOG_FILES = "${docbook_xml_dtd_45}/xml/dtd/docbook/catalog.xml";
+  };
 
   preConfigure = ''
     touch Makefile.PL
@@ -108,6 +126,6 @@ buildPerlPackage rec {
   meta = {
     description = "Tools for helping translation of documentation";
     homepage = "https://po4a.org";
-    license = with lib.licenses; [ gpl2Plus ];
+    license = lib.licenses.gpl2Plus;
   };
 }

@@ -1,11 +1,12 @@
-{ lib
-, fetchurl
-, stdenv
-, zlib
-, openssl
-, libuuid
-, pkg-config
-, bzip2
+{
+  lib,
+  fetchurl,
+  stdenv,
+  zlib,
+  openssl,
+  libuuid,
+  pkg-config,
+  bzip2,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -18,14 +19,18 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ zlib openssl libuuid ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ bzip2 ];
+  buildInputs = [
+    zlib
+    openssl
+    libuuid
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ bzip2 ];
 
   meta = {
     description = "Legacy library for support of the Expert Witness Compression Format";
     homepage = "https://sourceforge.net/projects/libewf/";
     license = lib.licenses.lgpl3;
-    maintainers = with lib.maintainers; [ d3vil0p3r ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
   };
 })

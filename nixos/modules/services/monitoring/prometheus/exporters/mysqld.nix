@@ -1,8 +1,23 @@
-{ config, lib, pkgs, options, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  options,
+  ...
+}:
 let
   cfg = config.services.prometheus.exporters.mysqld;
-  inherit (lib) types mkOption mkIf mkForce cli concatStringsSep optionalString escapeShellArgs;
-in {
+  inherit (lib)
+    types
+    mkOption
+    mkIf
+    mkForce
+    concatStringsSep
+    optionalString
+    escapeShellArgs
+    ;
+in
+{
   port = 9104;
   extraOpts = {
     telemetryPath = mkOption {
@@ -47,7 +62,7 @@ in {
         "${pkgs.prometheus-mysqld-exporter}/bin/mysqld_exporter"
         "--web.listen-address=${cfg.listenAddress}:${toString cfg.port}"
         "--web.telemetry-path=${cfg.telemetryPath}"
-        (optionalString (cfg.configFile != null) ''--config.my-cnf=''${CREDENTIALS_DIRECTORY}/config'')
+        (optionalString (cfg.configFile != null) "--config.my-cnf=\${CREDENTIALS_DIRECTORY}/config")
         (escapeShellArgs cfg.extraFlags)
       ];
       RestrictAddressFamilies = [
@@ -57,4 +72,3 @@ in {
     };
   };
 }
-

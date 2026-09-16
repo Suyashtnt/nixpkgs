@@ -3,29 +3,36 @@
   aiohttp,
   buildPythonPackage,
   fetchFromGitHub,
+  hatchling,
   jinja2,
   nltk,
-  setuptools,
+  pyprojectVersionPatchHook,
+  sqlglot,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hakuin";
-  version = "0-unstable-2024-03-31";
+  version = "0.2.2";
   pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pruzko";
     repo = "hakuin";
-    rev = "3b7b76dcbfb8ab2b98e6dee08df02158327af772";
-    hash = "sha256-tRjo9a0ZCBjKxbXTkiKFzfL4pL5awF5vXmsJlYxwoIw=";
+    tag = finalAttrs.version;
+    hash = "sha256-97nh+woUsCXcoO2i5KprCwJiE24V3mg91qcNgy7bpgg=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [ hatchling ];
+
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
 
   dependencies = [
     aiohttp
     jinja2
     nltk
+    sqlglot
   ];
 
   # Module has no test
@@ -33,10 +40,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "hakuin" ];
 
-  meta = with lib; {
+  meta = {
     description = "Blind SQL Injection optimization and automation framework";
     homepage = "https://github.com/pruzko/hakuin";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "hk";
   };
-}
+})

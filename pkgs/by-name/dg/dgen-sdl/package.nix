@@ -1,8 +1,9 @@
-{ lib
-, stdenv
-, fetchurl
-, libarchive
-, SDL
+{
+  lib,
+  stdenv,
+  fetchurl,
+  libarchive,
+  SDL,
 }:
 
 stdenv.mkDerivation rec {
@@ -10,7 +11,7 @@ stdenv.mkDerivation rec {
   version = "1.33";
 
   src = fetchurl {
-    url = "https://sourceforge.net/projects/dgen/files/dgen/${version}/${pname}-${version}.tar.gz";
+    url = "https://sourceforge.net/projects/dgen/files/dgen/${version}/dgen-sdl-${version}.tar.gz";
     hash = "sha256-meLAYBfCKHPHf4gYbrzAmGckTrbgQsdjuwlLArje9h4=";
   };
 
@@ -20,6 +21,7 @@ stdenv.mkDerivation rec {
   ];
 
   configureFlags = [
+    (lib.enableFeature (!stdenv.hostPlatform.isDarwin) "sdltest")
     "--enable-debug-vdp"
     "--enable-debugger"
     "--enable-joystick"
@@ -34,7 +36,9 @@ stdenv.mkDerivation rec {
     "--with-star=no" # Needs ASM support
   ];
 
-  meta = with lib; {
+  env.NIX_CFLAGS_COMPILE = lib.optionalString stdenv.cc.isClang "-Wno-reserved-user-defined-literal";
+
+  meta = {
     homepage = "https://dgen.sourceforge.net/";
     description = "Sega Genesis/Mega Drive emulator";
     longDescription = ''
@@ -63,9 +67,9 @@ stdenv.mkDerivation rec {
       - hqx and scale2x upscaling filters
       - VGM dumping
     '';
-    license = licenses.mit;
-    maintainers = with maintainers; [ AndersonTorres ];
-    platforms = with platforms; unix;
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    platforms = with lib.platforms; unix;
   };
 }
 # TODO: implement configure options

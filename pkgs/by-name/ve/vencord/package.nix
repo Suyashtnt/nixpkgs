@@ -1,58 +1,65 @@
 {
   curl,
-  esbuild,
   fetchFromGitHub,
   git,
   jq,
   lib,
   nix-update,
   nodejs,
-  pnpm,
+  pnpm_11,
+  fetchPnpmDeps,
+  pnpmConfigHook,
   stdenv,
   writeShellScript,
+  discord,
+  discord-ptb,
+  discord-canary,
+  discord-development,
   buildWebExtension ? false,
 }:
+let
+  pnpm = pnpm_11;
+in
 stdenv.mkDerivation (finalAttrs: {
   pname = "vencord";
-  version = "1.10.3";
+  version = "1.15.5";
 
   src = fetchFromGitHub {
     owner = "Vendicated";
     repo = "Vencord";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-PgQz6CNr5wkycSZ/M2saS3VtUQlC2rIolnCJlVPrxo8=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-AiZjrbx2A3NMkbyKJBGiCB/zq7fIvWlhpAAcyPrtT7Q=";
   };
 
-  pnpmDeps = pnpm.fetchDeps {
-    inherit (finalAttrs) pname src;
+  patches = [ ./fix-deps.patch ];
 
-    hash = "sha256-bosCE9gBFCcM3Ww6sJmhps/cl4lovXKMieYpkqAMst8=";
+  postPatch = ''
+    substituteInPlace packages/vencord-types/package.json \
+      --replace-fail '"@types/react": "18.3.1"' '"@types/react": "19.1.0"'
+  '';
+
+  pnpmDeps = fetchPnpmDeps {
+    inherit (finalAttrs)
+      pname
+      src
+      patches
+      postPatch
+      ;
+    inherit pnpm;
+    fetcherVersion = 4;
+    hash = "sha256-LiAcWwGmZlpO+rr0tcMNpViBiBRhSHj+wvyHFIe32lw=";
   };
 
   nativeBuildInputs = [
     git
     nodejs
-    pnpm.configHook
+    pnpmConfigHook
+    pnpm
   ];
 
   env = {
-    ESBUILD_BINARY_PATH = lib.getExe (
-      esbuild.overrideAttrs (
-        final: _: {
-          version = "0.15.18";
-          src = fetchFromGitHub {
-            owner = "evanw";
-            repo = "esbuild";
-            rev = "v${final.version}";
-            hash = "sha256-b9R1ML+pgRg9j2yrkQmBulPuLHYLUQvW+WTyR/Cq6zE=";
-          };
-          vendorHash = "sha256-+BfxCyg0KkDQpHt/wycy/8CTG6YBA/VJvJFhhzUnSiQ=";
-        }
-      )
-    );
     VENCORD_REMOTE = "${finalAttrs.src.owner}/${finalAttrs.src.repo}";
-    # TODO: somehow update this automatically
-    VENCORD_HASH = "deadbeef";
+    VENCORD_HASH = "${finalAttrs.version}";
   };
 
   buildPhase = ''
@@ -68,36 +75,45 @@ stdenv.mkDerivation (finalAttrs: {
     runHook preInstall
 
     cp -r dist/${lib.optionalString buildWebExtension "chromium-unpacked/"} $out
+    cp package.json $out # Presence is checked by Vesktop.
 
     runHook postInstall
   '';
 
-  # We need to fetch the latest *tag* ourselves, as nix-update can only fetch the latest *releases* from GitHub
-  # Vencord had a single "devbuild" release that we do not care about
-  passthru.updateScript = writeShellScript "update-vencord" ''
-    export PATH="${
-      lib.makeBinPath [
-        curl
-        jq
-        nix-update
-      ]
-    }:$PATH"
-    ghTags=$(curl ''${GITHUB_TOKEN:+" -u \":$GITHUB_TOKEN\""} "https://api.github.com/repos/Vendicated/Vencord/tags")
-    latestTag=$(echo "$ghTags" | jq -r .[0].name)
+  passthru = {
+    # We need to fetch the latest *tag* ourselves, as nix-update can only fetch the latest *releases* from GitHub
+    # Vencord had a single "devbuild" release that we do not care about
+    updateScript = writeShellScript "update-vencord" ''
+      export PATH="${
+        lib.makeBinPath [
+          curl
+          jq
+          nix-update
+        ]
+      }:$PATH"
+      ghTags=$(curl ''${GITHUB_TOKEN:+" -u \":$GITHUB_TOKEN\""} "https://api.github.com/repos/Vendicated/Vencord/tags")
+      latestTag=$(echo "$ghTags" | jq -r .[0].name)
 
-    echo "Latest tag: $latestTag"
+      echo "Latest tag: $latestTag"
 
-    exec nix-update --version "$latestTag" "$@"
-  '';
+      exec nix-update --version "$latestTag" "$@"
+    '';
 
-  meta = with lib; {
-    description = "Vencord web extension";
+    tests = lib.genAttrs' [ discord discord-ptb discord-canary discord-development ] (
+      p: lib.nameValuePair p.pname p.tests.withVencord
+    );
+  };
+
+  meta = {
+    description = "Cutest Discord client mod";
     homepage = "https://github.com/Vendicated/Vencord";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [
-      FlafyDev
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [
+      _4evy
+      Gliczy
       NotAShelf
       Scrumplex
+      ryand56
     ];
   };
 })

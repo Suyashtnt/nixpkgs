@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   meson-python,
   cython,
   pytestCheckHook,
@@ -11,22 +10,15 @@
 
 buildPythonPackage rec {
   pname = "pywavelets";
-  version = "1.6.0";
+  version = "1.10.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "PyWavelets";
     repo = "pywt";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-Dr6LWGVlYGDD21l1RQ7elScovcen5uuFdJJXe3deB5o=";
+    tag = "v${version}";
+    hash = "sha256-lzf/GVNJjPDd4r5KCddU3E7Ynn1UGrItf+eIt+xQmvo=";
   };
-
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail '"numpy>=2.0.0rc1,<2.3",' ""
-  '';
 
   build-system = [
     meson-python
@@ -51,10 +43,10 @@ buildPythonPackage rec {
     "pywt._extensions._swt"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Wavelet transform module";
     homepage = "https://github.com/PyWavelets/pywt";
-    changelog = "https://github.com/PyWavelets/pywt/releases/tag/v${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/PyWavelets/pywt/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
   };
 }

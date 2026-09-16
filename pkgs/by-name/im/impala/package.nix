@@ -3,24 +3,34 @@
   rustPlatform,
   fetchFromGitHub,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "impala";
-  version = "0.2.3";
+  version = "0.9.0";
 
   src = fetchFromGitHub {
     owner = "pythops";
     repo = "impala";
-    rev = "v${version}";
-    hash = "sha256-4LQmM4VTW3ykh6eDWKxBe3jxlJphgAytgeaQZNwivsQ=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-uCazIX3HToznF2jjTu9+uUeLp2CoQ8cKiP+SxwWlH64=";
   };
 
-  cargoHash = "sha256-IMvlGAD9DB00luu9F4UKxwSYt0sV+IU8Pb7r10VtyYg=";
+  cargoHash = "sha256-w8pxZchekifoTzxgiNzUKvx2hsu45EZPr54do2iFmUo=";
+
+  # fix for compilation of musl builds on aarch64
+  # see https://github.com/NixOS/nixpkgs/issues/145726
+  postPatch = ''
+    rm .cargo/config.toml
+  '';
 
   meta = {
     description = "TUI for managing wifi";
     homepage = "https://github.com/pythops/impala";
     platforms = lib.platforms.linux;
     license = lib.licenses.gpl3Only;
-    maintainers = [ lib.maintainers.nydragon ];
+    maintainers = with lib.maintainers; [
+      nydragon
+      saadndm
+    ];
+    mainProgram = "impala";
   };
-}
+})

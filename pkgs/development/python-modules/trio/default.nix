@@ -3,14 +3,12 @@
   buildPythonPackage,
   fetchFromGitHub,
   pythonOlder,
-  stdenv,
 
   # build-system
   setuptools,
 
   # dependencies
   attrs,
-  exceptiongroup,
   idna,
   outcome,
   sniffio,
@@ -18,34 +16,33 @@
 
   # tests
   astor,
-  coreutils,
   jedi,
   pyopenssl,
   pytestCheckHook,
   pytest-trio,
+  pyyaml,
   trustme,
-  yapf,
 }:
 
 let
   # escape infinite recursion with pytest-trio
   pytest-trio' = (pytest-trio.override { trio = null; }).overrideAttrs {
+    # `pythonRemoveDeps` is not working properly
+    dontCheckRuntimeDeps = true;
     doCheck = false;
     pythonImportsCheck = [ ];
   };
 in
 buildPythonPackage rec {
   pname = "trio";
-  version = "0.25.0";
+  version = "0.33.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "python-trio";
     repo = "trio";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-JQ493U4WINOG6ob4IzfNQt5Lgs3DmEM2BDwbae7Bvsw=";
+    tag = "v${version}";
+    hash = "sha256-juqlTJPcXpLdzO5OBCcwVR7rckABza9TAhPs9ta5c8U=";
   };
 
   build-system = [ setuptools ];
@@ -56,26 +53,31 @@ buildPythonPackage rec {
     outcome
     sniffio
     sortedcontainers
-  ] ++ lib.optionals (pythonOlder "3.11") [ exceptiongroup ];
+  ];
 
-  # tests are failing on Darwin
-  doCheck = !stdenv.hostPlatform.isDarwin;
+  __darwinAllowLocalNetworking = true;
 
   nativeCheckInputs = [
     astor
-    jedi
     pyopenssl
     pytestCheckHook
     pytest-trio'
+    pyyaml
     trustme
-    yapf
-  ];
+  ]
+  # jedi has no compatibility with python 3.14 yet
+  # https://github.com/davidhalter/jedi/issues/2064
+  ++ lib.optional (pythonOlder "3.14") jedi;
 
   preCheck = ''
     export HOME=$TMPDIR
     # $out is first in path which causes "import file mismatch"
     PYTHONPATH=$PWD/src:$PYTHONPATH
   '';
+
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
+  ];
 
   # It appears that the build sandbox doesn't include /etc/services, and these tests try to use it.
   disabledTests = [
@@ -96,13 +98,12 @@ buildPythonPackage rec {
   ];
 
   meta = {
-    changelog = "https://github.com/python-trio/trio/blob/v${version}/docs/source/history.rst";
+    changelog = "https://github.com/python-trio/trio/blob/${src.tag}/docs/source/history.rst";
     description = "Async/await-native I/O library for humans and snake people";
     homepage = "https://github.com/python-trio/trio";
     license = with lib.licenses; [
       mit
       asl20
     ];
-    maintainers = with lib.maintainers; [ catern ];
   };
 }

@@ -2,30 +2,41 @@
   lib,
   buildGoModule,
   fetchFromGitHub,
+  versionCheckHook,
+  nix-update-script,
 }:
 
 buildGoModule rec {
   pname = "mactop";
-  version = "0.1.8";
+  version = "2.1.5";
 
   src = fetchFromGitHub {
-    owner = "context-labs";
+    owner = "metaspartan";
     repo = "mactop";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-BcBUOI5EE04ZTPoHGrNQjctsDFbMoe/6MZaLj/58c34=";
+    tag = "v${version}";
+    hash = "sha256-uIHqnHkqdQGZceruvHdXacS5vD2tgN1KPY4v6k7s5Vc=";
   };
 
-  vendorHash = "sha256-/KecVx4Gp776t8gFSO29E1q9v29nwrKIWZYCpj7IlSo=";
+  vendorHash = "sha256-TF66wg8nyAb/kZ80XLaD7H39EehZQ896DS6Ce3+P8Lk=";
+
+  proxyVendor = true;
 
   ldflags = [
     "-s"
     "-w"
   ];
 
+  doInstallCheck = true;
+  doCheck = false;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  passthru.updateScript = nix-update-script { };
+  versionCheckProgramArg = "--version";
+
   meta = {
     description = "Terminal-based monitoring tool 'top' designed to display real-time metrics for Apple Silicon chips";
-    homepage = "https://github.com/context-labs/mactop";
-    changelog = "https://github.com/context-labs/mactop/releases/tag/${lib.removePrefix "refs/tags/" src.rev}";
+    homepage = "https://github.com/metaspartan/mactop";
+    changelog = "https://github.com/metaspartan/mactop/releases/tag/${src.tag}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ natsukium ];
     mainProgram = "mactop";

@@ -1,8 +1,10 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, installShellFiles
-, pkg-config
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchpatch,
+  installShellFiles,
+  pkg-config,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -16,7 +18,18 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-hvWuxFkzhOSCplPtyjRtn36bIk6KdPBcpr3lAmiAyfE=";
   };
 
-  nativeBuildInputs = [ pkg-config installShellFiles ];
+  patches = [
+    (fetchpatch {
+      url = "https://aur.archlinux.org/cgit/aur.git/plain/signal-handler-fix.patch?h=thc-secure-delete&id=ca83e2c6a548aaba56a0499180d15d61c75b6acd";
+      hash = "sha256-MGCl5wXHuDr0Z4MlBGlSAUrv5VeQ8FjWCNsTOnS7Evw=";
+      extraPrefix = "";
+    })
+  ];
+
+  nativeBuildInputs = [
+    pkg-config
+    installShellFiles
+  ];
 
   makeFlags = [
     "CC=${stdenv.cc.targetPrefix}cc"
@@ -31,13 +44,13 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "THC's Secure Delete tools";
     homepage = "https://github.com/gordrs/thc-secure-delete";
     changelog = "https://github.com/gordrs/thc-secure-delete/blob/v${finalAttrs.version}/CHANGES";
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ tochiaha ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ tochiaha ];
     mainProgram = "srm";
-    platforms = platforms.all;
+    platforms = lib.platforms.all;
   };
 })

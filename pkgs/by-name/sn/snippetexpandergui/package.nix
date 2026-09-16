@@ -1,22 +1,23 @@
-{ lib
-, buildGoModule
-, wrapGAppsHook3
-, wails
-, scdoc
-, installShellFiles
-, xorg
-, gtk3
-, webkitgtk
-, snippetexpanderd
-, snippetexpanderx
+{
+  lib,
+  buildGoModule,
+  wrapGAppsHook3,
+  wails,
+  scdoc,
+  installShellFiles,
+  libx11,
+  gtk3,
+  # webkitgtk_4_0,
+  snippetexpanderd,
+  snippetexpanderx,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   inherit (snippetexpanderd) src version;
 
   pname = "snippetexpandergui";
 
-  vendorHash = "sha256-2nLO/b6XQC88VXE+SewhgKpkRtIHsva+fDudgKpvZiY=";
+  vendorHash = "sha256-1ofkbbitCzrLxugi769jbjOD2iN0Z6kYC5d7X2GYNIg=";
 
   proxyVendor = true;
 
@@ -30,9 +31,9 @@ buildGoModule rec {
   ];
 
   buildInputs = [
-    xorg.libX11
+    libx11
     gtk3
-    webkitgtk
+    # webkitgtk_4_0
     snippetexpanderd
     snippetexpanderx
   ];
@@ -40,7 +41,7 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X 'main.version=${src.rev}'"
+    "-X 'main.version=${finalAttrs.src.rev}'"
   ];
 
   tags = [
@@ -57,16 +58,23 @@ buildGoModule rec {
   preFixup = ''
     gappsWrapperArgs+=(
       # Ensure snippetexpanderd and snippetexpanderx are available to start/stop.
-      --prefix PATH : ${lib.makeBinPath [ snippetexpanderd snippetexpanderx ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          snippetexpanderd
+          snippetexpanderx
+        ]
+      }
     )
   '';
 
   meta = {
+    # webkitgtk_4_0 was removed
+    broken = true;
     description = "Your little expandable text snippet helper GUI";
     homepage = "https://snippetexpander.org";
     license = lib.licenses.gpl2Plus;
-    maintainers = with lib.maintainers; [ ianmjones ];
+    maintainers = [ ];
     platforms = lib.platforms.linux;
     mainProgram = "snippetexpandergui";
   };
-}
+})

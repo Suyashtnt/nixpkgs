@@ -1,27 +1,35 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, rustPlatform
-, installShellFiles
-, pkg-config
-, perl
-, openssl
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  rustPlatform,
+  installShellFiles,
+  pkg-config,
+  perl,
+  openssl,
+  curl,
 }:
-rustPlatform.buildRustPackage rec {
+
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "release-plz";
-  version = "0.3.79";
+  version = "0.3.165";
 
   src = fetchFromGitHub {
-    owner = "MarcoIeni";
+    owner = "release-plz";
     repo = "release-plz";
-    rev = "release-plz-v${version}";
-    hash = "sha256-tI9/FtGxjKPIFg6L7pNeSx24G3FcfwOlIqcuF6wCTSU=";
+    rev = "release-plz-v${finalAttrs.version}";
+    hash = "sha256-bGcODNHg7wL6ya6/EvcndiqfGYBW1vrK263MKvvxamU=";
   };
 
-  cargoHash = "sha256-UN3SkNNY8ovaT/eNb9JyF9KQWt8KG0TX9ztLjrAnPPo=";
+  cargoHash = "sha256-LMYadKgnHRZeqm6ULakURO4hEu/+zS3+gm+lOlt5nOU=";
 
-  nativeBuildInputs = [ installShellFiles pkg-config perl ];
-  buildInputs = [ openssl ];
+  nativeBuildInputs = [
+    installShellFiles
+    pkg-config
+    perl
+  ];
+
+  buildInputs = [ openssl ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ curl ];
 
   buildAndTestSubdir = "crates/release_plz";
 
@@ -29,18 +37,24 @@ rustPlatform.buildRustPackage rec {
   doCheck = false;
 
   postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
-    installShellCompletion --cmd ${meta.mainProgram} \
-      --bash <($out/bin/${meta.mainProgram} generate-completions bash) \
-      --fish <($out/bin/${meta.mainProgram} generate-completions fish) \
-      --zsh <($out/bin/${meta.mainProgram} generate-completions zsh)
+    installShellCompletion --cmd ${finalAttrs.meta.mainProgram} \
+      --bash <($out/bin/${finalAttrs.meta.mainProgram} generate-completions bash) \
+      --fish <($out/bin/${finalAttrs.meta.mainProgram} generate-completions fish) \
+      --zsh <($out/bin/${finalAttrs.meta.mainProgram} generate-completions zsh)
   '';
 
   meta = {
     description = "Publish Rust crates from CI with a Release PR";
     homepage = "https://release-plz.ieni.dev";
-    license = with lib.licenses; [ asl20 mit ];
-    maintainers = with lib.maintainers; [ dannixon ];
+    changelog = "https://github.com/release-plz/release-plz/blob/release-plz-v${finalAttrs.version}/CHANGELOG.md";
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
+    maintainers = with lib.maintainers; [
+      dannixon
+      chrjabs
+    ];
     mainProgram = "release-plz";
-    broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   format = pkgs.formats.yaml { };
   cfg = config.services.evdevremapkeys;
@@ -6,7 +11,7 @@ let
 in
 {
   options.services.evdevremapkeys = {
-    enable = lib.mkEnableOption ''evdevremapkeys, a daemon to remap events on linux input devices'';
+    enable = lib.mkEnableOption "evdevremapkeys, a daemon to remap events on linux input devices";
 
     settings = lib.mkOption {
       type = format.type;

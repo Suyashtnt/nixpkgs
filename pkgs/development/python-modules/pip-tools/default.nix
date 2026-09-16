@@ -4,47 +4,61 @@
   buildPythonPackage,
   build,
   click,
-  fetchPypi,
-  pep517,
+  fetchFromGitHub,
+  fetchpatch,
   pip,
+  pyproject-hooks,
+  pytest-mock,
   pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   setuptools-scm,
-  tomli,
   tomli-w,
   wheel,
 }:
 
 buildPythonPackage rec {
   pname = "pip-tools";
-  version = "7.4.1";
-  format = "pyproject";
+  version = "7.5.3";
+  pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-hkgm9Qc4ZEUOJNvuuFzjkgzfsJhIo9aev1N7Uh8UvMk=";
+  src = fetchFromGitHub {
+    owner = "jazzband";
+    repo = "pip-tools";
+    tag = "v${version}";
+    hash = "sha256-MkYGD/ropw+MLLrk4gRZZguOv5extzNNXwTy6NQnCu0=";
   };
 
-  patches = [ ./fix-setup-py-bad-syntax-detection.patch ];
+  patches = [
+    ./fix-setup-py-bad-syntax-detection.patch
 
-  nativeBuildInputs = [ setuptools-scm ];
+    (fetchpatch {
+      name = "pip-26-compat.patch";
+      url = "https://github.com/jazzband/pip-tools/commit/cbe3c692f8977270e7ae6061c8159450a73c13fe.patch";
+      excludes = [
+        "changelog.d/2379.feature.md"
+        "pyproject.toml"
+        "tox.ini"
+      ];
+      hash = "sha256-wDma1FBnWnrRln0o7HaizMIkoQey6VdQzGh+q84cHxE=";
+    })
+  ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     build
     click
-    pep517
     pip
+    pyproject-hooks
     setuptools
     wheel
-  ] ++ lib.optionals (pythonOlder "3.11") [ tomli ];
+  ];
 
   __darwinAllowLocalNetworking = true;
 
   nativeCheckInputs = [
+    pytest-mock
     pytest-xdist
     pytestCheckHook
     tomli-w
@@ -55,28 +69,51 @@ buildPythonPackage rec {
     export no_proxy='*';
   '';
 
+  disabledTestPaths = [
+    # Most tests require network access
+    "tests/test_cli_compile.py"
+  ];
+
   disabledTests = [
     # Tests require network access
     "network"
     "test_direct_reference_with_extras"
     "test_local_duplicate_subdependency_combined"
     "test_bad_setup_file"
+    "test_get_hashes_local_repository_cache_miss"
+    "test_toggle_reuse_hashes_local_repository"
+    "test_get_hashes_from_mixed"
+    "test_toggle_reuse_hashes_local_repository"
+    "test_generate_hashes_all_platforms"
+    "test_iter_dependencies_after_combine_install_requirements"
+    "test_iter_dependencies_after_combine_install_requirements_extras"
+    "test_name_collision"
+    "test_build_project_metadata_upgrading_raises_error"
     # Assertion error
     "test_compile_recursive_extras"
+    "test_compile_build_targets_setuptools_no_wheel_dep"
     "test_combine_different_extras_of_the_same_package"
     "test_diff_should_not_uninstall"
     "test_cli_compile_all_extras_with_multiple_packages"
     # Deprecations
     "test_error_in_pyproject_toml"
+
+    # constraints.txt is now in a tmpdir
+    "test_preserve_via_requirements_constrained_dependencies_when_run_twice"
+    "test_annotate_option"
+    # TypeError("'<' not supported between instances of 'InstallationCandidate' and 'InstallationCandidate'")>.exit_code
+    "test_no_candidates"
+    "test_no_candidates_pre"
+    "test_failure_of_legacy_resolver_prompts_for_backtracking"
   ];
 
   pythonImportsCheck = [ "piptools" ];
 
-  meta = with lib; {
+  meta = {
     description = "Keeps your pinned dependencies fresh";
     homepage = "https://github.com/jazzband/pip-tools/";
     changelog = "https://github.com/jazzband/pip-tools/releases/tag/${version}";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ zimbatm ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ zimbatm ];
   };
 }

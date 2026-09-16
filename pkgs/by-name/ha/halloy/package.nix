@@ -1,69 +1,56 @@
 {
   lib,
   stdenv,
-  darwin,
   fetchFromGitHub,
   copyDesktopItems,
   makeDesktopItem,
   libxkbcommon,
-  makeWrapper,
+  makeBinaryWrapper,
+  nix-update-script,
   openssl,
   pkg-config,
   rustPlatform,
   vulkan-loader,
   wayland,
-  xorg,
+  libxi,
+  libxcursor,
+  libx11,
+  libxcb,
   alsa-lib,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "halloy";
-  version = "2024.11";
+  version = "2026.8";
 
   src = fetchFromGitHub {
     owner = "squidowl";
     repo = "halloy";
-    rev = "refs/tags/${version}";
-    hash = "sha256-kmdsC0SQoL5gppzBhnF0LfOFj14zeI3C6SdCBiVoKj0=";
+    tag = finalAttrs.version;
+    hash = "sha256-OPSitjgfiBbqCNa3dIBHrFCP7097vsF78H5aCbtvPAI=";
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "dpi-0.1.1" = "sha256-25sOvEBhlIaekTeWvy3UhjPI1xrJbOQvw/OkTg12kQY=";
-      "glyphon-0.5.0" = "sha256-OGXLqiMjaZ7gR5ANkuCgkfn/I7c/4h9SRE6MZZMW3m4=";
-      "iced-0.13.0-dev" = "sha256-XQUaI16lGEMGFxqK3UNd8jQfUiBzomxlT/I+yeZncFo=";
-    };
-  };
+  cargoHash = "sha256-LBJmiUxCHUZM1nzF7rCapKPELqdSLNdz2am7ivHSK98=";
 
   nativeBuildInputs = [
     copyDesktopItems
-    makeWrapper
+    makeBinaryWrapper
     pkg-config
   ];
 
-  buildInputs =
-    [
-      alsa-lib
-      libxkbcommon
-      openssl
-      vulkan-loader
-      xorg.libX11
-      xorg.libXcursor
-      xorg.libXi
-      xorg.libXrandr
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk.frameworks.AppKit
-      darwin.apple_sdk.frameworks.CoreFoundation
-      darwin.apple_sdk.frameworks.CoreGraphics
-      darwin.apple_sdk.frameworks.Cocoa
-      darwin.apple_sdk.frameworks.Foundation
-      darwin.apple_sdk.frameworks.Metal
-      darwin.apple_sdk.frameworks.QuartzCore
-      darwin.apple_sdk.frameworks.Security
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [ wayland ];
+  buildInputs = [
+    openssl
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    alsa-lib
+    libxkbcommon
+    vulkan-loader
+    wayland
+    libx11
+    libxcursor
+    libxi
+    libxcb
+  ];
 
   desktopItems = [
     (makeDesktopItem {
@@ -71,11 +58,12 @@ rustPlatform.buildRustPackage rec {
       desktopName = "Halloy";
       comment = "IRC client written in Rust";
       icon = "org.squidowl.halloy";
-      exec = pname;
+      exec = finalAttrs.meta.mainProgram;
       terminal = false;
       mimeTypes = [
         "x-scheme-handler/irc"
         "x-scheme-handler/ircs"
+        "x-scheme-handler/halloy"
       ];
       categories = [
         "Network"
@@ -106,25 +94,32 @@ rustPlatform.buildRustPackage rec {
   postInstall = ''
     install -Dm644 assets/linux/icons/hicolor/128x128/apps/org.squidowl.halloy.png \
       $out/share/icons/hicolor/128x128/apps/org.squidowl.halloy.png
-  '' + lib.optionalString stdenv.hostPlatform.isDarwin ''
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
     APP_DIR="$out/Applications/Halloy.app/Contents"
 
     mkdir -p "$APP_DIR/MacOS"
-    cp -r ${src}/assets/macos/Halloy.app/Contents/* "$APP_DIR"
+    cp -r ${finalAttrs.src}/assets/macos/Halloy.app/Contents/* "$APP_DIR"
 
     substituteInPlace "$APP_DIR/Info.plist" \
-      --replace-fail "{{ VERSION }}" "${version}" \
-      --replace-fail "{{ BUILD }}" "${version}-nixpkgs"
+      --replace-fail "{{ VERSION }}" "${finalAttrs.version}" \
+      --replace-fail "{{ BUILD }}" "${finalAttrs.version}-nixpkgs"
 
-    makeWrapper "$out/bin/halloy" "$APP_DIR/MacOS/halloy"
+    makeBinaryWrapper "$out/bin/halloy" "$APP_DIR/MacOS/halloy"
   '';
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "IRC application";
     homepage = "https://github.com/squidowl/halloy";
-    changelog = "https://github.com/squidowl/halloy/blob/${version}/CHANGELOG.md";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ fab iivusly ];
+    changelog = "https://github.com/squidowl/halloy/blob/${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [
+      fab
+      iivusly
+      ivyfanchiang
+    ];
     mainProgram = "halloy";
   };
-}
+})

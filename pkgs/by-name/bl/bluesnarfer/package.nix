@@ -10,7 +10,7 @@ stdenv.mkDerivation (finalAttrs: {
   version = "0.1";
 
   src = fetchzip {
-    url = "http://www.alighieri.org/tools/bluesnarfer.tar.gz";
+    url = "https://www.alighieri.org/tools/bluesnarfer.tar.gz";
     stripRoot = false;
     hash = "sha256-HGdrJZohKIsOkLETBdHz80w6vxmG25aMEWXrQlpMgRw=";
   };
@@ -21,6 +21,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   strictDeps = true;
 
+  env.NIX_CFLAGS_COMPILE = toString [
+    "-Wno-incompatible-pointer-types"
+    "-Wno-implicit-function-declaration"
+  ];
+
   installPhase = ''
     runHook preInstall
     install -Dm755 bluesnarfer $out/bin/bluesnarfer
@@ -29,7 +34,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = {
     description = "Bluetooth bluesnarfing utility";
-    homepage = "http://www.alighieri.org/project.html";
+    homepage = "https://www.alighieri.org/project.html";
     license = lib.licenses.gpl2Plus;
     maintainers = with lib.maintainers; [ fgaz ];
     platforms = lib.platforms.linux;

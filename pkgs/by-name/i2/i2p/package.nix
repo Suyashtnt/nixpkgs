@@ -1,29 +1,49 @@
-{ lib
-, stdenv
-, fetchzip
-, jdk
-, ant
-, gettext
-, which
-, dbip-country-lite
-, java-service-wrapper
-, makeWrapper
-, gmp
+{
+  lib,
+  stdenv,
+  fetchzip,
+  jdk_headless,
+  jre_minimal,
+  ant,
+  gettext,
+  which,
+  dbip-country-lite,
+  java-service-wrapper,
+  makeWrapper,
+  gmp,
 }:
 
+let
+  jre = jre_minimal.override {
+    modules = [
+      "java.base"
+      "java.desktop"
+      "java.instrument"
+      "java.logging"
+      "java.management"
+      "java.naming"
+      "java.rmi"
+      "java.security.jgss"
+      "java.sql"
+      "java.xml"
+      "jdk.zipfs"
+    ];
+  };
+in
 stdenv.mkDerivation (finalAttrs: {
   pname = "i2p";
-  version = "2.6.1";
+  version = "2.13.0";
 
   src = fetchzip {
     urls = [
       "https://github.com/i2p/i2p.i2p/archive/i2p-${finalAttrs.version}.tar.gz"
-    ] ++ (map (mirror: "${mirror}${finalAttrs.version}/i2psource_${finalAttrs.version}.tar.bz2") [
+    ]
+    ++ (map (mirror: "${mirror}${finalAttrs.version}/i2psource_${finalAttrs.version}.tar.bz2") [
       "https://download.i2p2.de/releases/"
       "https://files.i2p-projekt.de/"
       "https://download.i2p2.no/releases/"
     ]);
-    hash = "sha256-ntjTXdpgcTReEVxzDEoq9r3NAqS7q4m+rlJXp7is1k0=";
+    hash = "sha256-fCtjCKbvad8Uk+1ir1suJ0MqV8JjAcmOKXJicbUtKls=";
   };
 
   strictDeps = true;
@@ -32,7 +52,7 @@ stdenv.mkDerivation (finalAttrs: {
     makeWrapper
     ant
     gettext
-    jdk
+    jdk_headless
     which
   ];
 
@@ -75,7 +95,7 @@ stdenv.mkDerivation (finalAttrs: {
       fi
     done
 
-    makeWrapper ${jdk}/bin/java $out/bin/i2prouter \
+    makeWrapper ${jre}/bin/java $out/bin/i2prouter \
       --add-flags "-cp $CP -Djava.library.path=$out/lib/ -Di2p.dir.base=$out -DloggerFilenameOverride=logs/log-router-@.txt" \
       --add-flags "net.i2p.router.RouterLaunch"
 
@@ -94,14 +114,15 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstallCheck
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Applications and router for I2P, anonymity over the Internet";
     homepage = "https://geti2p.net";
-    sourceProvenance = with sourceTypes; [
+    changelog = "https://github.com/i2p/i2p.i2p/releases/tag/i2p-${finalAttrs.version}";
+    sourceProvenance = with lib.sourceTypes; [
       fromSource
       binaryBytecode # source bundles dependencies as jars
     ];
-    license = with licenses; [
+    license = with lib.licenses; [
       asl20
       boost
       bsd2
@@ -116,8 +137,12 @@ stdenv.mkDerivation (finalAttrs: {
       mit
       publicDomain
     ];
-    platforms = [ "x86_64-linux" "i686-linux" "aarch64-linux" ];
-    maintainers = with maintainers; [ linsui ];
+    platforms = [
+      "x86_64-linux"
+      "i686-linux"
+      "aarch64-linux"
+    ];
+    maintainers = with lib.maintainers; [ linsui ];
     mainProgram = "i2prouter-plain";
   };
 })

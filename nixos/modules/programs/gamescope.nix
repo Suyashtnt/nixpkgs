@@ -1,7 +1,8 @@
-{ config
-, lib
-, pkgs
-, ...
+{
+  config,
+  lib,
+  pkgs,
+  ...
 }:
 let
   cfg = config.programs.gamescope;
@@ -9,14 +10,13 @@ let
   gamescope =
     let
       wrapperArgs =
-        lib.optional (cfg.args != [ ])
-          ''--add-flags "${builtins.toString cfg.args}"''
+        lib.optional (cfg.args != [ ]) ''--add-flags "${toString cfg.args}"''
         ++ builtins.attrValues (builtins.mapAttrs (var: val: "--set-default ${var} ${val}") cfg.env);
     in
     pkgs.runCommand "gamescope" { nativeBuildInputs = [ pkgs.makeBinaryWrapper ]; } ''
       mkdir -p $out/bin
       makeWrapper ${cfg.package}/bin/gamescope $out/bin/gamescope --inherit-argv0 \
-        ${builtins.toString wrapperArgs}
+        ${toString wrapperArgs}
       ln -s ${cfg.package}/bin/gamescopectl $out/bin/gamescopectl
     '';
 in
@@ -25,6 +25,8 @@ in
     enable = lib.mkEnableOption "gamescope, the SteamOS session compositing window manager";
 
     package = lib.mkPackageOption pkgs "gamescope" { };
+
+    enableWsi = lib.mkEnableOption "gamescope-wsi, the Vulkan WSI layer, alongside gamescope";
 
     capSysNice = lib.mkOption {
       type = lib.types.bool;
@@ -38,7 +40,10 @@ in
     args = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
-      example = [ "--rt" "--prefer-vk-device 8086:9bc4" ];
+      example = [
+        "--rt"
+        "--prefer-vk-device 8086:9bc4"
+      ];
       description = ''
         Arguments passed to GameScope on startup.
       '';
@@ -73,7 +78,12 @@ in
     };
 
     environment.systemPackages = lib.mkIf (!cfg.capSysNice) [ gamescope ];
+
+    hardware.graphics = lib.optionalAttrs cfg.enableWsi {
+      extraPackages = with pkgs; [ gamescope-wsi ];
+      extraPackages32 = with pkgs; [ pkgsi686Linux.gamescope-wsi ];
+    };
   };
 
-  meta.maintainers = with lib.maintainers; [ nrdxp ];
+  meta.maintainers = [ ];
 }

@@ -1,36 +1,44 @@
-{ buildGoModule
-, fetchFromGitHub
-, installShellFiles
-, lib
-, makeWrapper
-, stdenv
-, xdg-utils
+{
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  lib,
+  makeWrapper,
+  stdenv,
+  writableTmpDirAsHomeHook,
+  xdg-utils,
 }:
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "aws-vault";
-  version = "7.2.0";
+  version = "7.14.0";
 
   src = fetchFromGitHub {
-    owner = "99designs";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-Qs4vxFgehWQYYECBGBSU8YI/BHLwOQUO5wBlNEUzD7c=";
+    owner = "ByteNess";
+    repo = "aws-vault";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-Adb0k6Cb0Jq4LTexNYmCHThE+/4ariIutwy7pH2onoU=";
   };
 
-  vendorHash = "sha256-4bJKDEZlO0DzEzTQ7m+SQuzhe+wKmL6wLueqgSz/46s=";
+  proxyVendor = true;
+  vendorHash = "sha256-vdgQS4ziTzLHWVaIiHORlSEOYPEbMF3fsSabEJh26t0=";
 
-  nativeBuildInputs = [ installShellFiles makeWrapper ];
+  nativeBuildInputs = [
+    installShellFiles
+    makeWrapper
+    writableTmpDirAsHomeHook
+  ];
 
   postInstall = ''
     # make xdg-open overrideable at runtime
     # aws-vault uses https://github.com/skratchdot/open-golang/blob/master/open/open.go to open links
-    ${lib.optionalString (!stdenv.hostPlatform.isDarwin) "wrapProgram $out/bin/aws-vault --suffix PATH : ${lib.makeBinPath [ xdg-utils ]}"}
+    ${lib.optionalString (
+      !stdenv.hostPlatform.isDarwin
+    ) "wrapProgram $out/bin/aws-vault --suffix PATH : ${lib.makeBinPath [ xdg-utils ]}"}
     installShellCompletion --cmd aws-vault \
       --bash $src/contrib/completions/bash/aws-vault.bash \
       --fish $src/contrib/completions/fish/aws-vault.fish \
       --zsh $src/contrib/completions/zsh/aws-vault.zsh
   '';
-
 
   doCheck = false;
 
@@ -38,21 +46,23 @@ buildGoModule rec {
 
   # set the version. see: aws-vault's Makefile
   ldflags = [
-    "-X main.Version=v${version}"
+    "-X main.Version=v${finalAttrs.version}"
   ];
 
   doInstallCheck = true;
 
   installCheckPhase = ''
-    $out/bin/aws-vault --version 2>&1 | grep ${version} > /dev/null
+    $out/bin/aws-vault --version 2>&1 | grep ${finalAttrs.version} > /dev/null
   '';
 
-  meta = with lib; {
-    description =
-      "A vault for securely storing and accessing AWS credentials in development environments";
+  meta = {
+    description = "Vault for securely storing and accessing AWS credentials in development environments";
     mainProgram = "aws-vault";
-    homepage = "https://github.com/99designs/aws-vault";
-    license = licenses.mit;
-    maintainers = with maintainers; [ zimbatm ];
+    homepage = "https://github.com/ByteNess/aws-vault";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      zimbatm
+      er0k
+    ];
   };
-}
+})

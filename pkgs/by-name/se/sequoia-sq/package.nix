@@ -1,29 +1,33 @@
-{ stdenv
-, fetchFromGitLab
-, lib
-, darwin
-, nettle
-, nix-update-script
-, rustPlatform
-, pkg-config
-, capnproto
-, installShellFiles
-, openssl
-, sqlite
+{
+  fetchFromGitLab,
+  lib,
+  nettle,
+  nix-update-script,
+  rustPlatform,
+  pkg-config,
+  capnproto,
+  installShellFiles,
+  openssl,
+  cacert,
+  sqlite,
+  versionCheckHook,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "sequoia-sq";
-  version = "0.38.0";
+  version = "1.4.0";
 
   src = fetchFromGitLab {
     owner = "sequoia-pgp";
     repo = "sequoia-sq";
-    rev = "v${version}";
-    hash = "sha256-Zzk7cQs5zD+houNjK8s3tP9kZ2/eAUV/OE3/GrNAXk8=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-+6QVRp0zDJIIv23YlAI/cspHuGc+YcWdPfJZIOxQRW8=";
   };
 
-  cargoHash = "sha256-Ou+YKfEOmMTZVg9unqoOibMQYsdNAYTq4ZoOANLRk2Y=";
+  cargoHash = "sha256-I6hPpRpILV+iU9erfVBQOXuICx4IvWvGyHWdep7jRm4=";
+
+  strictDeps = true;
+  __structuredAttrs = true;
 
   nativeBuildInputs = [
     pkg-config
@@ -36,39 +40,46 @@ rustPlatform.buildRustPackage rec {
     openssl
     sqlite
     nettle
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin (with darwin.apple_sdk.frameworks; [ Security SystemConfiguration ]);
-
-  checkFlags = [
-    # https://gitlab.com/sequoia-pgp/sequoia-sq/-/issues/297
-    "--skip=sq_autocrypt_import"
   ];
 
   # Needed for tests to be able to create a ~/.local/share/sequoia directory
+  # Needed for avoiding "OpenSSL error" since 1.2.0
   preCheck = ''
     export HOME=$(mktemp -d)
+    export SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt
   '';
 
-  env.ASSET_OUT_DIR = "/tmp/";
+  env.ASSET_OUT_DIR = "target";
+
+  # key store daemon binds a loopback socket
+  __darwinAllowLocalNetworking = true;
 
   doCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+  versionCheckProgramArg = "version";
 
   postInstall = ''
-    installManPage /tmp/man-pages/*.*
+    installManPage ${finalAttrs.env.ASSET_OUT_DIR}/man-pages/*.*
     installShellCompletion \
       --cmd sq \
-      --bash /tmp/shell-completions/sq.bash \
-      --fish /tmp/shell-completions/sq.fish \
-      --zsh /tmp/shell-completions/_sq
+      --bash ${finalAttrs.env.ASSET_OUT_DIR}/shell-completions/sq.bash \
+      --fish ${finalAttrs.env.ASSET_OUT_DIR}/shell-completions/sq.fish \
+      --zsh ${finalAttrs.env.ASSET_OUT_DIR}/shell-completions/_sq
   '';
 
   passthru.updateScript = nix-update-script { };
 
   meta = {
-    description = "Cool new OpenPGP implementation";
+    description = "Command line application exposing a useful set of OpenPGP functionality for common tasks";
     homepage = "https://sequoia-pgp.org/";
-    changelog = "https://gitlab.com/sequoia-pgp/sequoia-sq/-/blob/v${version}/NEWS";
-    license = lib.licenses.gpl2Plus;
-    maintainers = with lib.maintainers; [ minijackson doronbehar ];
+    changelog = "https://gitlab.com/sequoia-pgp/sequoia-sq/-/blob/v${finalAttrs.version}/NEWS";
+    license = lib.licenses.lgpl2Plus;
+    maintainers = with lib.maintainers; [
+      doronbehar
+      dvn0
+      anish
+    ];
     mainProgram = "sq";
   };
-}
+})

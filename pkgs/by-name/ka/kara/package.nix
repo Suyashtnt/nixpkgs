@@ -2,30 +2,45 @@
   stdenv,
   lib,
   fetchFromGitHub,
+  cmake,
   nix-update-script,
   kdePackages,
-  ...
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "kara";
-  version = "0.7.1";
+  version = "1.0.0";
 
   src = fetchFromGitHub {
     owner = "dhruv8sh";
     repo = "kara";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-G+sLHcHnNuzIRE+6bvEeXaWYVdoqqxcp5kGF8ZhD/34=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-nOMsR9bocDVwH1wB+tGu7y4hnvcAUVTNPXrAzcmws3w=";
   };
 
-  installPhase = ''
-    runHook preInstall
+  nativeBuildInputs = [
+    cmake
+    kdePackages.extra-cmake-modules
+  ];
 
-    mkdir -p $out/share/plasma/plasmoids/org.dhruv8sh.kara
-    cp metadata.json $out/share/plasma/plasmoids/org.dhruv8sh.kara
-    cp -r contents $out/share/plasma/plasmoids/org.dhruv8sh.kara
+  buildInputs = with kdePackages; [
+    qtbase
+    qtdeclarative
+    ki18n
+    kservice
+    kwindowsystem
+    libplasma
+    plasma-activities
+    kwin
+    plasma-workspace
+  ];
 
-    runHook postInstall
-  '';
+  strictDeps = true;
+
+  cmakeFlags = [
+    (lib.cmakeFeature "Qt6_DIR" "${kdePackages.qtbase}/lib/cmake/Qt6")
+  ];
+
+  dontWrapQtApps = true;
 
   passthru.updateScript = nix-update-script { };
 

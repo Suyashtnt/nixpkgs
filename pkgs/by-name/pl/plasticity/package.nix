@@ -1,48 +1,61 @@
-{ alsa-lib
-, at-spi2-atk
-, autoPatchelfHook
-, cairo
-, cups
-, dbus
-, desktop-file-utils
-, expat
-, fetchurl
-, gdk-pixbuf
-, gtk3
-, gvfs
-, hicolor-icon-theme
-, lib
-, libdrm
-, libglvnd
-, libnotify
-, libsForQt5
-, libxkbcommon
-, mesa
-, nspr
-, nss
-, openssl
-, pango
-, rpmextract
-, stdenv
-, systemd
-, trash-cli
-, vulkan-loader
-, wrapGAppsHook3
-, xdg-utils
-, xorg
+{
+  alsa-lib,
+  at-spi2-atk,
+  autoPatchelfHook,
+  cairo,
+  cups,
+  dbus,
+  desktop-file-utils,
+  expat,
+  fetchurl,
+  gdk-pixbuf,
+  gtk3,
+  gvfs,
+  hicolor-icon-theme,
+  lib,
+  libdrm,
+  libglvnd,
+  libnotify,
+  libxkbcommon,
+  libgbm,
+  libGL,
+  nspr,
+  nss,
+  openssl,
+  pango,
+  rpmextract,
+  stdenv,
+  systemd,
+  trash-cli,
+  vulkan-loader,
+  wrapGAppsHook3,
+  xdg-utils,
+  libxtst,
+  libxrandr,
+  libxfixes,
+  libxext,
+  libxdamage,
+  libxcomposite,
+  libx11,
+  libxcb,
 }:
-stdenv.mkDerivation rec  {
+stdenv.mkDerivation rec {
   pname = "plasticity";
-  version = "24.2.0";
+  version = "26.1.4";
 
   src = fetchurl {
     url = "https://github.com/nkallen/plasticity/releases/download/v${version}/Plasticity-${version}-1.x86_64.rpm";
-    hash = "sha256-3dHS7chTgoD35AV/q8DHIYl43KbCsoFYEqSQHXm05tg=";
+    hash = "sha256-paBF0lk8rvuY4lnl5v7nOXaFsZQuNkTtXCoW53xBiMU=";
   };
 
   passthru.updateScript = ./update.sh;
 
-  nativeBuildInputs = [ wrapGAppsHook3 autoPatchelfHook rpmextract mesa ];
+  nativeBuildInputs = [
+    wrapGAppsHook3
+    autoPatchelfHook
+    rpmextract
+    libgbm
+  ];
 
   buildInputs = [
     alsa-lib
@@ -58,13 +71,12 @@ stdenv.mkDerivation rec  {
     hicolor-icon-theme
     libdrm
     libnotify
-    libsForQt5.kde-cli-tools
     libxkbcommon
     nspr
     nss
     openssl
     pango
-    stdenv.cc.cc.lib
+    (lib.getLib stdenv.cc.cc)
     trash-cli
     xdg-utils
   ];
@@ -72,15 +84,15 @@ stdenv.mkDerivation rec  {
   runtimeDependencies = [
     systemd
     libglvnd
-    vulkan-loader #may help with nvidia users
-    xorg.libX11
-    xorg.libxcb
-    xorg.libXcomposite
-    xorg.libXdamage
-    xorg.libXext
-    xorg.libXfixes
-    xorg.libXrandr
-    xorg.libXtst
+    vulkan-loader # may help with nvidia users
+    libx11
+    libxcb
+    libxcomposite
+    libxdamage
+    libxext
+    libxfixes
+    libxrandr
+    libxtst
   ];
 
   dontUnpack = true;
@@ -96,33 +108,44 @@ stdenv.mkDerivation rec  {
     "TD_DbEntities.tx"
     "TD_DbIO.tx"
     "WipeOut.tx"
-   ];
+  ];
 
-installPhase = ''
-  runHook preInstall
+  installPhase = ''
+    runHook preInstall
 
-  mkdir $out
-  cd $out
-  rpmextract $src
-  mv $out/usr/* $out
-  rm -r $out/usr
+    mkdir $out
+    cd $out
+    rpmextract $src
+    mv $out/usr/* $out
+    rm -r $out/usr
+    rm -r $out/lib/.build-id
 
-  runHook postInstall
-'';
-
-  #--use-gl=egl for it to use hardware rendering it seems. Otherwise there are terrible framerates
-  postInstall = ''
-    substituteInPlace share/applications/Plasticity.desktop \
-      --replace-fail 'Exec=Plasticity %U' "Exec=Plasticity --use-gl=egl %U"
+    runHook postInstall
   '';
 
-  meta = with lib; {
+  preFixup = ''
+    patchelf --add-needed libGL.so.1 \
+      --set-rpath "${
+        lib.makeLibraryPath [
+          libGL
+        ]
+      }" \
+      $out/bin/Plasticity
+
+    rm "$out/lib/Plasticity/libvulkan.so.1"
+    ln -s -t "$out/lib/Plasticity" "${lib.getLib vulkan-loader}/lib/libvulkan.so.1"
+  '';
+
+  meta = {
     description = "CAD for artists";
     homepage = "https://www.plasticity.xyz";
-    license = licenses.unfree;
+    license = lib.licenses.unfree;
     mainProgram = "Plasticity";
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
-    maintainers = with maintainers; [ imadnyc ];
+    maintainers = with lib.maintainers; [
+      imadnyc
+      bearfm
+    ];
     platforms = [ "x86_64-linux" ];
   };
 }

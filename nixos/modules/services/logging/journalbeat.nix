@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.journalbeat;
 
@@ -27,7 +32,7 @@ in
 
       tags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = "Tags to place on the shipped log messages";
       };
 
@@ -56,8 +61,8 @@ in
       {
         assertion = !lib.hasPrefix "/" cfg.stateDir;
         message =
-          "The option services.journalbeat.stateDir shouldn't be an absolute directory." +
-          " It should be a directory relative to /var/lib/.";
+          "The option services.journalbeat.stateDir shouldn't be an absolute directory."
+          + " It should be a directory relative to /var/lib/.";
       }
     ];
 
@@ -66,12 +71,12 @@ in
       wantedBy = [ "multi-user.target" ];
       wants = [ "elasticsearch.service" ];
       after = [ "elasticsearch.service" ];
-      preStart = ''
-        mkdir -p ${cfg.stateDir}/data
-        mkdir -p ${cfg.stateDir}/logs
-      '';
       serviceConfig = {
         StateDirectory = cfg.stateDir;
+        ExecStartPre = [
+          "${lib.getExe' pkgs.coreutils "mkdir"} -p ${cfg.stateDir}/data"
+          "${lib.getExe' pkgs.coreutils "mkdir"} -p ${cfg.stateDir}/logs"
+        ];
         ExecStart = ''
           ${cfg.package}/bin/journalbeat \
             -c ${journalbeatYml} \

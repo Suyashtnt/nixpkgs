@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   hatchling,
   jupyter-events,
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "0.9.3";
   pyproject = true;
 
-  disables = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "jupyter-server";
     repo = "jupyter_server_fileid";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-ob7hnqU7GdaDHEPF7+gwkmsboKZgiiLzzwxbBUwYHYo=";
   };
 

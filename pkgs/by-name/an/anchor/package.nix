@@ -2,51 +2,43 @@
   lib,
   rustPlatform,
   fetchFromGitHub,
-  stdenv,
-  darwin,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "anchor";
-  version = "0.30.1";
+  version = "1.2.0";
 
   src = fetchFromGitHub {
-    owner = "coral-xyz";
+    owner = "otter-sec";
     repo = "anchor";
-    rev = "v${version}";
-    hash = "sha256-NL8ySfvnCGKu1PTU4PJKTQt+Vsbcj+F1YYDzu0mSUoY=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-lbNAMEqRYkyRojs8r9pDZI36DTBzHuyP7LSvHd5cZi8=";
     fetchSubmodules = true;
   };
 
-  cargoPatches = [
-    ./0001-update-time-rs.patch
+  cargoHash = "sha256-8AX5G2j9KMjq6vaby4/RGXXSDHNwJsYiEYHJsoeDJaM=";
+
+  # Only build the anchor-cli package
+  cargoBuildFlags = [
+    "-p"
+    "anchor-cli"
   ];
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "serum_dex-0.4.0" = "sha256-Nzhh3OcAFE2LcbUgrA4zE2TnUMfV0dD4iH6fTi48GcI=";
-    };
-  };
-
-  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.Security
-    darwin.apple_sdk.frameworks.SystemConfiguration
+  # Only run tests for the anchor-cli
+  cargoTestFlags = [
+    "-p"
+    "anchor-cli"
   ];
 
-  checkFlags = [
-    # the following test cases try to access network, skip them
-    "--skip=tests::test_check_and_get_full_commit_when_full_commit"
-    "--skip=tests::test_check_and_get_full_commit_when_partial_commit"
-    "--skip=tests::test_get_anchor_version_from_commit"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Solana Sealevel Framework";
-    homepage = "https://github.com/coral-xyz/anchor";
-    changelog = "https://github.com/coral-xyz/anchor/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ xrelkd ];
+    homepage = "https://github.com/otter-sec/anchor";
+    changelog = "https://github.com/otter-sec/anchor/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      Denommus
+      _0xgsvs
+    ];
     mainProgram = "anchor";
   };
-}
+})

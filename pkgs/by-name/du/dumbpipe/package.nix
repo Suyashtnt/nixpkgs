@@ -1,34 +1,52 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, rustPlatform
-, darwin
+{
+  lib,
+  fetchFromGitHub,
+  rustPlatform,
+  nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "dumbpipe";
-  version = "0.17.0";
+  version = "0.39.0";
 
   src = fetchFromGitHub {
     owner = "n0-computer";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-7OHghotSibkGRrcsh7CqZBp94FY6RKZvcn8QW+dTH1I=";
+    repo = "dumbpipe";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-AoWWFlMjo1bZUq5RY4gjpEMydULHaCKSSxBh45a7pdI=";
   };
 
-  cargoHash = "sha256-rlhfGw/b0HnV1Xl9VWIqEuyM9pq29O6bpaawk2hnG+o=";
+  cargoHash = "sha256-je2/GjCCDymYGhho6yf7SNQ3YkLCLQ5nEqHPNdDXjbQ=";
 
-  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin (
-    with darwin.apple_sdk.frameworks; [
-      SystemConfiguration
-    ]
-  );
+  __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  # On Darwin, dumbpipe invokes CoreFoundation APIs that read ICU data from the
+  # system. Ensure these paths are accessible in the sandbox to avoid segfaults
+  # during checkPhase.
+  sandboxProfile = ''
+    (allow file-read* (subpath "/usr/share/icu"))
+  '';
+
+  checkFlags = [
+    # These tests require network access
+    "--skip=connect_listen_ctrlc_connect"
+    "--skip=connect_listen_ctrlc_listen"
+    "--skip=connect_tcp_happy"
+    "--skip=unix_socket_tests::unix_socket_roundtrip"
+  ];
+
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Connect A to B - Send Data";
     homepage = "https://www.dumbpipe.dev/";
-    license = with licenses; [ asl20 mit ];
-    maintainers = with maintainers; [ cameronfyfe ];
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
+    maintainers = [ ];
     mainProgram = "dumbpipe";
   };
-}
+})

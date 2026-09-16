@@ -1,4 +1,4 @@
-#!@shell@
+#!@runtimeShell@
 # shellcheck shell=bash
 
 if [ -n "$DEBUG" ] ; then
@@ -73,6 +73,10 @@ apprun() {
     unpack "$APPIMAGE" "$APPDIR"
   else echo "$(basename "$APPIMAGE")" installed in "$APPDIR"
   fi
+
+  # Fix potential for the appimages to try to import libraries from QT
+  # installed on the system, causing a version mismatch
+  unset QT_PLUGIN_PATH
 
   export PATH="$PATH:$PWD/usr/bin"
 }

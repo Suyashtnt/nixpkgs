@@ -1,39 +1,61 @@
 {
-  mkYarnPackage,
-  nodejs,
+  lib,
+  stdenv,
   fetchFromGitLab,
   fetchYarnDeps,
-  lib,
+  yarn,
+  yarnConfigHook,
+  yarnInstallHook,
+  nodejs_22,
+  nix-update-script,
 }:
-mkYarnPackage rec {
-  inherit nodejs;
-  version = "1.0.4";
+
+let
+  # The latest nodejs is always used in yarn, leading to build issues when it's
+  # different from the pinned one.
+  nodejs = nodejs_22;
+  yarnConfigHook' = yarnConfigHook.override {
+    yarn = yarn.override { inherit nodejs; };
+  };
+in
+
+stdenv.mkDerivation (finalAttrs: {
+  pname = "gancio-plugin-telegram-bridge";
+  version = "1.0.6";
 
   src = fetchFromGitLab {
     domain = "framagit.org";
     owner = "bcn.convocala";
     repo = "gancio-plugin-telegram-bridge";
-    rev = "v${version}";
-    hash = "sha256-Da8PxCX1Z1dKJu9AiwdRDfb1r1P2KiZe8BClYB9Rz48=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-J7FIfJjounrq/hPQk58mYXigjD7BZQWoE4aGi0eJ4sY=";
   };
-
-  offlineCache = fetchYarnDeps {
-    inherit yarnLock;
-    hash = "sha256-BcRVmVA5pnFzpg2gN/nKLzENnoEdwrE0EgulDizq8Ok=";
-  };
-
-  packageJSON = ./package.json;
 
   # upstream doesn't provide a yarn.lock file
-  yarnLock = ./yarn.lock;
+  postPatch = ''
+    cp --no-preserve=all ${./yarn.lock} ./yarn.lock
+  '';
 
-  doDist = false;
+  offlineCache = fetchYarnDeps {
+    yarnLock = ./yarn.lock;
+    hash = "sha256-3842mgKcsa0FIAFdClVorYFKWODiQJm7ytw2bkJ1WG4=";
+  };
+
+  nativeBuildInputs = [
+    yarnConfigHook'
+    yarnInstallHook
+    nodejs
+  ];
 
   postInstall = ''
-    rmdir $out/bin
-    ln -s $out/libexec/gancio-plugin-telegram/deps/gancio-plugin-telegram/index.js $out/
-    ln -s $out/libexec/gancio-plugin-telegram/node_modules $out/
+    ln -s "$out/lib/node_modules/gancio-plugin-telegram/index.js" "$out/index.js"
+    ln -s "$out/lib/node_modules/gancio-plugin-telegram/node_modules" "$out/node_modules"
   '';
+
+  passthru = {
+    inherit nodejs;
+    updateScript = nix-update-script { };
+  };
 
   meta = {
     description = "Telegram bridge for Gancio, republishes content to Telegram channels or groups";
@@ -42,4 +64,4 @@ mkYarnPackage rec {
     platforms = lib.platforms.linux;
     maintainers = with lib.maintainers; [ jbgi ];
   };
-}
+})

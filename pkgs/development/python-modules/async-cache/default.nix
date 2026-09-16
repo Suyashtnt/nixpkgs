@@ -2,23 +2,32 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "async-cache";
-  version = "1.1.1";
+  version = "2.0.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "iamsinghrajat";
     repo = "async-cache";
-    rev = "9925f07920e6b585dc6345f49b7f477b3e1b8c2c"; # doesn't tag releases :(
-    hash = "sha256-AVSdtWPs1c8AE5PNOq+BdXzBXkI0aeFVzxxPl/ATyU0=";
+    tag = finalAttrs.version;
+    hash = "sha256-3SPepAlXJxufTgNqwxh/c2jhL/j9/omqOZElHhDiIIw=";
   };
 
-  meta = with lib; {
+  build-system = [ setuptools ];
+
+  pythonImportsCheck = [ "cache" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Caching solution for asyncio";
     homepage = "https://github.com/iamsinghrajat/async-cache";
-    license = licenses.mit;
-    maintainers = [ maintainers.lukegb ];
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.lukegb ];
   };
-}
+})

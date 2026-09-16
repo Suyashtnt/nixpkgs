@@ -1,28 +1,39 @@
-{ lib, buildGoModule, fetchFromGitHub, installShellFiles, testers, atlas }:
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  testers,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "atlas";
-  version = "0.27.0";
+  version = "1.3.0";
 
   src = fetchFromGitHub {
     owner = "ariga";
     repo = "atlas";
-    rev = "v${version}";
-    hash = "sha256-av2WKuEzDhjvqGHIAlNR/Tt8AhqkjLhgcZIpJEKgEVA=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-4zn/+xdcWzgB5SVZQ6tHBowrf33pvcKr1775MVcDQSc=";
   };
 
   modRoot = "cmd/atlas";
 
   proxyVendor = true;
-  vendorHash = "sha256-wu2WONeL5LNGjn/xaRDPtBBVcvLOxSeelj7a6xxMHTY=";
+  vendorHash = "sha256-9yg8VkRtyaMQjCAAOHIG4A9QSV1VOFOLBK9cTrE83a4=";
 
   nativeBuildInputs = [ installShellFiles ];
 
-  ldflags = [ "-s" "-w" "-X ariga.io/atlas/cmd/atlas/internal/cmdapi.version=v${version}" ];
+  ldflags = [
+    "-s"
+    "-w"
+    "-X ariga.io/atlas/cmd/atlas/internal/cmdapi.version=v${finalAttrs.version}"
+  ];
 
   subPackages = [ "." ];
 
-  postInstall = ''
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     installShellCompletion --cmd atlas \
       --bash <($out/bin/atlas completion bash) \
       --fish <($out/bin/atlas completion fish) \
@@ -30,17 +41,17 @@ buildGoModule rec {
   '';
 
   passthru.tests.version = testers.testVersion {
-    package = atlas;
+    package = finalAttrs.finalPackage;
     command = "atlas version";
-    version = "v${version}";
+    version = "v${finalAttrs.version}";
   };
 
-  meta = with lib; {
-    description = "Modern tool for managing database schemas";
+  meta = {
+    description = "Manage your database schema as code";
     homepage = "https://atlasgo.io/";
-    changelog = "https://github.com/ariga/atlas/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ aaronjheng ];
+    changelog = "https://github.com/ariga/atlas/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ aaronjheng ];
     mainProgram = "atlas";
   };
-}
+})

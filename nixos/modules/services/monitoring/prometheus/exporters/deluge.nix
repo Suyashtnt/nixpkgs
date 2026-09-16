@@ -1,8 +1,13 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.services.prometheus.exporters.deluge;
-  inherit (lib) mkOption types concatStringsSep;
+  inherit (lib) mkOption types;
 in
 {
   port = 9354;
@@ -63,10 +68,20 @@ in
     };
   };
   serviceOpts = {
+    script = ''
+      passwordfile="$CREDENTIALS_DIRECTORY/password-file"
+      if [ -e "$passwordfile" ]; then
+        export DELUGE_PASSWORD="$(cat "$passwordfile")"
+      fi
+
+      exec ${pkgs.prometheus-deluge-exporter}/bin/deluge-exporter
+    '';
+
     serviceConfig = {
-      ExecStart = ''
-        ${pkgs.prometheus-deluge-exporter}/bin/deluge-exporter
-      '';
+      LoadCredential = lib.mkIf (config.services.prometheus.exporters.deluge.delugePasswordFile != null) [
+        "password-file:${config.services.prometheus.exporters.deluge.delugePasswordFile}"
+      ];
+
       Environment = [
         "LISTEN_PORT=${toString cfg.port}"
         "LISTEN_ADDRESS=${toString cfg.listenAddress}"
@@ -74,12 +89,13 @@ in
         "DELUGE_HOST=${cfg.delugeHost}"
         "DELUGE_USER=${cfg.delugeUser}"
         "DELUGE_PORT=${toString cfg.delugePort}"
-      ] ++ lib.optionals (cfg.delugePassword != null) [
+      ]
+      ++ lib.optionals (cfg.delugePassword != null) [
         "DELUGE_PASSWORD=${cfg.delugePassword}"
-      ] ++ lib.optionals cfg.exportPerTorrentMetrics [
+      ]
+      ++ lib.optionals cfg.exportPerTorrentMetrics [
         "PER_TORRENT_METRICS=1"
       ];
-      EnvironmentFile = lib.optionalString (cfg.delugePasswordFile != null) "/etc/deluge-exporter/password";
     };
   };
 }

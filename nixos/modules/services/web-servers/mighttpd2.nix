@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -6,7 +11,8 @@ let
   cfg = config.services.mighttpd2;
   configFile = pkgs.writeText "mighty-config" cfg.config;
   routingFile = pkgs.writeText "mighty-routing" cfg.routing;
-in {
+in
+{
   options.services.mighttpd2 = {
     enable = mkEnableOption "Mighttpd2 web server";
 
@@ -18,10 +24,8 @@ in {
         # IP address or "*"
         Host: *
         Debug_Mode: Yes # Yes or No
-        # If available, "nobody" is much more secure for User:.
-        User: root
-        # If available, "nobody" is much more secure for Group:.
-        Group: root
+        User: mighttpd2
+        Group: mighttpd2
         Pid_File: /run/mighty.pid
         Logging: Yes # Yes or No
         Log_File: /var/log/mighty # The directory must be writable by User:
@@ -44,7 +48,7 @@ in {
       type = types.lines;
       description = ''
         Verbatim config file to use
-        (see https://kazu-yamamoto.github.io/mighttpd2/config.html)
+        (see <https://kazu-yamamoto.github.io/mighttpd2/config.html>)
       '';
     };
 
@@ -78,7 +82,7 @@ in {
       type = types.lines;
       description = ''
         Verbatim routing file to use
-        (see https://kazu-yamamoto.github.io/mighttpd2/config.html)
+        (see <https://kazu-yamamoto.github.io/mighttpd2/config.html>)
       '';
     };
 
@@ -94,11 +98,12 @@ in {
   };
 
   config = mkIf cfg.enable {
-    assertions =
-      [ { assertion = cfg.routing != "";
-          message = "You need at least one rule in mighttpd2.routing";
-        }
-      ];
+    assertions = [
+      {
+        assertion = cfg.routing != "";
+        message = "You need at least one rule in mighttpd2.routing";
+      }
+    ];
     systemd.services.mighttpd2 = {
       description = "Mighttpd2 web server";
       wants = [ "network-online.target" ];

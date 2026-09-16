@@ -1,20 +1,21 @@
-{ lib
-, stdenv
-, fetchurl
-, callPackage
-, makeWrapper
-, makeDesktopItem
-, love
-, luajit
-, writeShellScript
-, nix-update
-, libcoldclear ? callPackage ./libcoldclear.nix { inherit ccloader; }
-, ccloader ? callPackage ./ccloader.nix { inherit libcoldclear luajit; }
+{
+  lib,
+  stdenv,
+  fetchurl,
+  callPackage,
+  makeWrapper,
+  makeDesktopItem,
+  love,
+  luajit,
+  writeShellScript,
+  nix-update,
+  libcoldclear ? callPackage ./libcoldclear.nix { inherit ccloader; },
+  ccloader ? callPackage ./ccloader.nix { inherit libcoldclear luajit; },
 }:
 
 let
   pname = "techmino";
-  description = "A modern Tetris clone with many features";
+  description = "Modern Tetris clone with many features";
 
   desktopItem = makeDesktopItem {
     name = pname;
@@ -51,7 +52,7 @@ stdenv.mkDerivation rec {
     cp $src $out/share/games/lovegames/techmino.love
 
     mkdir -p $out/bin
-    makeWrapper ${love}/bin/love $out/bin/techmino \
+    makeWrapper ${lib.getExe love} $out/bin/techmino \
       --add-flags $out/share/games/lovegames/techmino.love \
       --suffix LUA_CPATH : ${ccloader}/lib/lua/${luajit.luaversion}/CCLoader.so
 
@@ -70,12 +71,13 @@ stdenv.mkDerivation rec {
     '';
   };
 
-  meta = with lib; {
+  meta = {
     inherit description;
     downloadPage = "https://github.com/26F-Studio/Techmino/releases";
     homepage = "https://github.com/26F-Studio/Techmino/";
-    license = licenses.lgpl3;
+    license = lib.licenses.lgpl3;
+    platforms = love.meta.platforms;
     mainProgram = "techmino";
-    maintainers = with maintainers; [ chayleaf ];
+    maintainers = with lib.maintainers; [ chayleaf ];
   };
 }

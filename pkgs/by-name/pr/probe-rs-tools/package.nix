@@ -1,50 +1,72 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitHub
-, cmake
-, gitMinimal
-, pkg-config
-, libusb1
-, openssl
-, DarwinTools
-, AppKit
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  fetchurl,
+  cmake,
+  pkg-config,
+  installShellFiles,
+  libusb1,
+  openssl,
+  stdenv,
 }:
-
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "probe-rs-tools";
-  version = "0.24.0";
+  version = "0.32.0";
+
+  # udev rules are in another unversioned repo
+  udevRules = fetchurl {
+    # Last updated 2026-08-10
+    url = "https://raw.githubusercontent.com/probe-rs/webpage/9cc4b7d0727cc1ad0b87d5999aa9cdbfd8021632/public/files/69-probe-rs.rules";
+    hash = "sha256-JvH56IOapIIaT1gD9XCd/mdgrha3VVNSjneVDdebnoI=";
+  };
 
   src = fetchFromGitHub {
     owner = "probe-rs";
     repo = "probe-rs";
-    rev = "v${version}";
-    hash = "sha256-H1RT+H7aQjZmesW+/0mjPH2M01J1eBZ47Rern5lCqWk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-C6ioLkU0tmCzWtThPGyOOiD/Z9n8RB5eogAxTmBwDj8=";
   };
 
-  cargoHash = "sha256-aTBtWPcOYT5koIu/uw5S2oKTnsvXcqB39SFbe8U1NJY=";
+  cargoHash = "sha256-Sfx8n9+Q9wplfnFenavoCWSaO7nlcAmRpxyyKe5Il6A=";
 
-  buildAndTestSubdir = pname;
+  buildAndTestSubdir = finalAttrs.pname;
 
   nativeBuildInputs = [
     # required by libz-sys, no option for dynamic linking
     # https://github.com/rust-lang/libz-sys/issues/158
     cmake
-    # build.rs fails without git
-    # https://github.com/probe-rs/probe-rs/pull/2492
-    gitMinimal
     pkg-config
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ DarwinTools ];
+    installShellFiles
+  ];
 
-  buildInputs = [ libusb1 openssl ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ AppKit ];
+  buildInputs = [
+    libusb1
+    openssl
+  ];
+
+  postInstall = ''
+    install -D -m 444 $udevRules $out/etc/udev/rules.d/69-probe-rs.rules
+  ''
+  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd probe-rs \
+      --bash <(SHELL=bash $out/bin/probe-rs complete install -m) \
+      --fish <(SHELL=fish $out/bin/probe-rs complete install -m) \
+      --zsh <(SHELL=zsh $out/bin/probe-rs complete install -m)
+  '';
 
   checkFlags = [
     # require a physical probe
     "--skip=cmd::dap_server::server::debugger::test::attach_request"
     "--skip=cmd::dap_server::server::debugger::test::attach_with_flashing"
+    "--skip=cmd::dap_server::server::debugger::test::disassemble::instructions_after_and_not_including_the_ref_address"
+    "--skip=cmd::dap_server::server::debugger::test::disassemble::instructions_before_and_not_including_the_ref_address_multiple_locations"
+    "--skip=cmd::dap_server::server::debugger::test::disassemble::instructions_including_the_ref_address_location_cloned_from_earlier_line"
+    "--skip=cmd::dap_server::server::debugger::test::disassemble::negative_byte_offset_of_exactly_one_instruction_aligned_"
+    "--skip=cmd::dap_server::server::debugger::test::disassemble::positive_byte_offset_that_lands_in_the_middle_of_an_instruction_unaligned_"
     "--skip=cmd::dap_server::server::debugger::test::launch_and_threads"
     "--skip=cmd::dap_server::server::debugger::test::launch_with_config_error"
-    "--skip=cmd::dap_server::server::debugger::test::test_initalize_request"
+    "--skip=cmd::dap_server::server::debugger::test::test_initialize_request"
     "--skip=cmd::dap_server::server::debugger::test::test_launch_and_terminate"
     "--skip=cmd::dap_server::server::debugger::test::test_launch_no_probes"
     "--skip=cmd::dap_server::server::debugger::test::wrong_request_after_init"
@@ -59,11 +81,17 @@ rustPlatform.buildRustPackage rec {
     "--skip=util::cargo::test::workspace_root"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "CLI tool for on-chip debugging and flashing of ARM chips";
     homepage = "https://probe.rs/";
-    changelog = "https://github.com/probe-rs/probe-rs/blob/v${version}/CHANGELOG.md";
-    license = with licenses; [ asl20 /* or */ mit ];
-    maintainers = with maintainers; [ xgroleau newam ];
+    changelog = "https://github.com/probe-rs/probe-rs/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = with lib.licenses; [
+      asl20 # or
+      mit
+    ];
+    maintainers = with lib.maintainers; [
+      xgroleau
+      newam
+    ];
   };
-}
+})

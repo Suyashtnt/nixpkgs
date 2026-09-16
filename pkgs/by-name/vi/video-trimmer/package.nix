@@ -15,25 +15,31 @@
   libadwaita,
   gst_all_1,
   ffmpeg-headless,
+  nix-update-script,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "video-trimmer";
-  version = "0.8.2";
+  version = "26.03.1";
 
   src = fetchFromGitLab {
     domain = "gitlab.gnome.org";
     owner = "YaLTeR";
     repo = "video-trimmer";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-GXFbfebwiESplOeYDWxBH8Q0SCgV0vePYV7rv0qgrHM=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-qHhN/BOSFTTco+Hy7Nn0h2ZcQw0eR0VEW7oVftpSkEM=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit (finalAttrs) src;
-    name = "${finalAttrs.pname}-${finalAttrs.version}";
-    hash = "sha256-szxJzBFtyFZ1T5TZb2MDPFJzn+EYETa/JbPdlg6UrTk=";
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-nYPVRTMY0XA3VDclid7+w6SMFl0i4Ra6HYKJtTTC1y0=";
   };
+
+  postPatch = ''
+    substituteInPlace build-aux/cargo.sh --replace-fail \
+      'cp "$CARGO_TARGET_DIR"/' \
+      'cp "$CARGO_TARGET_DIR"/${stdenv.hostPlatform.rust.cargoShortTarget}/'
+  '';
 
   nativeBuildInputs = [
     pkg-config
@@ -60,7 +66,12 @@ stdenv.mkDerivation (finalAttrs: {
     gst_all_1.gst-plugins-bad
   ];
 
+  # For https://gitlab.gnome.org/YaLTeR/video-trimmer/-/blob/cf64e8dea345bcd991db29a3f862a9277c71fe81/build-aux/cargo.sh#L19
+  env.CARGO_BUILD_TARGET = stdenv.hostPlatform.rust.rustcTargetSpec;
+
   doCheck = true;
+
+  strictDeps = true;
 
   preFixup = ''
     gappsWrapperArgs+=(
@@ -68,13 +79,18 @@ stdenv.mkDerivation (finalAttrs: {
     )
   '';
 
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
   meta = {
     homepage = "https://gitlab.gnome.org/YaLTeR/video-trimmer";
     description = "Trim videos quickly";
+    changelog = "https://gitlab.gnome.org/YaLTeR/video-trimmer/-/releases/v${finalAttrs.version}";
     maintainers = with lib.maintainers; [
       doronbehar
-      aleksana
     ];
+    teams = [ lib.teams.gnome-circle ];
     license = lib.licenses.gpl3Plus;
     platforms = lib.platforms.linux;
     mainProgram = "video-trimmer";

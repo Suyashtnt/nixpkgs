@@ -6,18 +6,19 @@
   libiconv,
   dirty-equals,
   pytestCheckHook,
+  nix-update-script,
 }:
 
 buildPythonPackage rec {
   pname = "jiter";
-  version = "0.5.0";
+  version = "0.12.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pydantic";
     repo = "jiter";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-EgovddXbwutLaVkosdbJ2Y3BpEms+RoeaO8ghBRNdio=";
+    tag = "v${version}";
+    hash = "sha256-d87RUXKEmZXxVQZnAvjwRKSP6F3Z+kXxg/LdY2l9B+k=";
   };
 
   postPatch = ''
@@ -40,6 +41,8 @@ buildPythonPackage rec {
     dirty-equals
     pytestCheckHook
   ];
+
+  passthru.updateScript = nix-update-script { extraArgs = [ "--generate-lockfile" ]; };
 
   meta = {
     description = "Fast iterable JSON parser";

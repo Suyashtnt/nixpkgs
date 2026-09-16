@@ -8,7 +8,6 @@
   poetry-core,
   python-engineio-v3,
   python-socketio-v4,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "3.1.4";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "jkeljo";
     repo = "sisyphus-control";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-1/trJ/mfiXljNt7ZIBwQ45mIBbqg68e29lvVsPDPzoU=";
   };
 
@@ -48,11 +45,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "sisyphus_control" ];
 
-  meta = with lib; {
+  meta = {
     description = "Control your Sisyphus Kinetic Art Table";
     homepage = "https://github.com/jkeljo/sisyphus-control";
     changelog = "https://github.com/jkeljo/sisyphus-control/blob/${src.rev}/CHANGELOG.rst";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

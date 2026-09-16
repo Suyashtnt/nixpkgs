@@ -5,7 +5,6 @@
   packaging,
   pretend,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "23.0.post0";
   pyproject = true;
 
-  disabled = pythonOlder "3.10";
-
   src = fetchFromGitHub {
     owner = "di";
     repo = "packaging_legacy";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-2TnJjxasC8+c+qHY60e6Jyqhf1nQJfj/tmIA/LvUsT8=";
   };
 

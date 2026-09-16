@@ -1,64 +1,65 @@
 {
   lib,
+  stdenv,
   fetchFromGitHub,
   rustPlatform,
-  stdenv,
-  Security,
-  SystemConfiguration,
   installShellFiles,
   nix-update-script,
+  tzdata,
+  fuse3,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "rustic";
-  version = "0.8.1";
+  version = "0.11.4";
 
   src = fetchFromGitHub {
     owner = "rustic-rs";
     repo = "rustic";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-SOXuQIdebzMHyO/r+0bvhZvdc09pNPiCXgYfzMoZUZo=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-d7ZAmIou8NFnx1T7CxnSqIRg8VuVeS0BXij023PElVE=";
   };
 
-  cargoHash = "sha256-5tXaq/FPC3T+f1p4RtihQGgwAptcO58mOKQhiOpjacc=";
+  cargoHash = "sha256-o6tQdAuwawmhhi93dPeg9l5WGekqDKkJS7HCToyniJ0=";
 
-  # At the time of writing, upstream defaults to "self-update", "tui", and "webdav".
-  # "self-update" is a self-updater, which we don't want in nixpkgs.
-  # With each update we should therefore ensure that we mimic the default features
-  # as closely as possible.
-  buildNoDefaultFeatures = true;
-  buildFeatures = [
-    "tui"
-    "webdav"
-  ];
+  buildFeatures = lib.optionals stdenv.hostPlatform.isLinux [ "mount" ];
+  checkFeatures = lib.subtractLists [ "mount" ] finalAttrs.buildFeatures; # we do not want `mount` during unit tests because it breaks rustic's test snapshots
 
   nativeBuildInputs = [ installShellFiles ];
 
-  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
-    Security
-    SystemConfiguration
-  ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ fuse3 ];
 
-  postInstall = ''
-    for shell in {ba,fi,z}sh; do
-      $out/bin/rustic completions $shell > rustic.$shell
-    done
+  nativeCheckInputs = [ tzdata ];
 
-    installShellCompletion rustic.{ba,fi,z}sh
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd rustic \
+      --bash <($out/bin/rustic completions bash) \
+      --fish <($out/bin/rustic completions fish) \
+      --zsh <($out/bin/rustic completions zsh)
+  '';
+
+  # We set TZDIR to avoid this warning during unit tests:
+  # > [WARN] could not find zoneinfo, concatenated tzdata or bundled time zone database
+  # This warning causes the check phase to fail.
+  preCheck = ''
+    export TZDIR=${tzdata}/share/zoneinfo
   '';
 
   passthru.updateScript = nix-update-script { };
 
   meta = {
     homepage = "https://github.com/rustic-rs/rustic";
-    changelog = "https://github.com/rustic-rs/rustic/blob/${src.rev}/CHANGELOG.md";
-    description = "fast, encrypted, deduplicated backups powered by pure Rust";
+    changelog = "https://github.com/rustic-rs/rustic/blob/${finalAttrs.src.rev}/CHANGELOG.md";
+    description = "Fast, encrypted, deduplicated backups powered by pure Rust";
     mainProgram = "rustic";
-    platforms = lib.platforms.linux ++ lib.platforms.darwin;
+    platforms = lib.platforms.all;
     license = [
       lib.licenses.mit
       lib.licenses.asl20
     ];
-    maintainers = [ lib.maintainers.nobbz ];
+    maintainers = [
+      lib.maintainers.nobbz
+      lib.maintainers.pmw
+    ];
   };
-}
+})

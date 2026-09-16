@@ -2,6 +2,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
+  fetchpatch,
   writeTextFile,
 
   pkg-config,
@@ -18,7 +19,7 @@
   zlib,
   utf8proc,
   freetype,
-  ffmpeg_7,
+  ffmpeg,
   libarchive,
   curl,
   libiconv,
@@ -30,30 +31,27 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "ccextractor";
-  version = "0.94-unstable-2024-08-12";
+  version = "0.96.6";
 
   src = fetchFromGitHub {
     owner = "CCExtractor";
     repo = "ccextractor";
-    rev = "92f2ce0fa026b01fb07db6751210e6bd8c8944d3";
-    hash = "sha256-bp7T9uJK4bauR2Co4lKqqnM6oGa3WZ+1toEKmzOx4mI=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-nvfQX+1pM16ll7ruXcB22fWn2zQvmpUzKhD3vznEcbI=";
   };
 
   patches = [
-    ./remove-default-commit-hash.patch
     ./remove-vendored-libraries.patch
-  ] ++ finalAttrs.cargoDeps.patches;
+  ]
+  ++ finalAttrs.cargoDeps.vendorStaging.patches;
 
   cmakeDir = "../src";
 
   cargoRoot = "src/rust";
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit (finalAttrs) src;
-    sourceRoot = "${finalAttrs.src.name}/${finalAttrs.cargoRoot}";
-    patches = [ ./use-rsmpeg-0.15.patch ];
-    patchFlags = [ "-p3" ];
-    hash = "sha256-jh8hHKAad+tCJGwuGdoJp/TMm/IsMrZmz8aag9lj0BA=";
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) src cargoRoot;
+    hash = "sha256-0FPxU3rUoT3/Xy3mQjjQGmxkNjs++sQxjCJ1/UuRQlc=";
   };
 
   nativeBuildInputs = [
@@ -67,41 +65,35 @@ stdenv.mkDerivation (finalAttrs: {
     rustPlatform.bindgenHook
   ];
 
-  buildInputs =
-    [
-      gpac
-      protobufc
-      libpng
-      zlib
-      utf8proc
-      freetype
-      ffmpeg_7
-      libarchive
-      curl
-      libiconv
-    ]
-    ++ lib.optionals enableOcr [
-      leptonica
-      tesseract
-    ];
+  buildInputs = [
+    gpac
+    protobufc
+    libpng
+    zlib
+    utf8proc
+    freetype
+    ffmpeg
+    libarchive
+    curl
+    libiconv
+  ]
+  ++ lib.optionals enableOcr [
+    leptonica
+    tesseract
+  ];
 
-  cmakeFlags =
-    [
-      # The tests are all part of one `cargo test` invocation, so let’s
-      # get the output from it.
-      (lib.cmakeFeature "CMAKE_CTEST_ARGUMENTS" "--verbose")
-
-      # TODO: This (and the corresponding patch) should probably be
-      # removed for the next stable release.
-      (lib.cmakeFeature "GIT_COMMIT_HASH" finalAttrs.src.rev)
-    ]
-    ++ lib.optionals enableOcr [
-      (lib.cmakeBool "WITH_OCR" true)
-      (lib.cmakeBool "WITH_HARDSUBX" true)
-    ];
+  cmakeFlags = [
+    # The tests are all part of one `cargo test` invocation, so let’s
+    # get the output from it.
+    (lib.cmakeFeature "CMAKE_CTEST_ARGUMENTS" "--verbose")
+  ]
+  ++ lib.optionals enableOcr [
+    (lib.cmakeBool "WITH_OCR" true)
+    (lib.cmakeBool "WITH_HARDSUBX" true)
+  ];
 
   env = {
-    FFMPEG_INCLUDE_DIR = "${lib.getDev ffmpeg_7}/include";
+    FFMPEG_INCLUDE_DIR = "${lib.getDev ffmpeg}/include";
 
     # Upstream’s FFmpeg binding crate needs an explicit path to a shared
     # object to do dynamic linking. The key word is *an* explicit path;
@@ -120,7 +112,7 @@ stdenv.mkDerivation (finalAttrs: {
           "swresample"
           "swscale"
         ];
-        ffmpegLibDir = "${lib.getLib ffmpeg_7}/lib";
+        ffmpegLibDir = "${lib.getLib ffmpeg}/lib";
         ffmpegLibExt = stdenv.hostPlatform.extensions.library;
         ffmpegLibPath = ffmpegLibName: "${ffmpegLibDir}/lib${ffmpegLibName}.${ffmpegLibExt}";
         ffmpegLinkerScript = writeTextFile {
@@ -136,7 +128,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   postPatch = lib.optionalString enableOcr ''
     substituteInPlace src/lib_ccx/ocr.c \
-      --replace-fail 'getenv("TESSDATA_PREFIX")' '"${tesseract}/share"'
+      --replace-fail 'getenv("TESSDATA_PREFIX")' '"${tesseract}/share/"'
   '';
 
   meta = {

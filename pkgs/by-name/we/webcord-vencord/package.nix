@@ -1,19 +1,18 @@
 {
   # allow overriding electron
-  electron,
+  electron_43,
   webcord,
-  substituteAll,
+  replaceVars,
   lib,
   vencord-web-extension,
 }:
 
 # nixpkgs-update: no auto update
-(webcord.override { inherit electron; }).overrideAttrs (old: {
+(webcord.override { inherit electron_43; }).overrideAttrs (old: {
   pname = "webcord-vencord";
 
   patches = (old.patches or [ ]) ++ [
-    (substituteAll {
-      src = ./add-extension.patch;
+    (replaceVars ./add-extension.patch {
       vencord = vencord-web-extension;
     })
   ];
@@ -22,6 +21,7 @@
     inherit (old.meta) license mainProgram platforms;
 
     description = "Webcord with Vencord web extension";
+    homepage = "https://github.com/SpacingBat3/WebCord";
     maintainers = with lib.maintainers; [
       FlafyDev
       NotAShelf

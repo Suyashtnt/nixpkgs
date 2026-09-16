@@ -2,38 +2,38 @@
   lib,
   beautifulsoup4,
   buildPythonPackage,
+  defusedxml,
   fetchPypi,
+  hatchling,
   llama-index-core,
-  poetry-core,
   pymupdf,
   pypdf,
-  pythonOlder,
   striprtf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "llama-index-readers-file";
-  version = "0.2.1";
+  version = "0.7.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     pname = "llama_index_readers_file";
-    inherit version;
-    hash = "sha256-x/kgdISfxZsQBJ1JakrlJmmr/LFZoZnZoROFKi/tcLg=";
+    inherit (finalAttrs) version;
+    hash = "sha256-Mo4/5dptphcuPXG2C1x2wWdnB7IgyPxH7fqnlfmu/RY=";
   };
 
   pythonRelaxDeps = [
     "pymupdf"
     "pypdf"
+    "striprtf"
+    "pandas"
   ];
 
-  build-system = [ poetry-core ];
-
+  build-system = [ hatchling ];
 
   dependencies = [
     beautifulsoup4
+    defusedxml
     llama-index-core
     pymupdf
     pypdf
@@ -45,10 +45,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "llama_index.readers.file" ];
 
-  meta = with lib; {
+  meta = {
     description = "LlamaIndex Readers Integration for files";
     homepage = "https://github.com/run-llama/llama_index/tree/main/llama-index-integrations/readers/llama-index-readers-file";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

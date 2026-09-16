@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -11,12 +10,10 @@ buildPythonPackage rec {
   version = "0.3.0";
   format = "setuptools";
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "ukBaz";
     repo = "python-btsocket";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-/T89GZJth7pBGQuN1ytCf649oWv7aZcfPHjYoftbLw8=";
   };
 
@@ -24,10 +21,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "btsocket" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library to interact with the Bluez Bluetooth Management API";
     homepage = "https://github.com/ukBaz/python-btsocket";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

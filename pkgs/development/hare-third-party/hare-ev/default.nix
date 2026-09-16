@@ -3,33 +3,33 @@
   hareHook,
   lib,
   stdenv,
-  unstableGitUpdater,
+  gitUpdater,
 }:
 
-stdenv.mkDerivation {
+stdenv.mkDerivation (finalAttrs: {
   pname = "hare-ev";
-  version = "0-unstable-2024-08-06";
+  version = "0.26.0.0";
 
   src = fetchFromSourcehut {
     owner = "~sircmpwn";
     repo = "hare-ev";
-    rev = "7de2b827e5e680e315697b97be142aebe71ec58f";
-    hash = "sha256-0RJqtYy3zGzy32WbR1pxsc3/B1VjUzJcVydqLxwmYSE=";
+    tag = finalAttrs.version;
+    hash = "sha256-Chetww+F46ZJ+cgVuoFXRVYOT9g13iBK5EembWXQhuc=";
   };
 
   nativeCheckInputs = [ hareHook ];
 
-  makeFlags = [ "PREFIX=${builtins.placeholder "out"}" ];
+  makeFlags = [ "PREFIX=${placeholder "out"}" ];
 
   doCheck = true;
 
-  passthru.updateScript = unstableGitUpdater { };
+  passthru.updateScript = gitUpdater { };
 
-  meta = with lib; {
+  meta = {
     description = "Event loop for Hare programs";
     homepage = "https://sr.ht/~sircmpwn/hare-ev";
-    license = licenses.mpl20;
-    maintainers = with maintainers; [ colinsane ];
+    license = lib.licenses.mpl20;
+    maintainers = with lib.maintainers; [ colinsane ];
     inherit (hareHook.meta) platforms badPlatforms;
   };
-}
+})

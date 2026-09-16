@@ -1,5 +1,6 @@
 {
   lib,
+  aiohttp,
   appdirs,
   buildPythonPackage,
   fetchFromGitHub,
@@ -7,27 +8,24 @@
   ifaddr,
   lxml,
   mock,
-  nix-update-script,
+  pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   requests,
   requests-mock,
   setuptools,
   xmltodict,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "soco";
-  version = "0.30.4";
+  version = "0.31.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "SoCo";
     repo = "SoCo";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-t5Cxlm5HhN6WY6ty4i2MAtqjbC7DwZqSp1g5nybFAH4=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-TCnKzAOrpQxh8JaBkoPs2e81xUS/iQ8D/Qtt3WU9J1k=";
   };
 
   build-system = [ setuptools ];
@@ -40,22 +38,24 @@ buildPythonPackage rec {
     xmltodict
   ];
 
+  optional-dependencies.events_asyncio = [ aiohttp ];
+
   nativeCheckInputs = [
-    pytestCheckHook
     graphviz
     mock
+    pytest-asyncio
+    pytestCheckHook
     requests-mock
-  ];
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.events_asyncio;
 
   pythonImportsCheck = [ "soco" ];
 
-  passthru.updateScript = nix-update-script { };
-
-  meta = with lib; {
+  meta = {
     description = "CLI and library to control Sonos speakers";
     homepage = "http://python-soco.com/";
-    changelog = "https://github.com/SoCo/SoCo/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ lovesegfault ];
+    changelog = "https://github.com/SoCo/SoCo/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ lovesegfault ];
   };
-}
+})

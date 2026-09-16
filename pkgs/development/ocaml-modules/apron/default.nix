@@ -1,22 +1,50 @@
-{ stdenv, lib, fetchFromGitHub, perl, gmp, mpfr, ppl, ocaml, findlib, camlidl, mlgmpidl
-, flint, pplite
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  perl,
+  gmp,
+  mpfr,
+  ppl,
+  ocaml,
+  findlib,
+  camlidl,
+  mlgmpidl,
+  flint,
+  pplite,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "ocaml${ocaml.version}-apron";
   version = "0.9.15";
   src = fetchFromGitHub {
     owner = "antoinemine";
     repo = "apron";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-gHLCurydxX1pS66DTAWUJGl9Yqu9RWRjkZh6lXzM7YY=";
   };
 
-  nativeBuildInputs = [ ocaml findlib perl ];
-  buildInputs = [ gmp mpfr ppl camlidl flint pplite ];
-  propagatedBuildInputs = [ mlgmpidl ];
+  nativeBuildInputs = [
+    ocaml
+    findlib
+    perl
+  ];
+  buildInputs = [
+    gmp
+    ppl
+    flint
+    pplite
+  ];
+  propagatedBuildInputs = [
+    camlidl
+    mlgmpidl
+    mpfr
+  ];
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   configurePhase = ''
     runHook preConfigure
@@ -37,4 +65,4 @@ stdenv.mkDerivation rec {
     description = "Numerical abstract domain library";
     inherit (ocaml.meta) platforms;
   };
-}
+})

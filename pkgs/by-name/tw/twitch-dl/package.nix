@@ -1,26 +1,24 @@
-{ lib
-, fetchFromGitHub
-, python3Packages
-, installShellFiles
-, scdoc
-, ffmpeg
+{
+  lib,
+  fetchFromGitHub,
+  python3Packages,
+  installShellFiles,
+  scdoc,
+  ffmpeg,
+  writableTmpDirAsHomeHook,
 }:
 
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "twitch-dl";
-  version = "2.9.2";
+  version = "3.3.2";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ihabunek";
     repo = "twitch-dl";
-    rev = "refs/tags/${version}";
-    hash = "sha256-BIE3+SDmc5ggF9P+qeloI1JYYrEtOJQ/8oDR76i0t6c=";
+    tag = finalAttrs.version;
+    hash = "sha256-c9vWmpaq6A6njl72TAQFVgBFjwWVfZPUwHvOaJyJY3w=";
   };
-
-  pythonRelaxDeps = [
-    "m3u8"
-  ];
 
   nativeBuildInputs = [
     python3Packages.setuptools
@@ -29,15 +27,16 @@ python3Packages.buildPythonApplication rec {
     scdoc
   ];
 
-
   propagatedBuildInputs = with python3Packages; [
     click
     httpx
     m3u8
+    wcwidth
   ];
 
   nativeCheckInputs = [
     python3Packages.pytestCheckHook
+    writableTmpDirAsHomeHook
   ];
 
   disabledTestPaths = [
@@ -61,7 +60,10 @@ python3Packages.buildPythonApplication rec {
   ];
 
   makeWrapperArgs = [
-    "--prefix" "PATH" ":" (lib.makeBinPath [ ffmpeg ])
+    "--prefix"
+    "PATH"
+    ":"
+    (lib.makeBinPath [ ffmpeg ])
   ];
 
   postInstall = ''
@@ -69,16 +71,15 @@ python3Packages.buildPythonApplication rec {
     installManPage twitch-dl.1
   '';
 
-  preInstallCheck = ''
-    export HOME="$(mktemp -d)"
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "CLI tool for downloading videos from Twitch";
     homepage = "https://github.com/ihabunek/twitch-dl";
-    changelog = "https://github.com/ihabunek/twitch-dl/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ pbsds hausken ];
+    changelog = "https://github.com/ihabunek/twitch-dl/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [
+      pbsds
+      hausken
+    ];
     mainProgram = "twitch-dl";
   };
-}
+})

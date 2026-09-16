@@ -28,7 +28,7 @@ stdenv.mkDerivation (finalAttrs: {
   deps = callPackage ./build.zig.zon.nix { };
 
   nativeBuildInputs = [
-    zig_0_13.hook
+    zig_0_13
     pkg-config
     wayland
     wayland-scanner
@@ -46,6 +46,11 @@ stdenv.mkDerivation (finalAttrs: {
     "--system"
     "${finalAttrs.deps}"
   ];
+
+  postFixup = ''
+    substituteInPlace $out/bin/wayprompt-ssh-askpass \
+      --replace-fail wayprompt $out/bin/wayprompt
+  '';
 
   meta = {
     homepage = "https://git.sr.ht/~leon_plickat/wayprompt";

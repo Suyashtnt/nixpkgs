@@ -1,57 +1,99 @@
-{ buildNpmPackage, lib, makeWrapper, bundlerEnv, testers, shopify-cli }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchPnpmDeps,
+  pnpmConfigHook,
+  pnpm_10,
+  faketty,
+  nodejs-slim_22,
+  versionCheckHook,
+  makeBinaryWrapper,
+  nix-update-script,
+}:
 let
-  version = "3.63.2";
+  pnpm = pnpm_10;
 
-  # Package the legacy ruby CLI.
-  rubyGems = bundlerEnv {
-    name = "shopify-cli-legacy";
-    gemdir = ./.;
-  };
+  nodejs-slim = nodejs-slim_22;
+  pnpm' = pnpm.override { inherit nodejs-slim; };
 in
-buildNpmPackage {
+stdenv.mkDerivation (finalAttrs: {
   pname = "shopify";
-  version = version;
+  version = "4.8.0";
 
-  src = lib.fileset.toSource {
-    root = ./.;
-    fileset = with lib.fileset; unions [
-      ./package.json
-      ./package-lock.json
-    ];
+  src = fetchFromGitHub {
+    owner = "shopify";
+    repo = "cli";
+    tag = finalAttrs.version;
+    hash = "sha256-I/VkGxyvlJpUHumxhkTFyj8owa7DVKdlK/aj8shDb7w=";
   };
 
-  npmDepsHash = "sha256-6CEDcWXZXYHFrT2xpbj5NwMrbDZXH6HclgTGkfKDlJs=";
-  dontNpmBuild = true;
-
-  nativeBuildInputs = [ makeWrapper ];
-
-  passthru = {
-    updateScript = ./update.sh;
-    tests.version = testers.testVersion {
-      package = shopify-cli;
-      command = "shopify version";
-    };
+  pnpmDeps = fetchPnpmDeps {
+    inherit (finalAttrs) pname version src;
+    inherit pnpm;
+    fetcherVersion = 3;
+    hash = "sha256-YGC4oHoWhmQ9snEGV7pjjLm3aICpx1+NBBNRevNQry8=";
   };
 
-  postInstall = ''
-    # Disable the installCLIDependencies function.
-    substituteInPlace $(grep -r -l 'await installCLIDependencies' $out/lib/node_modules/shopify/node_modules/@shopify/cli/dist) \
-      --replace-fail 'await installCLIDependencies' '// await installCLIDependencies'
+  nativeBuildInputs = [
+    faketty
+    nodejs-slim
+    pnpmConfigHook
+    pnpm'
+    makeBinaryWrapper
+  ];
 
-    wrapProgram $out/bin/shopify \
-      --set SHOPIFY_RUBY_BINDIR  ${rubyGems.wrappedRuby}/bin \
-      --prefix PATH : ${rubyGems}/bin \
-      --set SHOPIFY_CLI_VERSION ${version} \
-      --set SHOPIFY_CLI_BUNDLED_THEME_CLI 0
+  # workaround for https://github.com/nrwl/nx/issues/22445
+  buildPhase = ''
+    runHook preBuild
+
+    faketty pnpm run bundle-for-release --disableRemoteCache=true --nxBail=true --outputStyle=static
+
+    runHook postBuild
   '';
 
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/lib/node_modules/@shopify/cli/{dist,bin}
+    mkdir -p $out/bin
+    pushd packages/cli
+    rm -rf dist/*.map
+    mv dist/* $out/lib/node_modules/@shopify/cli/dist
+    mv bin/run.js $out/lib/node_modules/@shopify/cli/bin/run.js
+    mv package.json oclif.manifest.json $out/lib/node_modules/@shopify/cli
+    popd
+    # Install runtime dependencies
+    rm -rf node_modules
+    pnpm config set nodeLinker hoisted
+    # Avoid pnpm trying to replace directories with files (ENOTDIR) by
+    # preferring non-symlinked executables and removing --force which can
+    # exacerbate move/rename races during install.
+    pnpm config set preferSymlinkedExecutables false
+    pnpm install --offline --prod --ignore-scripts --frozen-lockfile
+    mv node_modules $out/lib/node_modules/@shopify/cli/node_modules
+
+    makeWrapper ${lib.getExe nodejs-slim} $out/bin/shopify \
+      --add-flags "$out/lib/node_modules/@shopify/cli/bin/run.js"
+
+    runHook postInstall
+  '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  passthru.updateScript = nix-update-script { };
+
   meta = {
-    platforms = lib.platforms.all;
+    platforms = lib.platforms.unix;
     mainProgram = "shopify";
     description = "CLI which helps you build against the Shopify platform faster";
     homepage = "https://github.com/Shopify/cli";
-    changelog = "https://github.com/Shopify/cli/releases/tag/${version}";
+    changelog = "https://github.com/Shopify/cli/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ fd onny ];
+    maintainers = with lib.maintainers; [
+      fd
+      onny
+    ];
   };
-}
+})

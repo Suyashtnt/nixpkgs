@@ -2,7 +2,6 @@
   lib,
   fetchPypi,
   buildPythonPackage,
-  isPy27,
   pytest,
 }:
 
@@ -10,7 +9,6 @@ buildPythonPackage rec {
   pname = "inflection";
   version = "0.5.1";
   format = "setuptools";
-  disabled = isPy27;
 
   src = fetchPypi {
     inherit pname version;
@@ -24,10 +22,7 @@ buildPythonPackage rec {
   meta = {
     homepage = "https://github.com/jpvanhal/inflection";
     description = "Port of Ruby on Rails inflector to Python";
-    maintainers = with lib.maintainers; [
-      NikolaMandic
-      ilya-kolpakov
-    ];
+    maintainers = with lib.maintainers; [ ilya-kolpakov ];
     license = lib.licenses.mit;
   };
 }

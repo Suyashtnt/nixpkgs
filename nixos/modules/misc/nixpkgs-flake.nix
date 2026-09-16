@@ -1,4 +1,10 @@
-{ config, options, lib, pkgs, ... }:
+{
+  config,
+  options,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.nixpkgs.flake;
 in
@@ -15,7 +21,7 @@ in
       default = null;
       defaultText = "if (using nixpkgsFlake.lib.nixosSystem) then self.outPath else null";
 
-      example = ''builtins.fetchTarball { name = "source"; sha256 = "${lib.fakeHash}"; url = "https://github.com/nixos/nixpkgs/archive/somecommit.tar.gz"; }'';
+      example = ''fetchTarball { name = "source"; sha256 = "${lib.fakeHash}"; url = "https://github.com/nixos/nixpkgs/archive/somecommit.tar.gz"; }'';
 
       description = ''
         The path to the nixpkgs sources used to build the system. This is automatically set up to be
@@ -24,7 +30,7 @@ in
 
         This can also be optionally set if the NixOS system is not built with a flake but still uses
         pinned sources: set this to the store path for the nixpkgs sources used to build the system,
-        as may be obtained by `builtins.fetchTarball`, for example.
+        as may be obtained by `fetchTarball`, for example.
 
         Note: the name of the store path must be "source" due to
         <https://github.com/NixOS/nix/issues/7075>.
@@ -72,31 +78,35 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.source != null) (lib.mkMerge [
-    {
-      assertions = [
-        {
-          assertion = cfg.setNixPath -> cfg.setFlakeRegistry;
-          message = ''
-            Setting `nixpkgs.flake.setNixPath` requires that `nixpkgs.flake.setFlakeRegistry` also
-            be set, since it is implemented in terms of indirection through the flake registry.
-          '';
-        }
-      ];
-    }
-    (lib.mkIf cfg.setFlakeRegistry {
-      nix.registry.nixpkgs.to = lib.mkDefault {
-        type = "path";
-        path = cfg.source;
-      };
-    })
-    (lib.mkIf cfg.setNixPath {
-      # N.B. This does not include nixos-config in NIX_PATH unlike modules/config/nix-channel.nix
-      # because we would need some kind of evil shim taking the *calling* flake's self path,
-      # perhaps, to ever make that work (in order to know where the Nix expr for the system came
-      # from and how to call it).
-      nix.nixPath = lib.mkDefault ([ "nixpkgs=flake:nixpkgs" ]
-        ++ lib.optional config.nix.channel.enable "/nix/var/nix/profiles/per-user/root/channels");
-    })
-  ]);
+  config = lib.mkIf (cfg.source != null) (
+    lib.mkMerge [
+      {
+        assertions = [
+          {
+            assertion = cfg.setNixPath -> cfg.setFlakeRegistry;
+            message = ''
+              Setting `nixpkgs.flake.setNixPath` requires that `nixpkgs.flake.setFlakeRegistry` also
+              be set, since it is implemented in terms of indirection through the flake registry.
+            '';
+          }
+        ];
+      }
+      (lib.mkIf cfg.setFlakeRegistry {
+        nix.registry.nixpkgs.to = lib.mkDefault {
+          type = "path";
+          path = cfg.source;
+        };
+      })
+      (lib.mkIf cfg.setNixPath {
+        # N.B. This does not include nixos-config in NIX_PATH unlike modules/config/nix-channel.nix
+        # because we would need some kind of evil shim taking the *calling* flake's self path,
+        # perhaps, to ever make that work (in order to know where the Nix expr for the system came
+        # from and how to call it).
+        nix.nixPath = lib.mkDefault (
+          [ "nixpkgs=flake:nixpkgs" ]
+          ++ lib.optional config.nix.channel.enable "/nix/var/nix/profiles/per-user/root/channels"
+        );
+      })
+    ]
+  );
 }

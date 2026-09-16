@@ -3,7 +3,6 @@
   aiohttp,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   setuptools,
 }:
 
@@ -12,12 +11,10 @@ buildPythonPackage rec {
   version = "0.3.7.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "MatsNl";
     repo = "pyatag";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-3h9mpopTbEULCx7rcEt/I/ZnUA0L/fJ7Y3L5h/6EuC4=";
   };
 
@@ -34,13 +31,14 @@ buildPythonPackage rec {
   ];
 
   # it would use the erroneous tag 3.5.1
+  # nixpkgs-update: no auto update
   passthru.skipBulkUpdate = true;
 
-  meta = with lib; {
+  meta = {
     description = "Python module to talk to Atag One";
     homepage = "https://github.com/MatsNl/pyatag";
     changelog = "https://github.com/MatsNl/pyatag/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

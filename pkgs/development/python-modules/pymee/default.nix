@@ -5,24 +5,26 @@
   setuptools,
   aiohttp,
   websockets,
+  regex,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pymee";
-  version = "2.2.0";
+  version = "2.3.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "FreshlyBrewedCode";
     repo = "pymee";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-4XKd0lZ6RAsG2zXjKMUeST6cNcg+SjT371gxLIhxkAA=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-VNKIA/1juhkn11nkW52htvE4daXJoySeEyevWbboUek=";
   };
 
   build-system = [ setuptools ];
   dependencies = [
     aiohttp
     websockets
+    regex
   ];
 
   pythonImportsCheck = [ "pymee" ];
@@ -33,8 +35,8 @@ buildPythonPackage rec {
   meta = {
     description = "Python library to interact with homee";
     homepage = "https://github.com/FreshlyBrewedCode/pymee";
-    changelog = "https://github.com/FreshlyBrewedCode/pymee/blob/${src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/FreshlyBrewedCode/pymee/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ sigmanificient ];
   };
-}
+})

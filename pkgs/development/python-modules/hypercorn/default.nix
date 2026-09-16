@@ -2,13 +2,15 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
-  exceptiongroup,
+  aioquic,
   h11,
   h2,
+  httpx,
   priority,
+  trio,
+  uvloop,
   wsproto,
-  poetry-core,
+  pdm-backend,
   pytest-asyncio,
   pytest-trio,
   pytestCheckHook,
@@ -16,50 +18,53 @@
 
 buildPythonPackage rec {
   pname = "hypercorn";
-  version = "0.16.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.11"; # missing taskgroup dependency
+  version = "0.18.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pgjones";
     repo = "Hypercorn";
-    rev = version;
-    hash = "sha256-pIUZCQmC3c6FiV0iMMwJGs9TMi6B/YM+vaSx//sAmKE=";
+    tag = version;
+    hash = "sha256-RNurpDq5Z3N9Wv9Hq/l6A3yKUriCCKx9BrbrWGwBsUk=";
   };
 
   postPatch = ''
     sed -i "/^addopts/d" pyproject.toml
   '';
 
-  build-system = [ poetry-core ];
+  build-system = [ pdm-backend ];
 
   dependencies = [
-    exceptiongroup
     h11
     h2
     priority
     wsproto
   ];
 
+  optional-dependencies = {
+    h3 = [ aioquic ];
+    trio = [ trio ];
+    uvloop = [ uvloop ];
+  };
+
   nativeCheckInputs = [
+    httpx
     pytest-asyncio
     pytest-trio
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
-  disabledTests = [
-    # https://github.com/pgjones/hypercorn/issues/217
-    "test_startup_failure"
-  ];
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "hypercorn" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/pgjones/hypercorn/blob/${src.tag}/CHANGELOG.rst";
     homepage = "https://github.com/pgjones/hypercorn";
     description = "ASGI web server inspired by Gunicorn";
     mainProgram = "hypercorn";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dgliwka ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dgliwka ];
   };
 }

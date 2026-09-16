@@ -2,57 +2,64 @@
   lib,
   stdenv,
   buildPythonPackage,
-  click,
-  coverage,
-  fetchPypi,
+  fetchFromGitHub,
+
+  # build-system
   pdm-backend,
-  pytest-sugar,
-  pytest-xdist,
-  pytestCheckHook,
-  pythonOlder,
+
+  # dependencies
+  annotated-doc,
+  click,
+
+  # optional-dependencies
   rich,
   shellingham,
-  typing-extensions,
+
+  # tests
+  pytest-xdist,
+  pytest9_0CheckHook,
+  writableTmpDirAsHomeHook,
+  procps,
 }:
 
 buildPythonPackage rec {
   pname = "typer";
-  version = "0.12.3";
-  format = "pyproject";
+  version = "0.25.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-SecxMUgdgEKI72JZjZehzu8wWJBapTahE0+QiRujVII=";
+  src = fetchFromGitHub {
+    owner = "fastapi";
+    repo = "typer";
+    tag = version;
+    hash = "sha256-HIvXseuR7zUXFuTWzntDfHhAp8BcFjxo35gn0i4+03w=";
   };
 
-  nativeBuildInputs = [ pdm-backend ];
+  postPatch = ''
+    for f in $(find tests -type f -print); do
+      # replace `sys.executable -m coverage run` with `sys.executable`
+      sed -z -i 's/"-m",\n\?\s*"coverage",\n\?\s*"run",//g' "$f"
+    done
+  '';
 
-  propagatedBuildInputs = [
+  env.TIANGOLO_BUILD_PACKAGE = "typer";
+
+  build-system = [ pdm-backend ];
+
+  dependencies = [
+    annotated-doc
     click
-    typing-extensions
-  # Build includes the standard optional by default
-  # https://github.com/tiangolo/typer/blob/0.12.3/pyproject.toml#L71-L72
-  ] ++ optional-dependencies.standard;
-
-  optional-dependencies = {
-    standard = [
-      shellingham
-      rich
-    ];
-  };
-
-  nativeCheckInputs = [
-    coverage # execs coverage in tests
-    pytest-sugar
-    pytest-xdist
-    pytestCheckHook
+    rich
+    shellingham
   ];
 
-  preCheck = ''
-    export HOME=$(mktemp -d);
-  '';
+  nativeCheckInputs = [
+    pytest-xdist
+    pytest9_0CheckHook
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    procps
+  ];
 
   disabledTests = [
     "test_scripts"
@@ -60,15 +67,18 @@ buildPythonPackage rec {
     # fails also on Linux
     "test_show_completion"
     "test_install_completion"
-  ] ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [ "test_install_completion" ];
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    "test_install_completion"
+  ];
 
   pythonImportsCheck = [ "typer" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for building CLI applications";
     homepage = "https://typer.tiangolo.com/";
     changelog = "https://github.com/tiangolo/typer/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ winpat ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ winpat ];
   };
 }

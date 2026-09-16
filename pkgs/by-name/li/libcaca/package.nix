@@ -1,25 +1,36 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, autoreconfHook
-, imlib2
-, xorg
-, ncurses
-, pkg-config
-, zlib
-, x11Support ? !stdenv.hostPlatform.isDarwin
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  fetchpatch,
+  autoreconfHook,
+  imlib2,
+  libxext,
+  libx11,
+  ncurses,
+  pkg-config,
+  zlib,
+  x11Support ? !stdenv.hostPlatform.isDarwin,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "libcaca";
   version = "0.99.beta20";
 
   src = fetchFromGitHub {
     owner = "cacalabs";
-    repo = pname;
-    rev = "v${version}";
+    repo = "libcaca";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-N0Lfi0d4kjxirEbIjdeearYWvStkKMyV6lgeyNKXcVw=";
   };
+
+  patches = [
+    (fetchpatch {
+      name = "CVE-2026-42046.patch";
+      url = "https://github.com/cacalabs/libcaca/commit/fb77acff9ba6bb01d53940da34fb10f20b156a23.patch";
+      hash = "sha256-AdpiE5Gw/CVET//7TTYZCb0glW5HY+T8xZkYs1XCBvY=";
+    })
+  ];
 
   nativeBuildInputs = [
     autoreconfHook
@@ -30,15 +41,26 @@ stdenv.mkDerivation rec {
     ncurses
     zlib
     (imlib2.override { inherit x11Support; })
-  ] ++ lib.optionals x11Support [
-    xorg.libX11
-    xorg.libXext
+  ]
+  ++ lib.optionals x11Support [
+    libx11
+    libxext
   ];
 
-  outputs = [ "bin" "dev" "out" "man" ];
+  outputs = [
+    "bin"
+    "dev"
+    "out"
+    "man"
+  ];
 
   configureFlags = [
     (if x11Support then "--enable-x11" else "--disable-x11")
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # Suppresses a build failure building Cocoa support due to accessing private ivar `_running`,
+    # which no longer available.
+    (lib.enableFeature false "cocoa")
   ];
 
   env.NIX_CFLAGS_COMPILE = lib.optionalString (!x11Support) "-DX_DISPLAY_MISSING";
@@ -48,7 +70,7 @@ stdenv.mkDerivation rec {
     mv $bin/bin/caca-config $dev/bin/caca-config
   '';
 
-  meta = with lib; {
+  meta = {
     homepage = "http://caca.zoy.org/wiki/libcaca";
     description = "Graphics library that outputs text instead of pixels";
     longDescription = ''
@@ -67,8 +89,8 @@ stdenv.mkDerivation rec {
 
       Libcaca was written by Sam Hocevar and Jean-Yves Lamoureux.
     '';
-    license = licenses.wtfpl;
-    maintainers = with maintainers; [ AndersonTorres ];
-    platforms = platforms.unix;
+    license = lib.licenses.wtfpl;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
   };
-}
+})

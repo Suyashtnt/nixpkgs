@@ -1,13 +1,20 @@
-{ pkgs ? import ../../.. {} }:
-  let
-    inherit (pkgs) runCommand closureInfo;
-    # splicing doesn't seem to work right here
-    inherit (pkgs.buildPackages) dumpnar rsync;
-    pack-all =
-      packCmd: name: pkgs: fixups:
-      (runCommand name {
-        nativeBuildInputs = [ rsync dumpnar ];
-      } ''
+{
+  pkgs ? import ../../.. { },
+}:
+let
+  inherit (pkgs) runCommand closureInfo;
+  # splicing doesn't seem to work right here
+  inherit (pkgs.buildPackages) dumpnar rsync;
+  pack-all =
+    packCmd: name: pkgs: fixups:
+    (runCommand name
+      {
+        nativeBuildInputs = [
+          rsync
+          dumpnar
+        ];
+      }
+      ''
         base=$PWD
         requisites="$(cat ${closureInfo { rootPaths = pkgs; }}/store-paths)"
         for f in $requisites; do
@@ -31,22 +38,36 @@
         ${fixups}
 
         ${packCmd}
-      '');
-    nar-all = pack-all "dumpnar . | xz -9 -e -T $NIX_BUILD_CORES >$out";
-    tar-all = pack-all "XZ_OPT=\"-9 -e -T $NIX_BUILD_CORES\" tar cJf $out --hard-dereference --sort=name --numeric-owner --owner=0 --group=0 --mtime=@1 .";
-    coreutils-big = pkgs.coreutils.override { singleBinary = false; };
-    mkdir = runCommand "mkdir" { coreutils = coreutils-big; } ''
-      mkdir -p $out/bin
-      cp $coreutils/bin/mkdir $out/bin
-    '';
-  in rec {
-  unpack = nar-all "unpack.nar.xz" (with pkgs; [bash mkdir xz gnutar]) ''
-    rm -rf include lib/*.a lib/i18n lib/bash share
+      ''
+    );
+  nar-all = pack-all "dumpnar . | xz -9 -e -T $NIX_BUILD_CORES >$out";
+  tar-all = pack-all "XZ_OPT=\"-9 -e -T $NIX_BUILD_CORES\" tar cJf $out --hard-dereference --sort=name --numeric-owner --owner=0 --group=0 --mtime=@1 .";
+  coreutils-big = pkgs.coreutils.override { singleBinary = false; };
+  mkdir = runCommand "mkdir" { coreutils = coreutils-big; } ''
+    mkdir -p $out/bin
+    cp $coreutils/bin/mkdir $out/bin
+    cp $coreutils/bin/cp $out/bin
+    cp $coreutils/bin/mv $out/bin
   '';
+in
+rec {
+  unpack =
+    nar-all "unpack.nar.xz"
+      (with pkgs; [
+        bash
+        mkdir
+        xz
+        gnutar
+      ])
+      ''
+        rm -rf include lib/*.a lib/bash share
+      '';
   bootstrap-tools = tar-all "bootstrap-tools.tar.xz" (
     with pkgs;
     # SYNCME: this version number must be synced with the one in default.nix
-    let llvmPackages = llvmPackages_18; in
+    let
+      llvmPackages = llvmPackages_21;
+    in
     [
       (runCommand "bsdcp" { } "mkdir -p $out/bin; cp ${freebsd.cp}/bin/cp $out/bin/bsdcp")
       coreutils
@@ -65,14 +86,16 @@
       gzip
       bzip2
       bzip2.dev
-      curl
+      # We don't use wcurl, and it uses shebangs for the build system when cross-compiling.
+      # That pollutes the bootstrap tarballs and prevents it from working.
+      (curl.overrideAttrs (old: {
+        postFixup = "rm $bin/bin/wcurl";
+      }))
       expand-response-params
       binutils-unwrapped
       freebsd.libc
-      llvmPackages.libcxx
-      llvmPackages.libcxx.dev
-      llvmPackages.compiler-rt
-      llvmPackages.compiler-rt.dev
+      stdenv.cc.libcxx
+      stdenv.cc.libcxx.dev
       llvmPackages.clang-unwrapped
       (freebsd.locales.override { locales = [ "C.UTF-8" ]; })
     ]

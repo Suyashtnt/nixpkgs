@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   django,
-  pythonOlder,
   setuptools-scm,
 }:
 
@@ -12,12 +11,10 @@ buildPythonPackage rec {
   version = "5.0.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "jazzband";
     repo = "django-model-utils";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-iRtTYXsgD8NYG3k9ZWAr2Nwazo3HUa6RgdbMeDxc7NI=";
   };
 
@@ -30,11 +27,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "model_utils" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/jazzband/django-model-utils";
     description = "Django model mixins and utilities";
     changelog = "https://github.com/jazzband/django-model-utils/blob/${version}/CHANGES.rst";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.programs.git;
@@ -19,27 +24,43 @@ in
           let
             gitini = attrsOf (attrsOf anything);
           in
-          either gitini (listOf gitini) // {
-            merge = loc: defs:
+          either gitini (listOf gitini)
+          // {
+            merge =
+              loc: defs:
               let
-                config = builtins.foldl'
-                  (acc: { value, ... }@x: acc // (if builtins.isList value then {
-                    ordered = acc.ordered ++ value;
-                  } else {
-                    unordered = acc.unordered ++ [ x ];
-                  }))
-                  {
-                    ordered = [ ];
-                    unordered = [ ];
-                  }
-                  defs;
+                config =
+                  builtins.foldl'
+                    (
+                      acc:
+                      { value, ... }@x:
+                      acc
+                      // (
+                        if builtins.isList value then
+                          {
+                            ordered = acc.ordered ++ value;
+                          }
+                        else
+                          {
+                            unordered = acc.unordered ++ [ x ];
+                          }
+                      )
+                    )
+                    {
+                      ordered = [ ];
+                      unordered = [ ];
+                    }
+                    defs;
               in
               [ (gitini.merge loc config.unordered) ] ++ config.ordered;
           };
         default = [ ];
         example = {
           init.defaultBranch = "main";
-          url."https://github.com/".insteadOf = [ "gh:" "github:" ];
+          url."https://github.com/".insteadOf = [
+            "gh:"
+            "github:"
+          ];
         };
         description = ''
           Configuration to write to /etc/gitconfig. A list can also be
@@ -47,7 +68,7 @@ in
           `config` to `[ { foo.x = 42; } { bar.y = 42; }]` will put the `foo`
           section before the `bar` section unlike the default alphabetical
           order, which can be helpful for sections such as `include` and
-          `includeIf`. See the CONFIGURATION FILE section of git-config(1) for
+          `includeIf`. See the CONFIGURATION FILE section of {manpage}`git-config(1)` for
           more information.
         '';
       };
@@ -60,6 +81,22 @@ in
         enable = lib.mkEnableOption "git-lfs (Large File Storage)";
 
         package = lib.mkPackageOption pkgs "git-lfs" { };
+
+        enablePureSSHTransfer = lib.mkEnableOption "Enable pure SSH transfer in server side by adding git-lfs-transfer to environment.systemPackages";
+      };
+
+      attributes = lib.mkOption {
+        type = lib.types.lines;
+        default = "";
+        example = "*.pdf diff=pdf";
+        description = ''
+          Assign git attributes to files (one pattern per line):
+
+              PATTERN1 ATTR1 ATTR2 ...
+
+          Blank lines and lines beginning with # are ignored. See
+          {manpage}`gitattributes(5)` for more information.
+        '';
       };
     };
   };
@@ -70,9 +107,16 @@ in
       environment.etc.gitconfig = lib.mkIf (cfg.config != [ ]) {
         text = lib.concatMapStringsSep "\n" lib.generators.toGitINI cfg.config;
       };
+
+      environment.etc.gitattributes = lib.mkIf (cfg.attributes != "") {
+        text = cfg.attributes + "\n";
+      };
     })
     (lib.mkIf (cfg.enable && cfg.lfs.enable) {
-      environment.systemPackages = [ cfg.lfs.package ];
+      environment.systemPackages = lib.mkMerge [
+        [ cfg.lfs.package ]
+        (lib.mkIf cfg.lfs.enablePureSSHTransfer [ pkgs.git-lfs-transfer ])
+      ];
       programs.git.config = {
         filter.lfs = {
           clean = "git-lfs clean -- %f";
@@ -89,5 +133,5 @@ in
     })
   ];
 
-  meta.maintainers = with lib.maintainers; [ figsoda ];
+  meta.maintainers = [ lib.maintainers.mushrowan ];
 }

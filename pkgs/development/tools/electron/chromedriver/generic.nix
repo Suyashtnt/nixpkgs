@@ -1,19 +1,20 @@
-{ lib
-, stdenv
-, fetchurl
-, glib
-, xorg
-, nspr
-, nss
-, autoPatchelfHook
-, unzip
+{
+  lib,
+  stdenv,
+  fetchurl,
+  glib,
+  libxcb,
+  nspr,
+  nss,
+  autoPatchelfHook,
+  unzip,
 }:
 
 version: hashes:
 let
   pname = "electron-chromedriver";
 
-  meta = with lib; {
+  meta = {
     homepage = "https://www.electronjs.org/";
     description = "WebDriver server for running Selenium tests on Chrome";
     longDescription = ''
@@ -24,23 +25,32 @@ let
       an unofficial build of ChromeDriver compiled by the Electronjs
       project.
     '';
-    sourceProvenance = with sourceTypes; [ binaryNativeCode ];
-    license = licenses.mit;
-    maintainers = with maintainers; [ liammurphy14 yayayayaka ];
-    platforms = ["x86_64-darwin" "x86_64-linux" "armv7l-linux" "aarch64-linux" "aarch64-darwin"];
+    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      liammurphy14
+    ];
+    teams = [ lib.teams.electron ];
+    platforms = [
+      "x86_64-linux"
+      "armv7l-linux"
+      "aarch64-linux"
+      "aarch64-darwin"
+    ];
     mainProgram = "chromedriver";
   };
 
-  fetcher = vers: tag: hash: fetchurl {
-    url = "https://github.com/electron/electron/releases/download/v${vers}/chromedriver-v${vers}-${tag}.zip";
-    sha256 = hash;
-  };
+  fetcher =
+    vers: tag: hash:
+    fetchurl {
+      url = "https://github.com/electron/electron/releases/download/v${vers}/chromedriver-v${vers}-${tag}.zip";
+      sha256 = hash;
+    };
 
   tags = {
     x86_64-linux = "linux-x64";
     aarch64-linux = "linux-arm64";
     armv7l-linux = "linux-armv7l";
-    x86_64-darwin = "darwin-x64";
     aarch64-darwin = "darwin-arm64";
   };
 
@@ -51,16 +61,19 @@ let
     src = fetcher version (get tags platform) (get hashes platform);
 
     buildInputs = [
-      stdenv.cc.cc.lib
+      (lib.getLib stdenv.cc.cc)
       glib
-      xorg.libxcb
+      libxcb
       nspr
       nss
     ];
   };
 
   linux = {
-    nativeBuildInputs = [ autoPatchelfHook unzip ];
+    nativeBuildInputs = [
+      autoPatchelfHook
+      unzip
+    ];
 
     dontUnpack = true;
     dontBuild = true;
@@ -71,6 +84,9 @@ let
       install -m777 -D chromedriver $out/bin/chromedriver
       runHook postInstall
     '';
+
+    __structuredAttrs = true;
+    strictDeps = true;
   };
 
   darwin = {
@@ -79,7 +95,7 @@ let
     dontUnpack = true;
     dontBuild = true;
 
-    # darwin distributions come with libffmpeg dependecy + icudtl.dat file
+    # darwin distributions come with libffmpeg dependency + icudtl.dat file
     installPhase = ''
       runHook preInstall
       unzip $src
@@ -90,7 +106,6 @@ let
     '';
   };
 in
-  stdenv.mkDerivation (
-    (common stdenv.hostPlatform) //
-    (if stdenv.hostPlatform.isDarwin then darwin else linux)
-  )
+stdenv.mkDerivation (
+  (common stdenv.hostPlatform) // (if stdenv.hostPlatform.isDarwin then darwin else linux)
+)

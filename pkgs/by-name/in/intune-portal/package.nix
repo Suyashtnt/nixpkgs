@@ -1,33 +1,39 @@
-{ stdenv
-, lib
-, fetchurl
-, dpkg
-, libuuid
-, xorg
-, curlMinimal
-, openssl
-, libsecret
-, webkitgtk
-, libsoup
-, gtk3
-, atk
-, pango
-, glib
-, sqlite
-, zlib
-, systemd
-, msalsdk-dbusclient
-, pam
-, dbus
-, nixosTests
+{
+  stdenv,
+  lib,
+  fetchurl,
+  dpkg,
+  libuuid,
+  libx11,
+  curlMinimal,
+  openssl_3,
+  libsecret,
+  webkitgtk_4_1,
+  libsoup_3,
+  gtk3,
+  atk,
+  pango,
+  glib,
+  sqlite,
+  zlib,
+  systemd,
+  pam,
+  p11-kit,
+  dbus,
+  nixosTests,
 }:
+let
+  curlMinimal_openssl_3 = curlMinimal.override {
+    openssl = openssl_3;
+  };
+in
 stdenv.mkDerivation rec {
   pname = "intune-portal";
-  version = "1.2405.17-jammy";
+  version = "1.2607.4-noble";
 
   src = fetchurl {
-    url = "https://packages.microsoft.com/ubuntu/22.04/prod/pool/main/i/intune-portal/intune-portal_${version}_amd64.deb";
-    hash = "sha256-WpVPWzh8jN092MaY2rMXhLfpVXsflMl9hOY9nNGJlLk=";
+    url = "https://packages.microsoft.com/ubuntu/24.04/prod/pool/main/i/intune-portal/intune-portal_${version}_amd64.deb";
+    hash = "sha256-bBhWI8U+QCynHaXJBtEGsZH7leW2AdavRJE7r5EcG9M=";
   };
 
   nativeBuildInputs = [ dpkg ];
@@ -36,22 +42,22 @@ stdenv.mkDerivation rec {
     let
       libPath = {
         intune = lib.makeLibraryPath [
-          stdenv.cc.cc.lib
+          stdenv.cc.cc
           libuuid
-          xorg.libX11
-          curlMinimal
-          openssl
+          libx11
+          curlMinimal_openssl_3
+          openssl_3
           libsecret
-          webkitgtk
-          libsoup
+          webkitgtk_4_1
+          libsoup_3
           gtk3
           atk
           glib
           pango
+          p11-kit
           sqlite
           zlib
           systemd
-          msalsdk-dbusclient
           dbus
         ];
         pam = lib.makeLibraryPath [ pam ];
@@ -103,11 +109,12 @@ stdenv.mkDerivation rec {
     tests = { inherit (nixosTests) intune; };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Microsoft Intune Portal allows you to securely access corporate apps, data, and resources";
     homepage = "https://www.microsoft.com/";
-    license = licenses.unfree;
+    license = lib.licenses.unfree;
     platforms = [ "x86_64-linux" ];
     maintainers = with lib.maintainers; [ rhysmdnz ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 }

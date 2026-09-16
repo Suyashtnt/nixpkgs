@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   setuptools,
   tkinter,
@@ -16,12 +15,11 @@ in
 buildPythonPackage {
   inherit pname version;
   pyproject = true;
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "TomSchimansky";
     repo = "CustomTkinter";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-1g2wdXbUv5xNnpflFLXvU39s16kmwvuegKWd91E3qm4=";
   };
 
@@ -55,6 +53,6 @@ buildPythonPackage {
       a consistent and modern look across all desktop platforms
       (Windows, macOS, Linux).
     '';
-    maintainers = with lib.maintainers; [ donteatoreo ];
+    maintainers = with lib.maintainers; [ _4evy ];
   };
 }

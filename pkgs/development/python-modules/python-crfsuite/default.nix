@@ -3,16 +3,18 @@
   buildPythonPackage,
   fetchPypi,
   pytestCheckHook,
+  cython,
 }:
 
 buildPythonPackage rec {
   pname = "python-crfsuite";
-  version = "0.9.10";
+  version = "0.9.12";
   format = "setuptools";
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-84UkYx4rUzNB8Q8sd2iScNxuzVmFSV3M96o3sQRbwuU=";
+    inherit version;
+    pname = "python_crfsuite";
+    hash = "sha256-2zf8zDvY8MScKKdpfKecidZ7P9W/EZEihmFpJArExIA=";
   };
 
   preCheck = ''
@@ -20,14 +22,19 @@ buildPythonPackage rec {
     rm -r pycrfsuite
   '';
 
+  build-system = [
+    cython
+  ];
+
   nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "pycrfsuite" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python binding for CRFsuite";
     homepage = "https://github.com/scrapinghub/python-crfsuite";
-    license = licenses.mit;
-    maintainers = teams.tts.members;
+    changelog = "https://github.com/scrapinghub/python-crfsuite/blob/${version}/CHANGES.rst";
+    license = lib.licenses.mit;
+    teams = [ lib.teams.tts ];
   };
 }

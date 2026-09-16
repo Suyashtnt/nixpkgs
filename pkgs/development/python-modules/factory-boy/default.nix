@@ -8,43 +8,42 @@
   flask-sqlalchemy,
   mongoengine,
   pytestCheckHook,
-  pythonOlder,
+  mongomock,
   sqlalchemy,
   sqlalchemy-utils,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "factory-boy";
-  version = "3.3.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "3.3.3";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "factory_boy";
     inherit version;
-    hash = "sha256-vHbZfRplu9mEKm1yKIIJjrVJ7I7hCB+fsuj/KfDDAPE=";
+    hash = "sha256-hmhi0iYSjfrH8rQWAofomdr1TyYSd4Mn3QPQ4ssePQM=";
   };
 
-  postPatch = ''
-    substituteInPlace tests/test_version.py \
-      --replace '"3.2.1.dev0")' '"${version}")'
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ faker ];
+  dependencies = [ faker ];
 
   nativeCheckInputs = [
     django
     flask
     flask-sqlalchemy
     mongoengine
+    mongomock
     pytestCheckHook
     sqlalchemy
     sqlalchemy-utils
   ];
 
-  # Checks for MongoDB requires an a running DB
-  disabledTests = [ "MongoEngineTestCase" ];
+  disabledTests = [
+    # Test checks for MongoDB requires an a running DB
+    "MongoEngineTestCase"
+  ];
 
   disabledTestPaths = [
     # incompatible with latest flask-sqlalchemy
@@ -53,11 +52,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "factory" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python package to create factories for complex objects";
     homepage = "https://github.com/rbarrois/factory_boy";
     changelog = "https://github.com/FactoryBoy/factory_boy/blob/${version}/docs/changelog.rst";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

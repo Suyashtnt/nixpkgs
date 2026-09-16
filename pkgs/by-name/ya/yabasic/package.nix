@@ -1,26 +1,27 @@
-{ lib
-, stdenv
-, fetchurl
-, libSM
-, libX11
-, libXt
-, libffi
-, ncurses
+{
+  lib,
+  stdenv,
+  fetchurl,
+  libsm,
+  libx11,
+  libxt,
+  libffi,
+  ncurses,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "yabasic";
-  version = "2.90.4";
+  version = "2.92.1";
 
   src = fetchurl {
-    url = "http://www.yabasic.de/download/yabasic-${finalAttrs.version}.tar.gz";
-    hash = "sha256-td54SC1LnO3z07m3BsVDpiAsmokzB4xn4dbVdfeYH8M=";
+    url = "https://www.yabasic.de/download/yabasic-${finalAttrs.version}.tar.gz";
+    hash = "sha256-VeQcDGGxQ3Xpfz6pYbwLcnUfRZjkDgsCCsVtqXm2Rqk=";
   };
 
   buildInputs = [
-    libSM
-    libX11
-    libXt
+    libsm
+    libx11
+    libxt
     libffi
     ncurses
   ];
@@ -36,10 +37,10 @@ stdenv.mkDerivation (finalAttrs: {
       allows to create standalone programs. Yabasic runs under Unix and Windows
       and has a comprehensive documentation; it is small, simple, open-source
       and free.
-   '';
+    '';
     changelog = "https://2484.de/yabasic/whatsnew.html";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.all;
   };
 })

@@ -1,39 +1,54 @@
-{ lib
-, fetchFromGitHub
-, cmake
-, gcc12Stdenv
-, SDL2
-, libGL
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  makeWrapper,
+  sdl2-compat,
+  vulkan-loader,
+  openal,
 }:
 
-gcc12Stdenv.mkDerivation (finalAttrs: {
+stdenv.mkDerivation (finalAttrs: {
   pname = "bstone";
-  version = "1.2.12";
+  version = "1.3.4";
+
+  __structuredAttrs = true;
+  strictDeps = true;
 
   src = fetchFromGitHub {
     owner = "bibendovsky";
     repo = "bstone";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-wtW595cSoVTZaVykxOkJViNs3OmuIch9nA5s1SqwbJo=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-8ifvHNf+vUtoffxghMwFXpGuarMEEBF+bkSbE4M9zf0=";
   };
 
   nativeBuildInputs = [
     cmake
+    makeWrapper
   ];
 
   buildInputs = [
-    libGL
-    SDL2
+    sdl2-compat
   ];
 
   postInstall = ''
-    mkdir -p $out/bin
-    mv $out/bstone* $out/bin
+    mkdir -p $out/{bin,share/bibendovsky/bstone}
+    mv $out/bstone $out/bin
+    mv $out/*.txt $out/share/bibendovsky/bstone
+
+    wrapProgram $out/bin/bstone \
+      --prefix LD_LIBRARY_PATH : ${
+        lib.makeLibraryPath [
+          openal
+          vulkan-loader
+        ]
+      }
   '';
 
   meta = {
     description = "Unofficial source port for the Blake Stone series";
-    homepage = "https://github.com/bibendovsky/bstone";
+    homepage = "https://bibendovsky.github.io/bstone";
     changelog = "https://github.com/bibendovsky/bstone/blob/${finalAttrs.src.rev}/CHANGELOG.md";
     license = with lib.licenses; [
       gpl2Plus # Original game source code
@@ -41,6 +56,6 @@ gcc12Stdenv.mkDerivation (finalAttrs: {
     ];
     maintainers = with lib.maintainers; [ keenanweaver ];
     mainProgram = "bstone";
-    platforms = lib.platforms.linux; #TODO: macOS / Darwin support
+    platforms = lib.platforms.linux; # TODO: macOS / Darwin support
   };
 })

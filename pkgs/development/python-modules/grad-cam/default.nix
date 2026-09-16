@@ -1,12 +1,11 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchPypi,
   setuptools,
   matplotlib,
   numpy,
-  opencv4,
+  opencv-python,
   pillow,
   scikit-learn,
   torch,
@@ -17,20 +16,13 @@
 
 buildPythonPackage rec {
   pname = "grad-cam";
-  version = "1.5.2";
+  version = "1.5.5";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-WhC3QjMDh4E8NnO8SyCtg9rFgDJkYP6/xdWNcTvlKFU=";
+    hash = "sha256-aQxDPSJtNcicnrFwRi2yBJCcsGs5xzgeaICkm2/DcBU=";
   };
-
-  postPatch = ''
-    substituteInPlace requirements.txt\
-      --replace "opencv-python" "opencv"
-  '';
 
   nativeBuildInputs = [
   ];
@@ -46,7 +38,7 @@ buildPythonPackage rec {
   dependencies = [
     matplotlib
     numpy
-    opencv4
+    opencv-python
     pillow
     scikit-learn
     torchvision

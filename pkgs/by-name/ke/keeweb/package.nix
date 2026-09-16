@@ -13,18 +13,18 @@
   nss,
   udev,
   gnome-keyring,
-  mesa,
+  libgbm,
   gtk3,
   libusb1,
   libsecret,
   libappindicator,
   xdotool,
-  libX11,
-  libXcomposite,
-  libXext,
-  libXrandr,
-  libXScrnSaver,
-  libXtst,
+  libx11,
+  libxcomposite,
+  libxext,
+  libxrandr,
+  libxscrnsaver,
+  libxtst,
   libxshmfence,
 }:
 let
@@ -35,10 +35,6 @@ let
     x86_64-linux = fetchurl {
       url = "https://github.com/keeweb/keeweb/releases/download/v${version}/KeeWeb-${version}.linux.x64.deb";
       hash = "sha256-/U+vn5TLIU9/J6cRFjuAdyGzlwC04mp4L2X2ETp+ZSE=";
-    };
-    x86_64-darwin = fetchurl {
-      url = "https://github.com/keeweb/keeweb/releases/download/v${version}/KeeWeb-${version}.mac.x64.dmg";
-      hash = "sha256-+ZFGrrw0tZ7F6lb/3iBIyGD+tp1puVhkPv10hfp6ATU=";
     };
     aarch64-darwin = fetchurl {
       url = "https://github.com/keeweb/keeweb/releases/download/v${version}/KeeWeb-${version}.mac.arm64.dmg";
@@ -55,15 +51,15 @@ let
     libGL
     nss
     udev
-    libX11
-    libXcomposite
-    libXext
-    libXrandr
-    libXScrnSaver
-    libXtst
+    libx11
+    libxcomposite
+    libxext
+    libxrandr
+    libxscrnsaver
+    libxtst
     libxshmfence
     gnome-keyring
-    mesa
+    libgbm
     gtk3
     libusb1
     libsecret
@@ -80,6 +76,9 @@ let
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ sikmir ];
     platforms = builtins.attrNames srcs;
+    knownVulnerabilities = [
+      "Uses Electron 12, EOL on November 16 2012. Has many known CVEs"
+    ];
   };
 in
 if stdenv.hostPlatform.isDarwin then
@@ -112,13 +111,10 @@ else
     nativeBuildInputs = [
       autoPatchelfHook
       wrapGAppsHook3
+      dpkg
     ];
 
     buildInputs = libraries;
-
-    unpackPhase = ''
-      ${dpkg}/bin/dpkg-deb --fsys-tarfile $src | tar --extract
-    '';
 
     installPhase = ''
       runHook preInstall

@@ -1,22 +1,26 @@
-{ lib
-, asciidoctor
-, fetchFromGitLab
-, ncurses
-, stdenv
+{
+  lib,
+  asciidoctor,
+  fetchFromGitLab,
+  ncurses,
+  stdenv,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "galaxis";
-  version = "1.11";
+  version = "1.13";
 
   src = fetchFromGitLab {
     owner = "esr";
     repo = "galaxis";
     rev = finalAttrs.version;
-    hash = "sha256-fSzifGoSdWyFGt99slzAsqCMDoeLbBqQGXujX8QAfGc=";
+    hash = "sha256-ZdCddbyWtF8dDAbU4M7snnegiFSEx1E0gKdDb5Xsre0=";
   };
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   nativeBuildInputs = [
     asciidoctor
@@ -63,9 +67,9 @@ stdenv.mkDerivation (finalAttrs: {
       game's simpler deductions.
     '';
     homepage = "http://catb.org/~esr/galaxis/";
-    license = with lib.licenses; [ gpl2Plus ];
+    license = lib.licenses.gpl2Plus;
     mainProgram = "galaxis";
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.linux;
   };
 })

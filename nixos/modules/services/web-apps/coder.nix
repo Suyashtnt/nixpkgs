@@ -1,11 +1,19 @@
-{ config, lib, options, pkgs, ... }:
+{
+  config,
+  lib,
+  options,
+  pkgs,
+  ...
+}:
 
 with lib;
 
 let
   cfg = config.services.coder;
   name = "coder";
-in {
+  configRefUrl = "https://coder.com/docs/@main/admin/setup/configuration-reference";
+in
+{
   options = {
     services.coder = {
       enable = mkEnableOption "Coder service";
@@ -75,8 +83,11 @@ in {
       environment = {
         extra = mkOption {
           type = types.attrs;
-          description = "Extra environment variables to pass run Coder's server with. See Coder documentation.";
-          default = {};
+          description = ''
+            Extra environment variables to pass run Coder's server with.
+            See [Coder configuration reference](${configRefUrl}).
+          '';
+          default = { };
           example = {
             CODER_OAUTH2_GITHUB_ALLOW_SIGNUPS = true;
             CODER_OAUTH2_GITHUB_ALLOWED_ORGS = "your-org";
@@ -84,7 +95,10 @@ in {
         };
         file = mkOption {
           type = types.nullOr types.path;
-          description = "Systemd environment file to add to Coder.";
+          description = ''
+            Systemd environment file to add to Coder.
+            See [Coder configuration reference](${configRefUrl}).
+          '';
           default = null;
         };
       };
@@ -159,7 +173,10 @@ in {
 
   config = mkIf cfg.enable {
     assertions = [
-      { assertion = cfg.database.createLocally -> cfg.database.username == name && cfg.database.database == cfg.database.username;
+      {
+        assertion =
+          cfg.database.createLocally
+          -> cfg.database.username == name && cfg.database.database == cfg.database.username;
         message = "services.coder.database.username must be set to ${name} if services.coder.database.createLocally is set true";
       }
     ];
@@ -172,7 +189,11 @@ in {
       environment = cfg.environment.extra // {
         CODER_ACCESS_URL = cfg.accessUrl;
         CODER_WILDCARD_ACCESS_URL = cfg.wildcardAccessUrl;
-        CODER_PG_CONNECTION_URL = "user=${cfg.database.username} ${optionalString (cfg.database.password != null) "password=${cfg.database.password}"} database=${cfg.database.database} host=${cfg.database.host} ${optionalString (cfg.database.sslmode != null) "sslmode=${cfg.database.sslmode}"}";
+        CODER_PG_CONNECTION_URL = "user=${cfg.database.username} ${
+          optionalString (cfg.database.password != null) "password=${cfg.database.password}"
+        } database=${cfg.database.database} host=${cfg.database.host} ${
+          optionalString (cfg.database.sslmode != null) "sslmode=${cfg.database.sslmode}"
+        }";
         CODER_ADDRESS = cfg.listenAddress;
         CODER_TLS_ENABLE = optionalString (cfg.tlsCert != null) "1";
         CODER_TLS_CERT_FILE = cfg.tlsCert;
@@ -203,15 +224,16 @@ in {
       ensureDatabases = [
         cfg.database.database
       ];
-      ensureUsers = [{
-        name = cfg.user;
-        ensureDBOwnership = true;
+      ensureUsers = [
+        {
+          name = cfg.user;
+          ensureDBOwnership = true;
         }
       ];
     };
 
     users.groups = optionalAttrs (cfg.group == name) {
-      "${cfg.group}" = {};
+      "${cfg.group}" = { };
     };
     users.users = optionalAttrs (cfg.user == name) {
       ${name} = {

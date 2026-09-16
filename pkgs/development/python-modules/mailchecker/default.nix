@@ -2,20 +2,17 @@
   lib,
   buildPythonPackage,
   fetchPypi,
-  pythonOlder,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mailchecker";
-  version = "6.0.9";
+  version = "6.0.21";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-8X6Qf/5vb67cJD9X6wyclR9h3smvjpaSLB3NCTOJuI0=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-tMZoQDvDLPqpbnWFkUd4QpyddI5VjS5qu1mbEvCZeQQ=";
   };
 
   build-system = [ setuptools ];
@@ -25,11 +22,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "MailChecker" ];
 
-  meta = with lib; {
+  meta = {
     description = "Module for temporary (disposable/throwaway) email detection";
     homepage = "https://github.com/FGRibreau/mailchecker";
-    changelog = "https://github.com/FGRibreau/mailchecker/blob/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/FGRibreau/mailchecker/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

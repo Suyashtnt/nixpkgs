@@ -1,4 +1,4 @@
-import ./make-test-python.nix ({ pkgs, lib, ... }:
+{ pkgs, lib, ... }:
 let
   user = "alice";
 in
@@ -14,22 +14,25 @@ in
     };
   };
 
-  testScript = { ... }:
+  testScript =
+    { ... }:
     let
       runexec = lib.getExe' pkgs.benchexec "runexec";
-      echo = builtins.toString pkgs.benchexec;
-      test = lib.getExe (pkgs.writeShellApplication rec {
-        name = "test";
-        meta.mainProgram = name;
-        text = "echo '${echo}'";
-      });
+      echo = toString pkgs.benchexec;
+      test = lib.getExe (
+        pkgs.writeShellApplication rec {
+          name = "test";
+          meta.mainProgram = name;
+          text = "echo '${echo}'";
+        }
+      );
       wd = "/tmp";
       stdout = "${wd}/runexec.out";
       stderr = "${wd}/runexec.err";
     in
     ''
       start_all()
-      machine.wait_for_unit("multi-user.target")
+      benchexec.wait_for_unit("multi-user.target")
       benchexec.succeed(''''\
           systemd-run \
             --property='StandardOutput=file:${stdout}' \
@@ -40,7 +43,8 @@ in
             --debug \
             --read-only-dir / \
             --hidden-dir /home \
-            '${test}' \
+            --no-container \
+            -- '${test}' \
       '''')
       benchexec.succeed("grep -s '${echo}' ${wd}/output.log")
       benchexec.succeed("test \"$(grep -Ec '((start|wall|cpu)time|memory)=' ${stdout})\" = 4")
@@ -49,6 +53,11 @@ in
 
   interactive.nodes.benchexec.services.kmscon = {
     enable = true;
-    fonts = [{ name = "Fira Code"; package = pkgs.fira-code; }];
+    fonts = [
+      {
+        name = "Fira Code";
+        package = pkgs.fira-code;
+      }
+    ];
   };
-})
+}

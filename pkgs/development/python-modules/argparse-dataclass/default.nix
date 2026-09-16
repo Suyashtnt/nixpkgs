@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
@@ -12,12 +11,10 @@ buildPythonPackage rec {
   version = "2.0.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "mivade";
     repo = "argparse_dataclass";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-ASdP6LOEeTszyppYV6vRQX8BKOHYUimI36tMSZTQfTk=";
   };
 
@@ -27,11 +24,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "argparse_dataclass" ];
 
-  meta = with lib; {
+  meta = {
     description = "Declarative CLIs with argparse and dataclasses";
     homepage = "https://github.com/mivade/argparse_dataclass";
     changelog = "https://github.com/mivade/argparse_dataclass/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ tm-drtina ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ tm-drtina ];
   };
 }

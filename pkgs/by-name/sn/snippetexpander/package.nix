@@ -1,18 +1,19 @@
-{ lib
-, buildGoModule
-, makeWrapper
-, scdoc
-, installShellFiles
-, snippetexpanderd
-, snippetexpanderx
+{
+  lib,
+  buildGoModule,
+  makeWrapper,
+  scdoc,
+  installShellFiles,
+  snippetexpanderd,
+  snippetexpanderx,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   inherit (snippetexpanderd) src version;
 
   pname = "snippetexpander";
 
-  vendorHash = "sha256-2nLO/b6XQC88VXE+SewhgKpkRtIHsva+fDudgKpvZiY=";
+  vendorHash = "sha256-1ofkbbitCzrLxugi769jbjOD2iN0Z6kYC5d7X2GYNIg=";
 
   proxyVendor = true;
 
@@ -32,7 +33,7 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X 'main.version=${src.rev}'"
+    "-X 'main.version=${finalAttrs.src.rev}'"
   ];
 
   postInstall = ''
@@ -43,15 +44,20 @@ buildGoModule rec {
   postFixup = ''
     # Ensure snippetexpanderd and snippetexpanderx are available to start/stop.
     wrapProgram $out/bin/snippetexpander \
-      --prefix PATH : ${lib.makeBinPath [ snippetexpanderd snippetexpanderx ]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          snippetexpanderd
+          snippetexpanderx
+        ]
+      }
   '';
 
   meta = {
     description = "Your little expandable text snippet helper CLI";
     homepage = "https://snippetexpander.org";
     license = lib.licenses.gpl2Plus;
-    maintainers = with lib.maintainers; [ ianmjones ];
+    maintainers = [ ];
     platforms = lib.platforms.linux;
     mainProgram = "snippetexpander";
   };
-}
+})

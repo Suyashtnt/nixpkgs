@@ -4,25 +4,37 @@
   cmarkgfm,
   docutils,
   fetchPypi,
+  fetchpatch2,
   nh3,
   pygments,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "readme-renderer";
-  version = "43.0";
+  version = "44.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     pname = "readme_renderer";
     inherit version;
-    hash = "sha256-GBjdKBQIE1Ce7tjWJof3zU97rZDU21hgAcXcCdT94xE=";
+    hash = "sha256-hxIDTqu/poBcrPFAK07rKnMCj3LRFm1vXLf5wEfF0eE=";
   };
+
+  patches = [
+    # https://github.com/pypa/readme_renderer/pull/325
+    (fetchpatch2 {
+      name = "pygment-2_19-compatibility.patch";
+      url = "https://github.com/pypa/readme_renderer/commit/04d5cfe76850192364eff344be7fe27730af8484.patch";
+      hash = "sha256-QBU3zL3DB8gYYwtKrIC8+H8798pU9Sz3T9e/Q/dXksw=";
+    })
+    (fetchpatch2 {
+      name = "docutils-0.22-compat.patch";
+      url = "https://github.com/pypa/readme_renderer/commit/d047a29755a204afca8873a6ecf30e686ccf6a27.patch";
+      hash = "sha256-GHTfRuOZr5c4mwu4s8K5IpvG1ZP1o/qd0U4H09BzhE8=";
+    })
+  ];
 
   build-system = [ setuptools ];
 
@@ -43,11 +55,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "readme_renderer" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for rendering readme descriptions";
     homepage = "https://github.com/pypa/readme_renderer";
     changelog = "https://github.com/pypa/readme_renderer/releases/tag/${version}";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

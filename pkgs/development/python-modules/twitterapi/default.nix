@@ -4,7 +4,6 @@
   fetchFromGitHub,
   requests,
   requests-oauthlib,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -12,12 +11,10 @@ buildPythonPackage rec {
   version = "2.8.2";
   format = "setuptools";
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "geduldig";
     repo = "TwitterAPI";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-4Z8XfgRhQXawCvaXM+kyMO3fejvXIF2LgVdmfXDDqIA=";
   };
 
@@ -31,11 +28,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "TwitterAPI" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python wrapper for Twitter's REST and Streaming APIs";
     homepage = "https://github.com/geduldig/TwitterAPI";
     changelog = "https://github.com/geduldig/TwitterAPI/blob/v${version}/CHANGE.log";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

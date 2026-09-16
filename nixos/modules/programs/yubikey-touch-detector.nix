@@ -49,12 +49,13 @@ in
       path = [ pkgs.gnupg ];
 
       environment = {
-        YUBIKEY_TOUCH_DETECTOR_LIBNOTIFY = builtins.toString cfg.libnotify;
-        YUBIKEY_TOUCH_DETECTOR_NOSOCKET = builtins.toString (!cfg.unixSocket);
-        YUBIKEY_TOUCH_DETECTOR_VERBOSE = builtins.toString cfg.verbose;
+        YUBIKEY_TOUCH_DETECTOR_LIBNOTIFY = toString cfg.libnotify;
+        YUBIKEY_TOUCH_DETECTOR_NOSOCKET = toString (!cfg.unixSocket);
+        YUBIKEY_TOUCH_DETECTOR_VERBOSE = toString cfg.verbose;
       };
 
       wantedBy = [ "graphical-session.target" ];
+      partOf = [ "graphical-session.target" ];
     };
     systemd.user.sockets.yubikey-touch-detector = {
       wantedBy = [ "sockets.target" ];

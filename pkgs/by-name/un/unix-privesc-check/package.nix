@@ -1,31 +1,30 @@
-{ lib
-, resholve
-, fetchurl
-, gawk
-, bash
-, binutils
-, coreutils
-, file
-, findutils
-, glibc
-, gnugrep
-, gnused
-, nettools
-, openssh
-, postgresql
-, ps
-, util-linux
-, which
+{
+  lib,
+  resholve,
+  fetchurl,
+  gawk,
+  bash,
+  binutils,
+  coreutils,
+  file,
+  findutils,
+  glibc,
+  gnugrep,
+  gnused,
+  net-tools,
+  openssh,
+  postgresql,
+  ps,
+  util-linux,
+  which,
 }:
 
-# resholve does not yet support `finalAttrs` call pattern hence `rec`
-# https://github.com/abathur/resholve/issues/107
-resholve.mkDerivation rec {
+resholve.mkDerivation (finalAttrs: {
   pname = "unix-privesc-check";
   version = "1.4";
 
   src = fetchurl {
-    url = "https://pentestmonkey.net/tools/unix-privesc-check/unix-privesc-check-${version}.tar.gz";
+    url = "https://pentestmonkey.net/tools/unix-privesc-check/unix-privesc-check-${finalAttrs.version}.tar.gz";
     hash = "sha256-4fhef2n6ut0jdWo9dqDj2GSyHih2O2DOLmGBKQ0cGWk=";
   };
 
@@ -44,10 +43,10 @@ resholve.mkDerivation rec {
         coreutils
         file
         findutils # for xargs command
-        glibc  # for ldd command
+        glibc # for ldd command
         gnugrep
         gnused
-        nettools
+        net-tools
         openssh
         postgresql # for psql command
         ps
@@ -56,9 +55,9 @@ resholve.mkDerivation rec {
       ];
       fake = {
         external = [
-            "lanscan" # lanscan exists only for HP-UX OS
-            "mount" # Getting same error described in https://github.com/abathur/resholve/issues/29
-            "passwd" # Getting same error described in https://github.com/abathur/resholve/issues/29
+          "lanscan" # lanscan exists only for HP-UX OS
+          "mount" # Getting same error described in https://github.com/abathur/resholve/issues/29
+          "passwd" # Getting same error described in https://github.com/abathur/resholve/issues/29
         ];
       };
       execer = [
@@ -76,12 +75,12 @@ resholve.mkDerivation rec {
     runHook postInstall
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Find misconfigurations that could allow local unprivilged users to escalate privileges to other users or to access local apps";
     mainProgram = "unix-privesc-check";
     homepage = "https://pentestmonkey.net/tools/audit/unix-privesc-check";
-    maintainers = with maintainers; [ d3vil0p3r ];
-    platforms = platforms.unix;
-    license = licenses.gpl2Plus;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
+    license = lib.licenses.gpl2Plus;
   };
-}
+})

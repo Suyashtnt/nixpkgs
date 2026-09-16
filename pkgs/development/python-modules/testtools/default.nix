@@ -7,19 +7,16 @@
   # build-system
   hatchling,
   hatch-vcs,
-
-  # dependencies
-  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "testtools";
-  version = "2.7.2";
+  version = "2.9.1";
   pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-W+W7wfD6D4tgrKbO7AeEXUHQxHXPRFv6200sRew5fqM=";
+    hash = "sha256-Oa2eueG5NdaDj0s67k1ucttl31YC9v7amY27T+jeCxk=";
   };
 
   nativeBuildInputs = [
@@ -29,14 +26,13 @@ buildPythonPackage rec {
 
   pythonRemoveDeps = [ "fixtures" ];
 
-  propagatedBuildInputs = lib.optionals (pythonAtLeast "3.12") [ setuptools ];
-
   # testscenarios has a circular dependency on testtools
   doCheck = false;
 
   meta = {
     description = "Set of extensions to the Python standard library's unit testing framework";
-    homepage = "https://pypi.python.org/pypi/testtools";
+    homepage = "https://github.com/testing-cabal/testtools";
     license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

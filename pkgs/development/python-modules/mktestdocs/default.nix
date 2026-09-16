@@ -12,14 +12,14 @@
 
 buildPythonPackage rec {
   pname = "mktestdocs";
-  version = "0.2.1";
+  version = "0.2.5";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "koaning";
     repo = "mktestdocs";
-    rev = "refs/tags/${version}";
-    hash = "sha256-snlt6SDiDYr04b2b2NgBC/1IBffpei034vFx3fnYUOc=";
+    tag = version;
+    hash = "sha256-OiOkU/qfxeLbCT1QywA1rGSwe9Ja8tENTmBo93vo0vc=";
   };
 
   build-system = [ setuptools ];

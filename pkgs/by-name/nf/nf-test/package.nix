@@ -1,31 +1,25 @@
-{ lib
-, fetchurl
-, makeWrapper
-, nextflow
-, nf-test
-, openjdk11
-, stdenv
-, testers
+{
+  lib,
+  fetchurl,
+  makeWrapper,
+  nextflow,
+  nf-test,
+  openjdk17,
+  stdenv,
+  testers,
 }:
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
 
   pname = "nf-test";
-  version = "0.9.0";
+  version = "0.9.5";
 
   src = fetchurl {
-    url = "https://github.com/askimed/nf-test/releases/download/v${version}/nf-test-${version}.tar.gz";
-    hash = "sha256-PhI866NrbokMsSrU6YeSv03S1+VcNqVJsocI3xPfDcc=";
+    url = "https://github.com/askimed/nf-test/releases/download/v${finalAttrs.version}/nf-test-${finalAttrs.version}.tar.gz";
+    hash = "sha256-t2eeuQzclkK/qJ6WNNsCzm5pneU6017w4vSEdjT8FkE=";
   };
   sourceRoot = ".";
 
-  buildInputs = [
-    makeWrapper
-  ];
-
-  nativeBuildInputs = [
-    nextflow
-  ];
-
+  nativeBuildInputs = [ makeWrapper ];
 
   installPhase = ''
     runHook preInstall
@@ -34,9 +28,9 @@ stdenv.mkDerivation rec {
     install -Dm644 nf-test.jar $out/share/nf-test
 
     mkdir -p $out/bin
-    makeWrapper ${openjdk11}/bin/java $out/bin/nf-test \
+    makeWrapper ${openjdk17}/bin/java $out/bin/nf-test \
       --add-flags "-jar $out/share/nf-test/nf-test.jar" \
-      --prefix PATH : ${lib.makeBinPath nativeBuildInputs} \
+      --prefix PATH : ${lib.makeBinPath [ nextflow ]} \
 
     runHook postInstall
   '';
@@ -46,13 +40,13 @@ stdenv.mkDerivation rec {
     command = "nf-test version";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Simple test framework for Nextflow pipelines";
     homepage = "https://www.nf-test.com/";
     changelog = "https://github.com/askimed/nf-test/releases";
-    license = licenses.mit;
-    maintainers = with maintainers; [ rollf ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ rollf ];
     mainProgram = "nf-test";
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
   };
-}
+})

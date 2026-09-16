@@ -1,26 +1,22 @@
 {
   lib,
-  backports-zoneinfo,
   buildPythonPackage,
   cached-property,
   defusedxml,
   dnspython,
   fetchFromGitHub,
-  flake8,
   isodate,
   lxml,
   oauthlib,
   psutil,
   pygments,
   python-dateutil,
-  pythonOlder,
   pytz,
   pyyaml,
   requests,
   requests-ntlm,
   requests-gssapi,
   requests-oauthlib,
-  requests-kerberos,
   requests-mock,
   setuptools,
   tzdata,
@@ -29,16 +25,14 @@
 
 buildPythonPackage rec {
   pname = "exchangelib";
-  version = "5.4.3";
+  version = "5.6.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "ecederstrand";
     repo = "exchangelib";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-SX5F0OXKdxA2HoDwvCe4M7RftdjUEdQuFbxRyuABC4E=";
+    tag = "v${version}";
+    hash = "sha256-tmJq0AZLuOic63ziIr173lbz6sDF/u75Y2ASYnHHDTM=";
   };
 
   pythonRelaxDeps = [ "defusedxml" ];
@@ -56,12 +50,11 @@ buildPythonPackage rec {
     requests
     requests-ntlm
     requests-oauthlib
-    requests-kerberos
     tzdata
     tzlocal
-  ] ++ lib.optionals (pythonOlder "3.9") [ backports-zoneinfo ];
+  ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     complete = [
       requests-gssapi
       # requests-negotiate-sspi
@@ -73,7 +66,6 @@ buildPythonPackage rec {
   };
 
   nativeCheckInputs = [
-    flake8
     psutil
     python-dateutil
     pytz
@@ -83,11 +75,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "exchangelib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Client for Microsoft Exchange Web Services (EWS)";
     homepage = "https://github.com/ecederstrand/exchangelib";
-    changelog = "https://github.com/ecederstrand/exchangelib/blob/v${version}/CHANGELOG.md";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ catern ];
+    changelog = "https://github.com/ecederstrand/exchangelib/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
   };
 }

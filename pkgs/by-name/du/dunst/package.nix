@@ -1,41 +1,43 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, makeWrapper
-, pkg-config
-, which
-, perl
-, jq
-, libXrandr
-, coreutils
-, cairo
-, dbus
-, systemd
-, gdk-pixbuf
-, glib
-, libX11
-, libXScrnSaver
-, wayland
-, wayland-protocols
-, libXinerama
-, libnotify
-, pango
-, xorgproto
-, librsvg
-, testers
-, withX11 ? true
-, withWayland ? true
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  makeWrapper,
+  pkg-config,
+  which,
+  perl,
+  jq,
+  libxrandr,
+  coreutils,
+  cairo,
+  dbus,
+  systemd,
+  gdk-pixbuf,
+  glib,
+  libx11,
+  libxscrnsaver,
+  wayland,
+  wayland-protocols,
+  libxinerama,
+  libnotify,
+  pango,
+  xorgproto,
+  librsvg,
+  versionCheckHook,
+  nix-update-script,
+  withX11 ? true,
+  withWayland ? true,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "dunst";
-  version = "1.11.0";
+  version = "1.13.2";
 
   src = fetchFromGitHub {
     owner = "dunst-project";
     repo = "dunst";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-eiFvvavXGNcHZnEGwlTLxRqFNdkvEZMwNIkVyDn1V6o=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Idh/moq+OjD3VpZKJ3blO1JAK7PPX42z15rQz/JZb84=";
   };
 
   nativeBuildInputs = [
@@ -54,23 +56,29 @@ stdenv.mkDerivation (finalAttrs: {
     libnotify
     pango
     librsvg
-  ] ++ lib.optionals withX11 [
-    libX11
-    libXScrnSaver
-    libXinerama
+  ]
+  ++ lib.optionals withX11 [
+    libx11
+    libxscrnsaver
+    libxinerama
     xorgproto
-    libXrandr
-  ] ++ lib.optionals withWayland [
+    libxrandr
+  ]
+  ++ lib.optionals withWayland [
     wayland
     wayland-protocols
   ];
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   makeFlags = [
     "PREFIX=$(out)"
     "VERSION=$(version)"
-    "SYSCONFDIR=$(out)/etc"
+    "SYSCONFDIR=/etc/xdg"
+    "SYSCONF_FORCE_NEW=0"
     "SERVICEDIR_DBUS=$(out)/share/dbus-1/services"
     "SERVICEDIR_SYSTEMD=$(out)/lib/systemd/user"
   ]
@@ -82,21 +90,39 @@ stdenv.mkDerivation (finalAttrs: {
       --set GDK_PIXBUF_MODULE_FILE "$GDK_PIXBUF_MODULE_FILE"
 
     wrapProgram $out/bin/dunstctl \
-      --prefix PATH : "${lib.makeBinPath [ coreutils dbus ]}"
+      --prefix PATH : "${
+        lib.makeBinPath [
+          coreutils
+          dbus
+        ]
+      }"
 
-    substituteInPlace $out/share/zsh/site-functions/_dunstctl $out/share/fish/vendor_completions.d/{dunstctl,dunstify} \
+    substituteInPlace \
+      $out/share/zsh/site-functions/_dunstctl \
+      $out/share/bash-completion/completions/dunstctl \
+      $out/share/fish/vendor_completions.d/{dunstctl,dunstify}.fish \
       --replace-fail "jq" "${lib.getExe jq}"
   '';
 
-  passthru.tests.version = testers.testVersion { package = finalAttrs.finalPackage; };
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Lightweight and customizable notification daemon";
     homepage = "https://dunst-project.org/";
-    license = licenses.bsd3;
-    # NOTE: 'unix' or even 'all' COULD work too, I'm not sure
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ domenkozar gepbird ];
+    changelog = "https://github.com/dunst-project/dunst/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
     mainProgram = "dunst";
+    maintainers = with lib.maintainers; [
+      gepbird
+    ];
+    # NOTE: 'unix' or even 'all' COULD work too, I'm not sure
+    platforms = lib.platforms.linux;
   };
 })

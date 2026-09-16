@@ -8,8 +8,11 @@
 
   # propagates
   cbor2,
-  python-dateutil,
-  pyyaml,
+  colorama,
+  ruamel-yaml,
+  starlark,
+  termcolor,
+  tomli,
   tomlkit,
   u-msgpack-python,
 
@@ -17,39 +20,41 @@
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "remarshal";
-  version = "0.17.1";
-  format = "pyproject";
+  version = "2.1.4"; # test with `nix-build pkgs/pkgs-lib/tests -A formats`
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "dbohdan";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-2WxMh5P/8NvElymnMU3JzQU0P4DMXFF6j15OxLaS+VA=";
+    owner = "remarshal-project";
+    repo = "remarshal";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QMz8XNdoI0ZNox7ah7flr67K7573y3rjWdHgOba1Rhg=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  pythonRelaxDeps = [ "pytest" ];
-
-  propagatedBuildInputs = [
+  dependencies = [
     cbor2
-    python-dateutil
-    pyyaml
+    colorama
+    ruamel-yaml
+    starlark
+    termcolor
+    tomli
     tomlkit
     u-msgpack-python
   ];
 
+  pythonRelaxDeps = [ "cbor2" ];
+
   nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    changelog = "https://github.com/remarshal-project/remarshal/releases/tag/v${version}";
+  meta = {
+    changelog = "https://github.com/remarshal-project/remarshal/releases/tag/${finalAttrs.src.tag}";
     description = "Convert between TOML, YAML and JSON";
-    license = licenses.mit;
-    homepage = "https://github.com/dbohdan/remarshal";
-    maintainers = with maintainers; [ offline ];
+    license = lib.licenses.mit;
+    homepage = "https://github.com/remarshal-project/remarshal";
+    maintainers = [ ];
+    mainProgram = "remarshal";
   };
-}
+})

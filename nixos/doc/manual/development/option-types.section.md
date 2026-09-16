@@ -23,14 +23,50 @@ merging is handled.
 
 `types.path`
 
-:   A filesystem path is anything that starts with a slash when
-    coerced to a string. Even if derivations can be considered as
-    paths, the more specific `types.package` should be preferred.
+:   A filesystem path that starts with a slash. Even if derivations can be
+     considered as paths, the more specific `types.package` should be preferred.
 
 `types.pathInStore`
 
 :   A path that is contained in the Nix store. This can be a top-level store
     path like `pkgs.hello` or a descendant like `"${pkgs.hello}/bin/hello"`.
+
+`types.externalPath`
+
+:   A path that is not contained in the Nix store. Typical use cases are:
+    secrets, password or any other external file.
+
+::: {.warning}
+This type only validates that the path is not *currently* in the Nix store.
+It does NOT prevent the value from being copied to the store later when:
+- Referenced in a derivation
+- Used in certain path operations (e.g., `${path}` interpolation)
+- Passed to functions that copy to the store
+
+Users must still be careful about how they reference these paths.
+:::
+
+`types.pathWith` { *`inStore`* ? `null`, *`absolute`* ? `null` }
+
+:   A filesystem path. Either a string or something that can be coerced
+    to a string.
+
+    **Parameters**
+
+    `inStore` (`Boolean` or `null`, default `null`)
+    : Whether the path must be in the store (`true`), must not be in the store
+      (`false`), or it doesn't matter (`null`)
+
+    `absolute` (`Boolean` or `null`, default `null`)
+    : Whether the path must be absolute (`true`), must not be absolute
+      (`false`), or it doesn't matter (`null`)
+
+    **Behavior**
+    - `pathWith { inStore = true; }` is equivalent to `pathInStore`
+    - `pathWith { absolute = true; }` is equivalent to `path`
+    - `pathWith { inStore = false; absolute = true; }` requires an absolute
+      path that is not in the store. Useful for password files that shouldn't be
+      leaked into the store.
 
 `types.package`
 
@@ -100,6 +136,22 @@ merging is handled.
     options have the correct file location annotated, and that if possible,
     multiple option definitions are correctly merged together. The main use
     case is as the type of the `_module.freeformType` option.
+
+`types.optionDeclaration`
+
+:   The type of a module system option declaration, as created by `lib.mkOption`.
+    This allows an option to hold another option declaration as its value, which
+    can then be spliced into a module's `options` attrset. Note that this only
+    accepts option declarations, not evaluated options (i.e. options that have
+    been processed by `evalModules` and have a `value` field).
+
+    ::: {.warning}
+    Use of this type is a form of metaprogramming that makes modules harder
+    to reason about, since options and their types become dynamic values
+    rather than statically declared structure. Prefer conventional module
+    patterns where possible, and only reach for `types.optionDeclaration` when the
+    added complexity is justified.
+    :::
 
 `types.attrs`
 
@@ -211,6 +263,13 @@ merging is handled.
     definitions cannot be merged. The regular expression is processed
     using `builtins.match`.
 
+### Specialised types {#sec-option-types-specialised}
+
+`types.luaInline`
+
+:   A string wrapped using `lib.mkLuaInline`. Allows embedding lua expressions
+    inline within generated lua. Multiple definitions cannot be merged.
+
 ## Submodule types {#sec-option-types-submodule}
 
 Submodules are detailed in [Submodule](#section-option-types-submodule).
@@ -288,21 +347,33 @@ A union of types is a type such that a value is valid when it is valid for at le
 
 If some values are instances of more than one of the types, it is not possible to distinguish which type they are meant to be instances of. If that's needed, consider using a [sum type](#sec-option-types-sums).
 
+<!-- SYNC WITH oneOf BELOW -->
 `types.either` *`t1 t2`*
 
 :   Type *`t1`* or type *`t2`*, e.g. `with types; either int str`.
     Multiple definitions cannot be merged.
 
+    ::: {.warning}
+    `either` and `oneOf` eagerly decide the active type based on the passed types' shallow check method. For composite types like `attrsOf` and `submodule`, which both match all attribute set definitions, the first type argument will be chosen for the returned option value, and this therefore also decides how nested values are checked and merged. For example, `either (attrsOf int) (submodule {...})` will always use `attrsOf int` for any attribute set value, even if it was intended as a submodule. This behavior is a trade-off that keeps the implementation simple and the evaluation order predictable, avoiding unexpected strictness problems such as infinite recursions. When proper type discrimination is needed, consider using a [sum type](#sec-option-types-sums) like `attrTag` instead.
+    :::
+
+<!-- SYNC WITH either ABOVE -->
 `types.oneOf` \[ *`t1 t2`* ... \]
 
 :   Type *`t1`* or type *`t2`* and so forth, e.g.
     `with types; oneOf [ int str bool ]`. Multiple definitions cannot be
     merged.
 
+    ::: {.warning}
+    `either` and `oneOf` eagerly decide the active type based on the passed types' shallow check method. For composite types like `attrsOf` and `submodule`, which both match all attribute set definitions, the first matching type in the list will be chosen for the returned option value, and this therefore also decides how nested values are checked and merged. For example, `oneOf [ (attrsOf int) (submodule {...}) ]` will always use `attrsOf int` for any attribute set value, even if it was intended as a submodule. This behavior is a trade-off that keeps the implementation simple and the evaluation order predictable, avoiding unexpected strictness problems such as infinite recursions. When proper type discrimination is needed, consider using a [sum type](#sec-option-types-sums) like `attrTag` instead.
+    :::
+
 `types.nullOr` *`t`*
 
 :   `null` or type *`t`*. Multiple definitions are merged according to
     type *`t`*.
+
+    This is mostly equivalent to `either (enum [ null ]) t`, but `nullOr` provides a `null` fallback for attribute values with `mkIf false` definitions in `lazyAttrsOf (nullOr t)`, whereas `either` would throw an error when the attribute is accessed.
 
 
 ## Sum types {#sec-option-types-sums}
@@ -343,7 +414,7 @@ If the you're interested in can be distinguished without a label, you may simpli
                 options.destination = mkOption { … };
               };
             };
-            ignore = types.mkOption {
+            drop = types.mkOption {
               description = "Drop the packet without sending anything back.";
               type = types.submodule {};
             };
@@ -399,6 +470,72 @@ Composed types are types that take a type as parameter. `listOf
     returned instead for the same `mkIf false` definition.
     :::
 
+`types.attrsWith` { *`elemType`*, *`lazy`* ? false, *`placeholder`* ? "name" }
+
+:   An attribute set of where all the values are of *`elemType`* type.
+
+    **Parameters**
+
+    `elemType` (Required)
+    : Specifies the type of the values contained in the attribute set.
+
+    `lazy`
+    : Determines whether the attribute set is lazily evaluated. See: `types.lazyAttrsOf`
+
+    `placeholder` (`String`, default: `name` )
+    : Placeholder string in documentation for the attribute names.
+      The default value `name` results in the placeholder `<name>`
+
+    **Behavior**
+
+    - `attrsWith { elemType = t; }` is equivalent to `attrsOf t`
+    - `attrsWith { lazy = true; elemType = t; }` is equivalent to `lazyAttrsOf t`
+    - `attrsWith { placeholder = "id"; elemType = t; }`
+
+      Displays the option as `foo.<id>` in the manual.
+
+`types.attrListOf` *`t`*
+
+:   An ordered list of single-attribute attribute sets, where each value is of *`t`* type.
+    The output is always `[ { name1 = value1; } { name2 = value2; } ... ]`.
+
+    Definitions can be provided in two formats, which may be mixed via `lib.mkMerge`, `imports`, etc:
+
+    - **List format**: `[ { a = 1; } { b = 2; } ]` — each element must be a single-attribute attribute set.
+      Elements may be wrapped in `lib.mkOrder` (or `lib.mkBefore`/`lib.mkAfter`) to control ordering;
+      unwrapped elements use the default order priority.
+
+    - **Attribute set format**: `{ a = lib.mkOrder 100 1; b = 2; }` — each name-value pair becomes a single-attribute attribute set in the output.
+      Values may be wrapped in `lib.mkOrder` (or `lib.mkBefore`/`lib.mkAfter`) to control ordering.
+      Values without `lib.mkOrder` use the default priority.
+
+    Multiple definitions of the same option are concatenated and then sorted by priority.
+    Entries at the same priority level preserve their definition order.
+
+`types.attrListWith` { *`elemType`*, *`asAttrs`* ? false, *`mergeAttrValues`* ? _name: values: values }
+
+:   An ordered list of single-attribute attribute sets, where each value is of *`elemType`* type.
+
+    **Parameters**
+
+    `elemType` (Required)
+    : Specifies the type of each value in the attribute list.
+
+    `asAttrs`
+    : When `true`, the option value is an attribute set instead of a list.
+      Duplicate keys are merged using `mergeAttrValues`.
+      The ordered list is always available via `valueMeta.attrListValue`.
+
+    `mergeAttrValues`
+    : A function `name: values: mergedValue` that controls how duplicate keys
+      are combined when `asAttrs = true`. This is passed as the callback to
+      `lib.zipAttrsWith`. The `values` list is in order of priority.
+      By default, all values are collected into a list.
+
+    **Behavior**
+
+    - `attrListWith { elemType = t; }` is equivalent to `attrListOf t`
+
 `types.uniq` *`t`*
 
 :   Ensures that type *`t`* cannot be merged. It is used to ensure option
@@ -416,6 +553,20 @@ Composed types are types that take a type as parameter. `listOf
     function *`f`* which takes an argument of type *`from`* and return a
     value of type *`to`*. Can be used to preserve backwards compatibility
     of an option if its type was changed.
+
+`types.json`
+
+:   A type representing JSON-compatible values. This includes `null`, booleans,
+    integers, floats, strings, paths, attribute sets, and lists.
+    Attribute sets and lists can be arbitrarily nested and contain any JSON-compatible
+    values.
+
+`types.toml`
+
+:   A type representing TOML-compatible values. This includes booleans,
+    integers, floats, strings, paths, attribute sets, and lists.
+    Attribute sets and lists can be arbitrarily nested and contain any TOML-compatible
+    values.
 
 ## Submodule {#section-option-types-submodule}
 
@@ -442,16 +593,14 @@ if you want to allow users to leave it undefined.
 {
   options.mod = mkOption {
     description = "submodule example";
-    type = with types; submodule {
-      options = {
-        foo = mkOption {
-          type = int;
-        };
-        bar = mkOption {
-          type = str;
+    type =
+      with types;
+      submodule {
+        options = {
+          foo = mkOption { type = int; };
+          bar = mkOption { type = str; };
         };
       };
-    };
   };
 }
 ```
@@ -463,12 +612,8 @@ if you want to allow users to leave it undefined.
 let
   modOptions = {
     options = {
-      foo = mkOption {
-        type = int;
-      };
-      bar = mkOption {
-        type = int;
-      };
+      foo = mkOption { type = int; };
+      bar = mkOption { type = int; };
     };
   };
 in
@@ -493,16 +638,14 @@ multiple definitions of the submodule option set
 {
   options.mod = mkOption {
     description = "submodule example";
-    type = with types; listOf (submodule {
-      options = {
-        foo = mkOption {
-          type = int;
+    type =
+      with types;
+      listOf (submodule {
+        options = {
+          foo = mkOption { type = int; };
+          bar = mkOption { type = str; };
         };
-        bar = mkOption {
-          type = str;
-        };
-      };
-    });
+      });
   };
 }
 ```
@@ -513,8 +656,14 @@ multiple definitions of the submodule option set
 ```nix
 {
   config.mod = [
-    { foo = 1; bar = "one"; }
-    { foo = 2; bar = "two"; }
+    {
+      foo = 1;
+      bar = "one";
+    }
+    {
+      foo = 2;
+      bar = "two";
+    }
   ];
 }
 ```
@@ -531,16 +680,14 @@ multiple named definitions of the submodule option set
 {
   options.mod = mkOption {
     description = "submodule example";
-    type = with types; attrsOf (submodule {
-      options = {
-        foo = mkOption {
-          type = int;
+    type =
+      with types;
+      attrsOf (submodule {
+        options = {
+          foo = mkOption { type = int; };
+          bar = mkOption { type = str; };
         };
-        bar = mkOption {
-          type = str;
-        };
-      };
-    });
+      });
   };
 }
 ```
@@ -550,8 +697,14 @@ multiple named definitions of the submodule option set
 ### Definition of attribute sets of submodules
 ```nix
 {
-  config.mod.one = { foo = 1; bar = "one"; };
-  config.mod.two = { foo = 2; bar = "two"; };
+  config.mod.one = {
+    foo = 1;
+    bar = "one";
+  };
+  config.mod.two = {
+    foo = 2;
+    bar = "two";
+  };
 }
 ```
 :::

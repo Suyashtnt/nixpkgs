@@ -1,6 +1,5 @@
 {
   buildPythonPackage,
-  pythonOlder,
   django,
   hatchling,
   opentelemetry-api,
@@ -18,8 +17,6 @@ buildPythonPackage rec {
   pname = "opentelemetry-instrumentation-django";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   sourceRoot = "${opentelemetry-instrumentation.src.name}/instrumentation/opentelemetry-instrumentation-django";
 
   build-system = [ hatchling ];
@@ -33,14 +30,15 @@ buildPythonPackage rec {
     opentelemetry-util-http
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     asgi = [ opentelemetry-instrumentation-asgi ];
   };
 
   nativeCheckInputs = [
     opentelemetry-test-utils
     pytestCheckHook
-  ] ++ passthru.optional-dependencies.asgi;
+  ]
+  ++ optional-dependencies.asgi;
 
   pythonImportsCheck = [ "opentelemetry.instrumentation.django" ];
 

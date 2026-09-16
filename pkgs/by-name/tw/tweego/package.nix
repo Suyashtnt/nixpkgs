@@ -3,14 +3,14 @@
   buildGoModule,
   fetchFromGitHub,
 }:
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "tweego";
   version = "2.1.1";
 
   src = fetchFromGitHub {
     owner = "tmedwards";
     repo = "tweego";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-LE85mSByTz7uFjs0XtrpfD7OARoMPE56FpjFw+FlGYw=";
   };
 
@@ -25,7 +25,7 @@ buildGoModule rec {
     description = "Free (gratis and libre) command line compiler for Twine/Twee story formats, written in Go";
     homepage = "https://www.motoslave.net/tweego";
     license = lib.licenses.bsd2;
-    maintainers = with lib.maintainers; [chrispwill];
+    maintainers = with lib.maintainers; [ chrispwill ];
     mainProgram = "tweego";
   };
-}
+})

@@ -1,11 +1,15 @@
-{ callPackage, fetchpatch, fetchzip }:
+{
+  callPackage,
+  fetchpatch,
+  fetchzip,
+}:
 
 let
   rev = "7bcf43f8dbd5c4a67ec573a1248114caa75fa3c2";
 in
 callPackage ./dvtm.nix {
   pname = "dvtm-unstable";
-  version = "unstable-2021-03-09";
+  version = "0.15-unstable-2021-03-09";
 
   src = fetchzip {
     urls = [

@@ -1,11 +1,24 @@
 { config, lib, ... }:
 {
   meta = {
-    maintainers = [ lib.maintainers.joachifm ];
+    maintainers = [ ];
   };
 
   imports = [
-    (lib.mkRenamedOptionModule [ "security" "virtualization" "flushL1DataCache" ] [ "security" "virtualisation" "flushL1DataCache" ])
+    (lib.mkRenamedOptionModule
+      [ "security" "virtualization" "flushL1DataCache" ]
+      [ "security" "virtualisation" "flushL1DataCache" ]
+    )
+    (lib.mkRemovedOptionModule
+      [
+        "security"
+        "unprivilegedUsernsClone"
+      ]
+      ''
+        to disable or enable unprivileged user namespaces please use
+        the sysctl "user.max_user_namespaces".
+      ''
+    )
   ];
 
   options = {
@@ -25,16 +38,6 @@
         When user namespace creation is disallowed, attempting to create a
         user namespace fails with "no space left on device" (ENOSPC).
         root may re-enable user namespace creation at runtime.
-      '';
-    };
-
-    security.unprivilegedUsernsClone = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = ''
-        When disabled, unprivileged users will not be able to create new namespaces.
-        By default unprivileged user namespaces are disabled.
-        This option only works in a hardened profile.
       '';
     };
 
@@ -78,7 +81,13 @@
     };
 
     security.virtualisation.flushL1DataCache = lib.mkOption {
-      type = lib.types.nullOr (lib.types.enum [ "never" "cond" "always" ]);
+      type = lib.types.nullOr (
+        lib.types.enum [
+          "never"
+          "cond"
+          "always"
+        ]
+      );
       default = null;
       description = ''
         Whether the hypervisor should flush the L1 data cache before
@@ -105,14 +114,11 @@
       boot.kernel.sysctl."user.max_user_namespaces" = 0;
 
       assertions = [
-        { assertion = config.nix.settings.sandbox -> config.security.allowUserNamespaces;
+        {
+          assertion = config.nix.settings.sandbox -> config.security.allowUserNamespaces;
           message = "`nix.settings.sandbox = true` conflicts with `!security.allowUserNamespaces`.";
         }
       ];
-    })
-
-    (lib.mkIf config.security.unprivilegedUsernsClone {
-      boot.kernel.sysctl."kernel.unprivileged_userns_clone" = lib.mkDefault true;
     })
 
     (lib.mkIf config.security.protectKernelImage {
@@ -131,7 +137,9 @@
     })
 
     (lib.mkIf (config.security.virtualisation.flushL1DataCache != null) {
-      boot.kernelParams = [ "kvm-intel.vmentry_l1d_flush=${config.security.virtualisation.flushL1DataCache}" ];
+      boot.kernelParams = [
+        "kvm-intel.vmentry_l1d_flush=${config.security.virtualisation.flushL1DataCache}"
+      ];
     })
   ];
 }

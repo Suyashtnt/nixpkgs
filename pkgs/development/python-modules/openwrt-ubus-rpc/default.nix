@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   requests,
   setuptools,
   urllib3,
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "0.0.3";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "Noltari";
     repo = "python-ubus-rpc";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-M4hbnGrAjBjohwgMf6qw5NQnpyKCZ0/4HVklHhizTKc=";
   };
 
@@ -34,11 +31,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "openwrt.ubus" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python API for OpenWrt ubus RPC";
     homepage = "https://github.com/Noltari/python-ubus-rpc";
     changelog = "https://github.com/Noltari/python-ubus-rpc/releases/tag/${version}";
-    license = with licenses; [ gpl2Only ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

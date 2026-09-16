@@ -1,60 +1,31 @@
 {
   lib,
-  overrideSDK,
   stdenv,
-  darwin,
   fetchFromGitHub,
-  testers,
   nix-update-script,
+  apple-sdk_15,
+  versionCheckHook,
 }:
 
 let
   inherit (stdenv.hostPlatform) system;
-  inherit (darwin.apple_sdk_11_0.frameworks)
-    AppKit
-    Carbon
-    CoreAudio
-    CoreWLAN
-    CoreVideo
-    DisplayServices
-    IOKit
-    MediaRemote
-    SkyLight
-    ;
-
-  target =
-    {
-      "aarch64-darwin" = "arm64";
-      "x86_64-darwin" = "x86";
-    }
-    .${system} or (throw "Unsupported system: ${system}");
-
-  stdenv' = if stdenv.hostPlatform.isDarwin then overrideSDK stdenv "11.0" else stdenv;
 in
-stdenv'.mkDerivation (finalAttrs: {
+stdenv.mkDerivation (finalAttrs: {
   pname = "sketchybar";
-  version = "2.21.0";
+  version = "2.24.0";
 
   src = fetchFromGitHub {
     owner = "FelixKratz";
     repo = "SketchyBar";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-hTfQQjx6ai83zYFfccsz/KaoZUIj5Dfz4ENe59gS02E=";
+    hash = "sha256-5tyc/yYzdV/3JTtujuj7le/14XkC7TlN/nZg7tOZsNg=";
   };
 
   buildInputs = [
-    AppKit
-    Carbon
-    CoreAudio
-    CoreWLAN
-    CoreVideo
-    DisplayServices
-    IOKit
-    MediaRemote
-    SkyLight
+    apple-sdk_15
   ];
 
-  makeFlags = [ target ];
+  makeFlags = [ "arm64" ];
 
   installPhase = ''
     runHook preInstall
@@ -65,18 +36,15 @@ stdenv'.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru = {
-    tests.version = testers.testVersion {
-      package = finalAttrs.finalPackage;
-      version = "sketchybar-v${finalAttrs.version}";
-    };
+  passthru.updateScript = nix-update-script { };
 
-    updateScript = nix-update-script { };
-  };
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
 
   meta = {
     description = "Highly customizable macOS status bar replacement";
     homepage = "https://github.com/FelixKratz/SketchyBar";
+    changelog = "https://github.com/FelixKratz/SketchyBar/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.gpl3;
     mainProgram = "sketchybar";
     maintainers = with lib.maintainers; [

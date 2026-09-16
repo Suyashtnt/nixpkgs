@@ -7,7 +7,6 @@
   sip,
   pyqt-builder,
   qt6Packages,
-  pythonOlder,
   pyqt6,
   python,
   mesa,
@@ -15,16 +14,18 @@
 
 buildPythonPackage rec {
   pname = "pyqt6-webengine";
-  version = "6.7.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "6.11.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "PyQt6_WebEngine";
+    pname = "pyqt6_webengine";
     inherit version;
-    hash = "sha256-aO3HrbbZ4nX13pVogeecyg1x+tQ5q+qhDYI7/1rFUAE=";
+    hash = "sha256-Fc9J77u9TGvIdlOyxK6A1gSfgA4xYgszZzSuLjfL7a4=";
   };
+
+  patches = [
+    ./qvariant.patch
+  ];
 
   # fix include path and increase verbosity
   postPatch = ''
@@ -36,7 +37,7 @@ buildPythonPackage rec {
   '';
 
   enableParallelBuilding = true;
-  # HACK: paralellize compilation of make calls within pyqt's setup.py
+  # HACK: parallelize compilation of make calls within pyqt's setup.py
   # pkgs/stdenv/generic/setup.sh doesn't set this for us because
   # make gets called by python code and not its build phase
   # format=pyproject means the pip-build-hook hook gets used to build this project
@@ -53,18 +54,23 @@ buildPythonPackage rec {
 
   dontWrapQtApps = true;
 
-  nativeBuildInputs = with qt6Packages; [
-    pkg-config
-    lndir
+  build-system = [
     sip
-    qtwebengine
-    qmake
     pyqt-builder
   ];
 
-  buildInputs = with qt6Packages; [ qtwebengine ];
+  dependencies = [
+    pyqt6
+  ];
 
-  propagatedBuildInputs = [ pyqt6 ];
+  nativeBuildInputs = with qt6Packages; [
+    pkg-config
+    lndir
+    qtwebengine
+    qmake
+  ];
+
+  buildInputs = with qt6Packages; [ qtwebengine ];
 
   passthru = {
     inherit sip;
@@ -73,7 +79,6 @@ buildPythonPackage rec {
   dontConfigure = true;
 
   # Checked using pythonImportsCheck, has no tests
-  doCheck = true;
 
   pythonImportsCheck = [
     "PyQt6.QtWebEngineCore"
@@ -81,14 +86,13 @@ buildPythonPackage rec {
     "PyQt6.QtWebEngineWidgets"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for Qt6 WebEngine";
     homepage = "https://riverbankcomputing.com/";
-    license = licenses.gpl3Only;
+    license = lib.licenses.gpl3Only;
     inherit (mesa.meta) platforms;
-    maintainers = with maintainers; [
+    maintainers = with lib.maintainers; [
       LunNova
-      nrdxp
     ];
   };
 }

@@ -3,42 +3,41 @@
   buildPythonPackage,
   fetchFromGitHub,
   django,
-  pythonOlder,
-  setuptools,
-  typing-extensions,
+  uv-build,
 }:
 
 buildPythonPackage rec {
   pname = "dj-database-url";
-  version = "2.2.0";
+  version = "3.1.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "jazzband";
     repo = "dj-database-url";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-i2btutob+5R+FFPlGwRSNF01MTfxVop8xaePDHxnqLE=";
+    tag = "v${version}";
+    hash = "sha256-d9wkxe7xJSTufc2La4W/etPAaW6YF47y0IqPa5YWknY=";
   };
 
-  build-system = [ setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.9.17,<0.10.0" uv_build \
+      --replace-fail 'version = "0.0.0"' 'version = "${version}"'
+  '';
 
-  dependencies = [
-    django
-    typing-extensions
-  ];
+  build-system = [ uv-build ];
+
+  dependencies = [ django ];
 
   # Tests access a DB via network
   doCheck = false;
 
   pythonImportsCheck = [ "dj_database_url" ];
 
-  meta = with lib; {
+  meta = {
     description = "Use Database URLs in your Django Application";
     homepage = "https://github.com/jazzband/dj-database-url";
-    changelog = "https://github.com/jazzband/dj-database-url/blob/v${version}/CHANGELOG.md";
-    license = licenses.bsd2;
+    changelog = "https://github.com/jazzband/dj-database-url/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
     maintainers = [ ];
   };
 }

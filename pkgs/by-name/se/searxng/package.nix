@@ -2,29 +2,35 @@
   lib,
   python3,
   fetchFromGitHub,
-  nixosTests
+  nixosTests,
+  unstableGitUpdater,
 }:
-
-python3.pkgs.toPythonModule (
-  python3.pkgs.buildPythonApplication rec {
+let
+  python = python3.override {
+    packageOverrides = final: prev: { };
+  };
+in
+python.pkgs.toPythonModule (
+  python.pkgs.buildPythonApplication rec {
     pname = "searxng";
-    version = "0-unstable-2024-06-19";
+    version = "0-unstable-2026-09-12";
+    pyproject = true;
 
     src = fetchFromGitHub {
       owner = "searxng";
       repo = "searxng";
-      rev = "acf3f109b2a99a5e6f25f5f2975016a36673c6ef";
-      hash = "sha256-NdFnB5JEaWo7gt+RwxKxkVtEL8uGLlc4z0ROHN+zoL4=";
+      rev = "d4f00d15d4c2b8260124a9039b80bc9c1c26499b";
+      hash = "sha256-N5sCetc2JEnKl9eZn2HtJ4QP3TAH9h75/lmqqSWpPSg=";
     };
 
-    postPatch = ''
-      sed -i 's/==.*$//' requirements.txt
-    '';
+    nativeBuildInputs = with python.pkgs; [ pythonRelaxDepsHook ];
+
+    pythonRelaxDeps = true;
 
     preBuild =
       let
         versionString = lib.concatStringsSep "." (
-          builtins.tail (lib.splitString "-" (lib.removePrefix "0-" version))
+          map (lib.removePrefix "0") (builtins.tail (lib.splitString "-" (lib.removePrefix "0-" version)))
         );
         commitAbbrev = builtins.substring 0 8 src.rev;
       in
@@ -40,30 +46,28 @@ python3.pkgs.toPythonModule (
         EOF
       '';
 
-    dependencies =
-      with python3.pkgs;
-      [
-        babel
-        certifi
-        python-dateutil
-        fasttext-predict
-        flask
-        flask-babel
-        brotli
-        jinja2
-        lxml
-        pygments
-        pytomlpp
-        pyyaml
-        redis
-        uvloop
-        setproctitle
-        httpx
-        httpx-socks
-        markdown-it-py
-      ]
-      ++ httpx.optional-dependencies.http2
-      ++ httpx-socks.optional-dependencies.asyncio;
+    build-system = with python.pkgs; [ setuptools ];
+
+    dependencies = with python.pkgs; [
+      babel
+      certifi
+      cloudscraper
+      curl-cffi
+      flask
+      flask-babel
+      isodate
+      jinja2
+      lxml
+      markdown-it-py
+      msgspec
+      pygments
+      python-dateutil
+      pyyaml
+      typer
+      typing-extensions
+      valkey
+      whitenoise
+    ];
 
     # tests try to connect to network
     doCheck = false;
@@ -71,24 +75,25 @@ python3.pkgs.toPythonModule (
     postInstall = ''
       # Create a symlink for easier access to static data
       mkdir -p $out/share
-      ln -s ../${python3.sitePackages}/searx/static $out/share/
+      ln -s ../${python.sitePackages}/searx/static $out/share/
 
       # copy config schema for the limiter
-      cp searx/limiter.toml $out/${python3.sitePackages}/searx/limiter.toml
+      cp searx/limiter.toml $out/${python.sitePackages}/searx/limiter.toml
     '';
 
     passthru = {
       tests = {
         searxng = nixosTests.searx;
       };
+      updateScript = unstableGitUpdater { hardcodeZeroVersion = true; };
     };
 
-    meta = with lib; {
+    meta = {
       homepage = "https://github.com/searxng/searxng";
       description = "Fork of Searx, a privacy-respecting, hackable metasearch engine";
-      license = licenses.agpl3Plus;
+      license = lib.licenses.agpl3Plus;
       mainProgram = "searxng-run";
-      maintainers = with maintainers; [
+      maintainers = with lib.maintainers; [
         SuperSandro2000
         _999eagle
       ];

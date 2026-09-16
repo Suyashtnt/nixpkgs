@@ -1,8 +1,7 @@
 {
   lib,
-  async-timeout,
-  buildPythonPackage,
   base36,
+  buildPythonPackage,
   chacha20poly1305-reuseable,
   cryptography,
   fetchFromGitHub,
@@ -12,26 +11,26 @@
   pytest-asyncio,
   pytest-timeout,
   pytestCheckHook,
-  pythonOlder,
+  pythonAtLeast,
+  setuptools,
   zeroconf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hap-python";
-  version = "4.9.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "5.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ikalchev";
     repo = "HAP-python";
-    rev = "refs/tags/${version}";
-    hash = "sha256-nnh8PSEcuPN1qGuInJ7uYe83zdne8axbTrHd4g1xoJs=";
+    tag = finalAttrs.version;
+    hash = "sha256-+EhxoO5X/ANGh008WE0sJeBsu8SRnuds3hXGxNWpKnk=";
   };
 
-  propagatedBuildInputs = [
-    async-timeout
+  build-system = [ setuptools ];
+
+  dependencies = [
     chacha20poly1305-reuseable
     cryptography
     h11
@@ -39,7 +38,7 @@ buildPythonPackage rec {
     zeroconf
   ];
 
-  passthru.optional-dependencies.QRCode = [
+  optional-dependencies.QRCode = [
     base36
     pyqrcode
   ];
@@ -48,32 +47,21 @@ buildPythonPackage rec {
     pytest-asyncio
     pytest-timeout
     pytestCheckHook
-  ] ++ passthru.optional-dependencies.QRCode;
-
-  disabledTestPaths = [
-    # Disable tests requiring network access
-    "tests/test_accessory_driver.py"
-    "tests/test_hap_handler.py"
-    "tests/test_hap_protocol.py"
-  ];
-
-  disabledTests = [
-    "test_persist_and_load"
-    "test_we_can_connect"
-    "test_idle_connection_cleanup"
-    "test_we_can_start_stop"
-    "test_push_event"
-    "test_bridge_run_stop"
-    "test_migration_to_include_client_properties"
-  ];
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "pyhap" ];
 
-  meta = with lib; {
+  disabledTests = lib.optionals (pythonAtLeast "3.14") [
+    # https://github.com/ikalchev/HAP-python/issues/490
+    "test_start_from_sync"
+  ];
+
+  meta = {
     description = "HomeKit Accessory Protocol implementation";
     homepage = "https://github.com/ikalchev/HAP-python";
-    changelog = "https://github.com/ikalchev/HAP-python/blob/${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ oro ];
+    changelog = "https://github.com/ikalchev/HAP-python/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ oro ];
   };
-}
+})

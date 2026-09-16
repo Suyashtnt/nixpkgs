@@ -2,15 +2,17 @@
   lib,
   anyio,
   buildPythonPackage,
-  curio,
   fetchFromGitHub,
   httpx,
   hypothesis,
+  mypy,
   poetry-core,
   pytest-aio,
-  pytest-subtests,
+  pytest-benchmark,
+  pytest-cov-stub,
+  pytest-mypy,
+  pytest-mypy-plugins,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   trio,
   typing-extensions,
@@ -18,23 +20,15 @@
 
 buildPythonPackage rec {
   pname = "returns";
-  version = "0.23.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "0.29.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dry-python";
     repo = "returns";
-    rev = "refs/tags/${version}";
-    hash = "sha256-4ZP/wvPgqQQec/BaXuL9r7BEc2G+LztMdFul0NeEJTc=";
+    tag = version;
+    hash = "sha256-xCdCZtbo1AmBeKdY4CeQdK8s+23EfTyQa5o78j1+yVw=";
   };
-
-  postPatch = ''
-    sed -i setup.cfg \
-      -e '/--cov.*/d' \
-      -e '/--mypy.*/d'
-  '';
 
   nativeBuildInputs = [ poetry-core ];
 
@@ -42,29 +36,28 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [
     anyio
-    curio
     httpx
     hypothesis
+    mypy
     pytestCheckHook
     pytest-aio
-    pytest-subtests
+    pytest-benchmark
+    pytest-cov-stub
+    pytest-mypy
+    pytest-mypy-plugins
     setuptools
     trio
   ];
 
-  preCheck = ''
-    rm -rf returns/contrib/mypy
-  '';
-
   pythonImportsCheck = [ "returns" ];
 
-  pytestFlagsArray = [ "--ignore=typesafety" ];
+  disabledTestPaths = [ "typesafety" ];
 
-  meta = with lib; {
-    description = "Make your functions return something meaningful, typed, and safe!";
+  meta = {
+    description = "Make your functions return something meaningful, typed, and safe";
     homepage = "https://github.com/dry-python/returns";
-    changelog = "https://github.com/dry-python/returns/blob/${version}/CHANGELOG.md";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ jessemoore ];
+    changelog = "https://github.com/dry-python/returns/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ jessemoore ];
   };
 }

@@ -1,43 +1,54 @@
 {
   lib,
-  buildNimPackage,
   fetchFromGitHub,
-  nim,
-  openssl,
+  buildNimPackage,
   makeWrapper,
+  nix-update-script,
+
+  openssl,
+  nim,
+  useSystemNim ? true,
 }:
+buildNimPackage (finalAttrs: {
 
-buildNimPackage (
-  final: prev: {
-    pname = "nimble";
-    version = "0-unstable-2024-05-14";
+  pname = "nimble";
+  version = "0.24.1";
 
-    src = fetchFromGitHub {
-      owner = "nim-lang";
-      repo = "nimble";
-      rev = "f8bd7b5fa6ea7a583b411b5959b06e6b5eb23667";
-      hash = "sha256-aRDaucD6wOUPtXLIrahvK0vBfurdgFrk+swzqzMA09w=";
-    };
+  src = fetchFromGitHub {
+    owner = "nim-lang";
+    repo = "nimble";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-39d9EsS0opz6vQzSE91gBRQbaTPeebVQLf/QdJoaD8o=";
+    fetchSubmodules = true;
+  };
 
-    lockFile = ./lock.json;
+  nativeBuildInputs = [ makeWrapper ];
+  buildInputs = [ openssl ];
 
-    nativeBuildInputs = [ makeWrapper ];
-    buildInputs = [ openssl ];
+  nimFlags = [ "--define:git_revision_override=${finalAttrs.src.tag}" ];
 
-    nimFlags = [ "--define:git_revision_override=${final.src.rev}" ];
+  doCheck = false; # it works on their machine
 
-    doCheck = false; # it works on their machine
+  postInstall =
+    let
+      wrapperFlags = lib.concatStringsSep " " (
+        [ "--suffix PATH : ${lib.makeBinPath [ nim ]}" ]
+        ++ lib.optionals useSystemNim [
+          "--add-flag \"--nim:${lib.getExe nim}\""
+          "--add-flag '--useSystemNim'"
+        ]
+      );
+    in
+    "wrapProgram $out/bin/nimble ${wrapperFlags}";
 
-    postInstall = ''
-      wrapProgram $out/bin/nimble \
-        --suffix PATH : ${lib.makeBinPath [ nim ]}
-    '';
+  passthru.updateScript = nix-update-script { };
 
-    meta = {
-      description = "Package manager for the Nim programming language";
-      homepage = "https://github.com/nim-lang/nimble";
-      license = lib.licenses.bsd3;
-      mainProgram = "nimble";
-    };
-  }
-)
+  meta = {
+    description = "Package manager for the Nim programming language";
+    homepage = "https://github.com/nim-lang/nimble";
+    changelog = "https://github.com/nim-lang/nimble/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.bsd3;
+    mainProgram = "nimble";
+    teams = [ lib.teams.nim ];
+  };
+})

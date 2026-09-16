@@ -8,19 +8,17 @@
   absl-py,
   afdko,
   axisregistry,
-  babelfont,
   beautifulsoup4,
   black,
   brotli,
-  bumpfontversion,
   coreutils,
   diffenator2,
-  font-v,
-  fontbakery,
+  ffmpeg-python,
   fontfeatures,
   fontmake,
   fonttools,
   gflanguages,
+  gfmetadata,
   gfsubsets,
   glyphsets,
   glyphslib,
@@ -43,8 +41,6 @@
   requests,
   rich,
   ruamel-yaml,
-  skia-pathops,
-  statmake,
   strictyaml,
   tabulate,
   ttfautohint-py,
@@ -52,7 +48,10 @@
   unidecode,
   vharfbuzz,
   vttlib,
+  gitpython,
+  freetype-py,
   python,
+  gitUpdater,
 }:
 
 let
@@ -61,14 +60,14 @@ let
 in
 buildPythonPackage rec {
   pname = "gftools";
-  version = "0.9.70";
+  version = "0.10.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "googlefonts";
     repo = "gftools";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-mZGkcIODzc2nuhAWU83BkhjWg4+8vnmCA4eXgDsyFy8=";
+    tag = "v${version}";
+    hash = "sha256-EpEMvHoSuuptVu/GVk+RFmxa0jE3acg9KUYtUrodHOs=";
   };
 
   postPatch = ''
@@ -91,7 +90,7 @@ buildPythonPackage rec {
 
     substituteInPlace \
       Lib/gftools/builder/operations/autohintOTF.py \
-      --replace-fail '"otfautohint' '"${lib.getExe' afdko "otfautohint"}'
+      --replace-fail 'otfautohint' '${lib.getExe' afdko "otfautohint"}'
 
     substituteInPlace \
       Lib/gftools/builder/operations/paintcompiler.py \
@@ -106,13 +105,15 @@ buildPythonPackage rec {
       --replace-fail '"cp' '"${lib.getExe' coreutils "cp"}'
 
     substituteInPlace \
-      Lib/gftools/builder/operations/{fix,remap,autohint,buildStat,addSubset,remapLayout,buildVTT}.py \
+      Lib/gftools/builder/operations/{fix,remap,autohint,buildStat,addSubset,remapLayout,buildVTT,buildAvar2}.py \
       --replace-fail '"gftools' '"${placeholder "out"}/bin/gftools'
 
     substituteInPlace \
       Lib/gftools/builder/operations/rename.py \
       --replace-fail "'gftools" "'${placeholder "out"}t/bin/gftools"
   '';
+
+  env.PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python";
 
   pythonRelaxDeps = [
     "protobuf"
@@ -128,15 +129,14 @@ buildPythonPackage rec {
     absl-py
     afdko
     axisregistry
-    babelfont
     beautifulsoup4
     brotli
-    bumpfontversion
-    font-v
+    ffmpeg-python
     fontfeatures
     fontmake
     fonttools
     gflanguages
+    gfmetadata
     gfsubsets
     glyphsets
     glyphslib
@@ -154,9 +154,6 @@ buildPythonPackage rec {
     requests
     rich
     ruamel-yaml
-    setuptools
-    skia-pathops
-    statmake
     strictyaml
     tabulate
     ttfautohint-py
@@ -164,13 +161,16 @@ buildPythonPackage rec {
     unidecode
     vharfbuzz
     vttlib
-  ] ++ fonttools.optional-dependencies.ufo ++ fontmake.optional-dependencies.json;
+    gitpython
+  ]
+  ++ fonttools.optional-dependencies.ufo
+  ++ fontmake.optional-dependencies.json;
 
   optional-dependencies = {
     qa = [
       diffenator2
-      fontbakery
       pycairo
+      freetype-py
     ];
     test = [
       black
@@ -181,7 +181,7 @@ buildPythonPackage rec {
   nativeCheckInputs = [ pytestCheckHook ];
 
   disabledTestPaths = [
-    # Wants none exsiting module
+    # Wants none existing module
     "bin/test_args.py"
     # Requires internet
     "tests/push/test_items.py"
@@ -196,12 +196,18 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "gftools" ];
 
-  meta = with lib; {
+  passthru.updateScript = gitUpdater {
+    rev-prefix = "v";
+    # Miss Released version
+    ignoredVersions = "0.9991";
+  };
+
+  meta = {
     description = "Misc tools for working with the Google Fonts library";
     homepage = "https://github.com/googlefonts/gftools";
-    changelog = "https://github.com/googlefonts/gftools/releases/tag/v${version}";
-    license = licenses.asl20;
+    changelog = "https://github.com/googlefonts/gftools/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
     mainProgram = "gftools";
-    maintainers = with maintainers; [ jopejoe1 ];
+    maintainers = with lib.maintainers; [ jopejoe1 ];
   };
 }

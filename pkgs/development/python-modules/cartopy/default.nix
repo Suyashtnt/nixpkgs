@@ -1,55 +1,59 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
-  fetchpatch,
-  fetchPypi,
+  fetchFromGitHub,
+
+  # build-system
   cython,
   setuptools-scm,
+
+  # nativeBuildInputs
   geos,
   proj,
+
+  # dependencies
   matplotlib,
   numpy,
   pyproj,
   pyshp,
   shapely,
+
+  # optional-dependencies
+  # ows
   owslib,
   pillow,
+  # plotting
   gdal,
   scipy,
+
+  # tests
   fontconfig,
   pytest-mpl,
   pytestCheckHook,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cartopy";
-  version = "0.23.0";
+  version = "0.25.0.post2";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  disabled = pythonOlder "3.8";
-
-  format = "setuptools";
-
-  src = fetchPypi {
-    inherit version;
-    pname = "Cartopy";
-    hash = "sha256-Ix83s1cB8rox2UlZzKdebaBMLuo6fxTOHHXuOw6udnY=";
+  src = fetchFromGitHub {
+    owner = "SciTools";
+    repo = "cartopy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-N5cE+VKux5Wu2CtGujuMy3UA1fZBFkD+Fin/rb4rtUM=";
   };
 
-  patches = [
-    # Some tests in the 0.23.0 release are failing due to missing network markers. Revisit after update.
-    (fetchpatch {
-      name = "mnt-add-missing-needs-network-markers.patch";
-      url = "https://github.com/SciTools/cartopy/commit/2403847ea69c3d95e899ad5d0cab32ac6017df0e.patch";
-      hash = "sha256-aGBUX4jFn7GgoqmHVC51DmS+ga3GcQGKfkut++x67Q0=";
-    })
+  build-system = [
+    cython
+    setuptools-scm
   ];
 
   nativeBuildInputs = [
-    cython
     geos # for geos-config
     proj
-    setuptools-scm
   ];
 
   buildInputs = [
@@ -57,7 +61,7 @@ buildPythonPackage rec {
     proj
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     matplotlib
     numpy
     pyproj
@@ -65,7 +69,7 @@ buildPythonPackage rec {
     shapely
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     ows = [
       owslib
       pillow
@@ -80,30 +84,61 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     pytest-mpl
     pytestCheckHook
-  ] ++ lib.flatten (lib.attrValues passthru.optional-dependencies);
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
   preCheck = ''
     export FONTCONFIG_FILE=${fontconfig.out}/etc/fonts/fonts.conf
-    export HOME=$TMPDIR
   '';
 
-  pytestFlagsArray = [
+  pytestFlags = [
     "--pyargs"
     "cartopy"
-    "-m"
-    "'not network and not natural_earth'"
+  ];
+
+  disabledTestMarks = [
+    "network"
+    "natural_earth"
   ];
 
   disabledTests = [
+    # Numerical errors. Example:
+    #   AssertionError: Arrays are not almost equal to 4 decimals
+    "test_LatitudeFormatter_mercator"
+    "test_cursor_values"
+    "test_default"
+    "test_extents"
+    "test_geoaxes_no_subslice"
+    "test_geoaxes_set_boundary_clipping"
+    "test_get_extent"
+    "test_gridliner_labels_zoom"
+    "test_infinite_loop_bounds"
+    "test_invalid_xy_domain_corner"
+    "test_invalid_y_domain"
+    "test_osgb_vals"
+    "test_pcolormesh_datalim"
+    "test_plot_after_contour_doesnt_shrink"
+    "test_sweep"
+    "test_tiny_point_between_boundary_points"
+    "test_transform_point"
+    "test_with_transform"
+
+    # Failed: Error: Image files did not match.
+    "test_background_img"
     "test_gridliner_constrained_adjust_datalim"
-    "test_gridliner_labels_bbox_style"
+    "test_imshow"
+    "test_pil_Image"
+    "test_stock_img"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Process geospatial data to create maps and perform analyses";
-    mainProgram = "feature_download";
-    license = licenses.lgpl3Plus;
     homepage = "https://scitools.org.uk/cartopy/docs/latest/";
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/SciTools/cartopy/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.lgpl3Plus;
+    maintainers = [ ];
+    teams = [ lib.teams.geospatial ];
+    mainProgram = "feature_download";
   };
-}
+})

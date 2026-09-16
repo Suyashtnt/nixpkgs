@@ -1,8 +1,14 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.coredns;
   configFile = pkgs.writeText "Corefile" cfg.config;
-in {
+in
+{
   options.services.coredns = {
     enable = lib.mkEnableOption "Coredns dns server";
 
@@ -23,7 +29,7 @@ in {
     package = lib.mkPackageOption pkgs "coredns" { };
 
     extraArgs = lib.mkOption {
-      default = [];
+      default = [ ];
       example = [ "-dns.port=53" ];
       type = lib.types.listOf lib.types.str;
       description = "Extra arguments to pass to coredns.";
@@ -36,7 +42,6 @@ in {
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
-        PermissionsStartOnly = true;
         LimitNPROC = 512;
         LimitNOFILE = 1048576;
         CapabilityBoundingSet = "cap_net_bind_service";

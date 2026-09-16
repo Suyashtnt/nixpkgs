@@ -1,26 +1,63 @@
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 
 with lib;
 
 let
   cfg = config.services.flarum;
 
-  flarumInstallConfig = pkgs.writeText "config.json" (builtins.toJSON {
-    debug = false;
-    offline = false;
+  # Only placeholders reach the world-readable Nix store; the install
+  # script substitutes the real secrets at runtime.
+  dbConfig =
+    # `engine` is MySQL-only; omit for other drivers
+    (if cfg.database.driver == "mysql" then cfg.database else removeAttrs cfg.database [ "engine" ])
+    // optionalAttrs (cfg.databasePasswordFile != null) {
+      password = "@databasePassword@";
+    };
 
-    baseUrl = cfg.baseUrl;
-    databaseConfiguration = cfg.database;
-    adminUser = {
-      username = cfg.adminUser;
-      password = cfg.initialAdminPassword;
-      email = cfg.adminEmail;
+  flarumInstallConfig = pkgs.writeText "config.json" (
+    builtins.toJSON {
+      debug = false;
+      offline = false;
+
+      baseUrl = cfg.baseUrl;
+      databaseConfiguration = dbConfig;
+      adminUser = {
+        username = cfg.adminUser;
+        password =
+          if cfg.initialAdminPasswordFile != null then "@adminPassword@" else cfg.initialAdminPassword;
+        email = cfg.adminEmail;
+      };
+      settings = {
+        forum_title = cfg.forumTitle;
+      };
+    }
+  );
+
+  phpFormat = pkgs.formats.php { };
+
+  configPhpFile = phpFormat.generate "flarum-config.php" {
+    debug = false;
+    database = dbConfig;
+    url = cfg.baseUrl;
+    paths = {
+      api = "api";
+      admin = "admin";
     };
-    settings = {
-      forum_title = cfg.forumTitle;
+    headers = {
+      poweredByHeader = true;
+      referrerPolicy = "same-origin";
     };
-  });
-in {
+    queue = {
+      driver = "sync";
+    };
+  };
+in
+{
   options.services.flarum = {
     enable = mkEnableOption "Flarum discussion platform";
 
@@ -61,7 +98,26 @@ in {
     initialAdminPassword = mkOption {
       type = types.str;
       default = "flarum";
-      description = "Initial password for the adminUser";
+      description = ''
+        Initial password for the adminUser.
+
+        WARNING: This is stored world-readable in the Nix store.
+        Use {option}`initialAdminPasswordFile` instead.
+      '';
+    };
+
+    initialAdminPasswordFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      example = "/run/secrets/flarum-admin-password";
+      description = ''
+        File containing the initial password for adminUser.
+        Must be readable by the flarum user.
+        Takes precedence over {option}`initialAdminPassword`.
+
+        The password must not contain `"` or `\` characters, as it is
+        substituted into a JSON installation config verbatim.
+      '';
     };
 
     user = mkOption {
@@ -82,26 +138,99 @@ in {
       description = "Home directory for writable storage";
     };
 
-    database = mkOption rec {
-      type = with types; attrsOf (oneOf [str bool int]);
-      description = "MySQL database parameters";
-      default = {
-        # the database driver; i.e. MySQL; MariaDB...
-        driver = "mysql";
-        # the host of the connection; localhost in most cases unless using an external service
-        host = "localhost";
-        # the name of the database in the instance
-        database = "flarum";
-        # database username
-        username = "flarum";
-        # database password
-        password = "";
-        # the prefix for the tables; useful if you are sharing the same database with another service
-        prefix = "";
-        # the port of the connection; defaults to 3306 with MySQL
-        port = 3306;
-        strict = false;
+    database = mkOption {
+      type = types.submodule {
+        freeformType =
+          with types;
+          attrsOf (oneOf [
+            str
+            bool
+            int
+          ]);
+        options = {
+          driver = mkOption {
+            type = types.str;
+            default = "mysql";
+            description = "Database driver; i.e. MySQL, MariaDB...";
+          };
+          host = mkOption {
+            type = types.str;
+            default = "localhost";
+            description = "Database server hostname.";
+          };
+          port = mkOption {
+            type = types.port;
+            default = 3306;
+            description = "Database connection port; defaults to 3306 with MySQL.";
+          };
+          database = mkOption {
+            type = types.str;
+            default = "flarum";
+            description = "Database name.";
+          };
+          username = mkOption {
+            type = types.str;
+            default = "flarum";
+            description = "Username for database server access.";
+          };
+          password = mkOption {
+            type = types.str;
+            default = "";
+            description = "Password for database server access.";
+          };
+          charset = mkOption {
+            type = types.str;
+            default = "utf8mb4";
+            description = "Character encoding for the database.";
+          };
+          collation = mkOption {
+            type = types.str;
+            default = "utf8mb4_unicode_ci";
+            description = "Character collation for database sorting and comparison.";
+          };
+          prefix = mkOption {
+            type = types.str;
+            default = "";
+            description = "Table prefix; useful for sharing a database with other services.";
+          };
+          strict = mkOption {
+            type = types.bool;
+            default = false;
+            description = "Enable strict SQL mode.";
+          };
+          engine = mkOption {
+            type = types.str;
+            default = "InnoDB";
+            description = "Storage engine for new tables; MySQL-only.";
+          };
+          prefix_indexes = mkOption {
+            type = types.bool;
+            default = true;
+            description = "Apply table prefix to database index names.";
+          };
+        };
       };
+      default = { };
+      description = ''
+        MySQL database parameters.
+
+        WARNING: A `password` set here is stored world-readable in the
+        Nix store. Use {option}`databasePasswordFile` instead.
+      '';
+    };
+
+    databasePasswordFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      example = "/run/secrets/flarum-db-password";
+      description = ''
+        File containing the database password.
+        Must be readable by the flarum user.
+        Takes precedence over `database.password`.
+
+        The password must not contain `"` or `\` characters, as it is
+        substituted into a JSON installation config verbatim.
+      '';
     };
 
     createDatabaseLocally = mkOption {
@@ -110,9 +239,28 @@ in {
       description = ''
         Create the database and database user locally, and run installation.
 
-        WARNING: Due to https://github.com/flarum/framework/issues/4018, this option is set
+        WARNING: Due to <https://github.com/flarum/framework/issues/4018>, this option is set
         to false by default. The 'flarum install' command may delete existing database tables.
         Only set this to true if you are certain you are working with a fresh, empty database.
+      '';
+    };
+
+    adoptConfig = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether to let this module manage a pre-existing config.php,
+        such as a hand-maintained one (typically with
+        {option}`createDatabaseLocally` = false).
+
+        By default, a config.php this module didn't create is left alone:
+        {option}`baseUrl` and {option}`database` are not applied to it, so
+        real settings can't get silently overwritten by their defaults.
+
+        Before enabling this, make sure {option}`baseUrl` and
+        {option}`database` already match the file's real values. Once
+        enabled, config.php is regenerated from these options on every
+        activation, and anything in the file not covered by them is lost.
       '';
     };
   };
@@ -125,7 +273,7 @@ in {
       homeMode = "755";
       group = cfg.group;
     };
-    users.groups.${cfg.group} = {};
+    users.groups.${cfg.group} = { };
 
     services.phpfpm.pools.flarum = {
       user = cfg.user;
@@ -150,7 +298,7 @@ in {
       enable = true;
       virtualHosts."${cfg.domain}" = {
         root = "${cfg.stateDir}/public";
-        locations."~ \.php$".extraConfig = ''
+        locations."~ \\.php$".extraConfig = ''
           fastcgi_pass unix:${config.services.phpfpm.pools.flarum.socket};
           fastcgi_index site.php;
         '';
@@ -163,8 +311,8 @@ in {
 
     services.mysql = mkIf cfg.enable {
       enable = true;
-      package = pkgs.mysql;
-      ensureDatabases = [cfg.database.database];
+      package = pkgs.mariadb;
+      ensureDatabases = [ cfg.database.database ];
       ensureUsers = [
         {
           name = cfg.database.username;
@@ -182,18 +330,29 @@ in {
       }
     ];
 
+    systemd.services."phpfpm-flarum" = {
+      restartTriggers = [ cfg.package ];
+    };
+
     systemd.services.flarum-install = {
       description = "Flarum installation";
-      requiredBy = ["phpfpm-flarum.service"];
-      before = ["phpfpm-flarum.service"];
-      requires = ["mysql.service"];
-      after = ["mysql.service"];
+      requiredBy = [ "phpfpm-flarum.service" ];
+      before = [ "phpfpm-flarum.service" ];
+      requires = [ "mysql.service" ];
+      after = [ "mysql.service" ];
+      restartTriggers = [
+        cfg.package
+        configPhpFile
+      ];
       serviceConfig = {
         Type = "oneshot";
+        RemainAfterExit = true;
         User = cfg.user;
         Group = cfg.group;
+        # The secret-filled install config is staged in /tmp
+        PrivateTmp = true;
       };
-      path = [config.services.phpfpm.phpPackage];
+      path = [ config.services.phpfpm.phpPackage ];
       script = ''
         mkdir -p ${cfg.stateDir}/{extensions,public/assets/avatars}
         mkdir -p ${cfg.stateDir}/storage/{cache,formatter,sessions,views}
@@ -201,11 +360,43 @@ in {
         cp -f ${cfg.package}/share/php/flarum/{extend.php,site.php,flarum} .
         ln -sf ${cfg.package}/share/php/flarum/vendor .
         ln -sf ${cfg.package}/share/php/flarum/public/index.php public/
-      '' + optionalString (cfg.createDatabaseLocally && cfg.database.driver == "mysql") ''
-        if [ ! -f config.php ]; then
-          php flarum install --file=${flarumInstallConfig}
+
+        ${optionalString cfg.adoptConfig "touch .flarum-installed"}
+
+        # config.php with no marker means we didn't write it, so leave it alone.
+        # This check must come before the guard below: that guard also touches
+        # the marker, which would make this check pass for the wrong reason.
+        if [ ! -f .flarum-installed ] && [ -f config.php ]; then
+          echo "flarum-install: config.php exists but wasn't written by this module; leaving it untouched." >&2
+          echo "flarum-install: set services.flarum.adoptConfig = true to adopt it." >&2
+        else
+      ''
+      + optionalString (cfg.createDatabaseLocally && cfg.database.driver == "mysql") ''
+        if [ ! -f .flarum-installed ]; then
+          if [ ! -f config.php ]; then
+            install -m 0600 ${flarumInstallConfig} /tmp/flarum-install.json
+            ${optionalString (cfg.initialAdminPasswordFile != null) ''
+              ${pkgs.replace-secret}/bin/replace-secret '@adminPassword@' \
+                ${escapeShellArg cfg.initialAdminPasswordFile} /tmp/flarum-install.json
+            ''}
+            ${optionalString (cfg.databasePasswordFile != null) ''
+              ${pkgs.replace-secret}/bin/replace-secret '@databasePassword@' \
+                ${escapeShellArg cfg.databasePasswordFile} /tmp/flarum-install.json
+            ''}
+            php flarum install --file=/tmp/flarum-install.json
+          fi
+          touch .flarum-installed
         fi
-      '' + ''
+      ''
+      + ''
+          touch .flarum-installed
+          install -m 0600 ${configPhpFile} config.php
+          ${optionalString (cfg.databasePasswordFile != null) ''
+            ${pkgs.replace-secret}/bin/replace-secret '@databasePassword@' \
+              ${escapeShellArg cfg.databasePasswordFile} config.php
+          ''}
+        fi
+
         if [ -f config.php ]; then
           php flarum migrate
           php flarum cache:clear
@@ -214,5 +405,8 @@ in {
     };
   };
 
-  meta.maintainers = with lib.maintainers; [ fsagbuya jasonodoom ];
+  meta.maintainers = with lib.maintainers; [
+    fsagbuya
+    jasonodoom
+  ];
 }

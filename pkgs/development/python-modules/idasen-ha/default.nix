@@ -1,28 +1,35 @@
 {
+  bleak-retry-connector,
   buildPythonPackage,
   fetchFromGitHub,
   idasen,
   lib,
   pytest-asyncio,
   pytestCheckHook,
+  pyprojectVersionPatchHook,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "idasen-ha";
-  version = "2.6.2";
+  version = "3.0.1";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "abmantis";
     repo = "idasen-ha";
-    rev = "refs/tags/${version}";
-    hash = "sha256-lqqSx4jxQVq2pjVv9lvaX6nNK6OqtMjPqOtLMLpVMUU=";
+    tag = version;
+    hash = "sha256-Je7zwPkwAJ1gOWV8wL0utbqC+RkLB10B+IZUFoUFeY4=";
   };
+
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
 
   build-system = [ setuptools ];
 
-  dependencies = [ idasen ];
+  dependencies = [
+    bleak-retry-connector
+    idasen
+  ];
 
   pythonImportsCheck = [ "idasen_ha" ];
 

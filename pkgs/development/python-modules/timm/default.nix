@@ -1,8 +1,9 @@
 {
   lib,
+  stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
+  pythonAtLeast,
 
   # build-system
   pdm-backend,
@@ -14,25 +15,36 @@
   torch,
   torchvision,
 
-  # checks
+  # tests
   expecttest,
   pytestCheckHook,
   pytest-timeout,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "timm";
-  version = "1.0.9";
+  version = "1.0.29";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "huggingface";
     repo = "pytorch-image-models";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-iWZXile3hCUMx2q3VHJasX7rlJmT0OKBm9rkCXuWISw=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-kmz6olMnxeD5MMiJnz3mcdz6RYO7T8kaP2+mJI2RAco=";
   };
+
+  # Fix torch 2.11.0 compatibility
+  # AttributeError: 'AdamWLegacy' object has no attribute '_cuda_graph_capture_health_check'
+  postPatch = ''
+    substituteInPlace \
+      timm/optim/adopt.py \
+      timm/optim/adamw.py \
+      timm/optim/nadamw.py \
+      --replace-fail \
+        "_cuda_graph_capture_health_check" \
+        "_accelerator_graph_capture_health_check"
+  '';
 
   build-system = [ pdm-backend ];
 
@@ -50,16 +62,21 @@ buildPythonPackage rec {
     pytest-timeout
   ];
 
-  pytestFlagsArray = [ "tests" ];
+  enabledTestPaths = [ "tests" ];
+
+  disabledTests =
+    lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+      # assert nan < 71.5658950805664
+      "test_optim_factory"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [
+      # AssertionError: assert 98178776.0 < 115.88214111328125
+      "test_optim_factory"
+    ];
 
   disabledTestPaths = [
     # Takes too long and also tries to download models
     "tests/test_models.py"
-  ];
-
-  disabledTests = [
-    # AttributeError: 'Lookahead' object has no attribute '_optimizer_step_pre...
-    "test_lookahead"
   ];
 
   pythonImportsCheck = [
@@ -70,8 +87,8 @@ buildPythonPackage rec {
   meta = {
     description = "PyTorch image models, scripts, and pretrained weights";
     homepage = "https://huggingface.co/docs/timm/index";
-    changelog = "https://github.com/huggingface/pytorch-image-models/blob/v${version}/README.md#whats-new";
+    changelog = "https://github.com/huggingface/pytorch-image-models/blob/${finalAttrs.src.tag}/README.md#whats-new";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ bcdarwin ];
   };
-}
+})

@@ -1,32 +1,34 @@
-{ lib
-, rustPlatform
-, fetchFromGitHub
-, installShellFiles
-, pkg-config
-, openssl
-, xz
-, stdenv
-, darwin
-, nix-update-script
+{
+  lib,
+  rustPlatform,
+  fetchFromGitHub,
+  installShellFiles,
+  pkg-config,
+  openssl,
+  nix-update-script,
+  versionCheckHook,
+  callPackage,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "typst";
-  version = "0.11.1";
+  version = "0.15.1";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "typst";
     repo = "typst";
-    rev = "v${version}";
-    hash = "sha256-FagjVU8BJZStE/geexZERuV2P28iF/pPn2mTi1Gu9iU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Z0DM/fBKIvA8y53GUlPrgthnXfOFbnzuPCOM9/ssrI8=";
+    leaveDotGit = true;
+    postFetch = ''
+      cd $out
+      git rev-parse HEAD > COMMIT
+      rm -rf .git
+    '';
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "typst-dev-assets-0.11.1" = "sha256-SMRtitDHFpdMEoOuPBnC3RBTyZ96hb4KmMSCXpAyKfU=";
-    };
-  };
+  cargoHash = "sha256-+/2L4o9d8UENPtJAD/sSqf5ysOfHJYZgnvhOAoRdK40=";
 
   nativeBuildInputs = [
     installShellFiles
@@ -35,11 +37,6 @@ rustPlatform.buildRustPackage rec {
 
   buildInputs = [
     openssl
-    xz
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.CoreFoundation
-    darwin.apple_sdk.frameworks.CoreServices
-    darwin.apple_sdk.frameworks.Security
   ];
 
   env = {
@@ -47,13 +44,16 @@ rustPlatform.buildRustPackage rec {
     OPENSSL_NO_VENDOR = true;
   };
 
+  # Fix for "Found argument '--test-threads' which wasn't expected, or isn't valid in this context"
   postPatch = ''
-    # Fix for "Found argument '--test-threads' which wasn't expected, or isn't valid in this context"
-    substituteInPlace tests/src/tests.rs --replace-fail 'ARGS.num_threads' 'ARGS.test_threads'
-    substituteInPlace tests/src/args.rs --replace-fail 'num_threads' 'test_threads'
+    substituteInPlace tests/src/tests.rs --replace-fail \
+      'ARGS.num_threads' \
+      'ARGS.test_threads'
+    substituteInPlace tests/src/args.rs --replace-fail \
+      'num_threads' \
+      'test_threads'
 
-    # Fix build with Rust 1.80; remove on next release
-    ln -sf ${./Cargo.lock} Cargo.lock
+    export TYPST_COMMIT_SHA="$(cat COMMIT | cut -c1-8)"
   '';
 
   postInstall = ''
@@ -65,14 +65,26 @@ rustPlatform.buildRustPackage rec {
 
   cargoTestFlags = [ "--workspace" ];
 
-  passthru.updateScript = nix-update-script { };
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  passthru = {
+    updateScript = nix-update-script { };
+    packages = callPackage ./typst-packages.nix { };
+    wrapper = callPackage ./wrapper.nix { };
+    withPackages = ps: finalAttrs.passthru.wrapper { packages = ps; };
+  };
 
   meta = {
-    changelog = "https://github.com/typst/typst/releases/tag/${src.rev}";
+    changelog = "https://github.com/typst/typst/releases/tag/${finalAttrs.src.tag}";
     description = "New markup-based typesetting system that is powerful and easy to learn";
     homepage = "https://github.com/typst/typst";
     license = lib.licenses.asl20;
     mainProgram = "typst";
-    maintainers = with lib.maintainers; [ drupol figsoda kanashimia ];
+    maintainers = with lib.maintainers; [
+      kanashimia
+      RossSmyth
+      faukah
+    ];
   };
-}
+})

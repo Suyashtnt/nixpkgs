@@ -2,6 +2,8 @@
   lib,
   stdenv,
   fetchFromGitHub,
+
+  bashInteractive,
   dbus,
   docbook2x,
   libapparmor,
@@ -14,18 +16,19 @@
   openssl,
   pkg-config,
   systemd,
+
   nix-update-script,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lxc";
-  version = "6.0.2";
+  version = "7.0.0";
 
   src = fetchFromGitHub {
     owner = "lxc";
     repo = "lxc";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-qc60oSs2KahQJpSmhrctXpV2Zumv7EvlnGFaOCSCX/E=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-eB68l7SmVxJViGmVlVtEXVD+cRtr4WqOrA8b9ImQ89g=";
   };
 
   nativeBuildInputs = [
@@ -36,6 +39,8 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   buildInputs = [
+    # some hooks use compgen
+    bashInteractive
     dbus
     libapparmor
     libcap
@@ -85,22 +90,16 @@ stdenv.mkDerivation (finalAttrs: {
 
   passthru = {
     tests = {
-      incus-legacy-init = nixosTests.incus.container-legacy-init;
-      incus-systemd-init = nixosTests.incus.container-systemd-init;
+      incus-lts = nixosTests.incus-lts.container;
       lxc = nixosTests.lxc;
-      lxd = nixosTests.lxd.container;
     };
 
-    updateScript = nix-update-script {
-      extraArgs = [
-        "--version-regex"
-        "v(6.0.*)"
-      ];
-    };
+    updateScript = nix-update-script { };
   };
 
   meta = {
-    homepage = "https://linuxcontainers.org/";
+    homepage = "https://linuxcontainers.org/lxc/";
+    changelog = "https://github.com/lxc/lxc/releases/tag/v${finalAttrs.version}";
     description = "Userspace tools for Linux Containers, a lightweight virtualization system";
     license = lib.licenses.gpl2;
 
@@ -111,6 +110,6 @@ stdenv.mkDerivation (finalAttrs: {
     '';
 
     platforms = lib.platforms.linux;
-    maintainers = lib.teams.lxc.members;
+    teams = [ lib.teams.lxc ];
   };
 })

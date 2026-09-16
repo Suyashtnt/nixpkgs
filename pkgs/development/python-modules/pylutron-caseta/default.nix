@@ -1,38 +1,38 @@
 {
   lib,
-  async-timeout,
   buildPythonPackage,
   click,
   cryptography,
   fetchFromGitHub,
   hatchling,
+  orjson,
   pytest-asyncio,
   pytest-timeout,
   pytestCheckHook,
-  pythonOlder,
   xdg,
   zeroconf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pylutron-caseta";
-  version = "0.21.1";
+  version = "0.29.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "gurumitts";
     repo = "pylutron-caseta";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-u2FPWDWBSoS5mJPnYAkLTQR6K8YLDs77djdWL+7840o=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-YGdx/WQLM7Dglo4FSEr+QJDKTf7Dyn8V3qSFWNlEu00=";
   };
 
-  nativeBuildInputs = [ hatchling ];
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs = [ cryptography ] ++ lib.optionals (pythonOlder "3.11") [ async-timeout ];
+  dependencies = [
+    cryptography
+    orjson
+  ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     cli = [
       click
       xdg
@@ -44,17 +44,17 @@ buildPythonPackage rec {
     pytest-asyncio
     pytest-timeout
     pytestCheckHook
-  ] ++ lib.optionals (pythonOlder "3.11") [ async-timeout ];
+  ];
 
-  pytestFlagsArray = [ "--asyncio-mode=auto" ];
+  pytestFlags = [ "--asyncio-mode=auto" ];
 
   pythonImportsCheck = [ "pylutron_caseta" ];
 
-  meta = with lib; {
-    description = "Python module o control Lutron Caseta devices";
+  meta = {
+    description = "Python module to control Lutron Caseta devices";
     homepage = "https://github.com/gurumitts/pylutron-caseta";
-    changelog = "https://github.com/gurumitts/pylutron-caseta/blob/v${version}/CHANGELOG.md";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/gurumitts/pylutron-caseta/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

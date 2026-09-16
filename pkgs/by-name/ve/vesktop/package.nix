@@ -2,19 +2,22 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  substituteAll,
+  replaceVars,
   makeBinaryWrapper,
   makeWrapper,
   makeDesktopItem,
   copyDesktopItems,
   vencord,
-  electron,
+  electron_43,
   libicns,
   pipewire,
   libpulseaudio,
   autoPatchelfHook,
-  pnpm_9,
+  pnpm_11,
+  fetchPnpmDeps,
+  pnpmConfigHook,
   nodejs,
+  jq,
   nix-update-script,
   withTTS ? true,
   withMiddleClickScroll ? false,
@@ -22,73 +25,80 @@
   # letting vesktop manage it's own version
   withSystemVencord ? false,
 }:
+let
+  electron = electron_43;
+in
 stdenv.mkDerivation (finalAttrs: {
   pname = "vesktop";
-  version = "1.5.3";
+  version = "1.6.7";
 
   src = fetchFromGitHub {
     owner = "Vencord";
     repo = "Vesktop";
     rev = "v${finalAttrs.version}";
-    hash = "sha256-HlT7ddlrMHG1qOCqdaYjuWhJD+5FF1Nkv2sfXLWd07o=";
+    hash = "sha256-Y74FIqcY26Dizz+DoY+r8caOfX+4/VmiEbmhcOpMHqE=";
   };
 
-  pnpmDeps = pnpm_9.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs)
       pname
       version
       src
       patches
       ;
-    hash = "sha256-rizJu6v04wFEpJtakC2tfPg/uylz7gAOzJiXvUwdDI4=";
+    pnpm = pnpm_11;
+    fetcherVersion = 4;
+    hash = "sha256-AK+ZbylpG7iKWKsIA0nfFfZYP7HaTCTSeDbNUFx/iY4=";
   };
 
-  nativeBuildInputs =
-    [
-      nodejs
-      pnpm_9.configHook
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [
-      # vesktop uses venmic, which is a shipped as a prebuilt node module
-      # and needs to be patched
-      autoPatchelfHook
-      copyDesktopItems
-      # we use a script wrapper here for environment variable expansion at runtime
-      # https://github.com/NixOS/nixpkgs/issues/172583
-      makeWrapper
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      # on macos we don't need to expand variables, so we can use the faster binary wrapper
-      makeBinaryWrapper
-    ];
+  nativeBuildInputs = [
+    nodejs
+    pnpmConfigHook
+    pnpm_11
+    jq
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    # vesktop uses venmic, which is a shipped as a prebuilt node module
+    # and needs to be patched
+    autoPatchelfHook
+    copyDesktopItems
+    # we use a script wrapper here for environment variable expansion at runtime
+    # https://github.com/NixOS/nixpkgs/issues/172583
+    makeWrapper
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # on macos we don't need to expand variables, so we can use the faster binary wrapper
+    makeBinaryWrapper
+  ];
 
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
     libpulseaudio
     pipewire
-    stdenv.cc.cc.lib
+    (lib.getLib stdenv.cc.cc)
   ];
 
-  patches =
-    [ ./disable_update_checking.patch ]
-    ++ lib.optional withSystemVencord (substituteAll {
+  patches = lib.optional withSystemVencord (
+    replaceVars ./use_system_vencord.patch {
       inherit vencord;
-      src = ./use_system_vencord.patch;
-    });
+    }
+  );
 
   env = {
     ELECTRON_SKIP_BINARY_DOWNLOAD = 1;
   };
 
-  # disable code signing on macos
-  # https://github.com/electron-userland/electron-builder/blob/77f977435c99247d5db395895618b150f5006e8f/docs/code-signing.md#how-to-disable-code-signing-during-the-build-process-on-macos
-  postConfigure = lib.optionalString stdenv.hostPlatform.isDarwin ''
-    export CSC_IDENTITY_AUTO_DISCOVERY=false
-  '';
+  preBuild = ''
+    # Validate electron version matches upstream package.json
+    expectedMajor="$(jq -r '.devDependencies.electron | ltrimstr("^") | split(".") | .[0]' < package.json)"
+    actualMajor="${lib.versions.major electron.version}"
+    if [ "$actualMajor" != "$expectedMajor" ] 2>/dev/null; then
+      echo "ERROR: electron version mismatch between package.json (major $expectedMajor) and nixpkgs (major $actualMajor)"
+      exit 1
+    fi
 
-  # electron builds must be writable on darwin
-  preBuild = lib.optionalString stdenv.hostPlatform.isDarwin ''
-    cp -r ${electron.dist}/Electron.app .
-    chmod -R u+w Electron.app
+    # electron builds must be writable
+    cp -r ${electron.dist} electron-dist
+    chmod -R u+w electron-dist
   '';
 
   buildPhase = ''
@@ -98,8 +108,9 @@ stdenv.mkDerivation (finalAttrs: {
     pnpm exec electron-builder \
       --dir \
       -c.asarUnpack="**/*.node" \
-      -c.electronDist=${if stdenv.hostPlatform.isDarwin then "." else electron.dist} \
-      -c.electronVersion=${electron.version}
+      -c.electronDist=electron-dist \
+      -c.electronVersion=${electron.version} \
+      ${lib.optionalString stdenv.hostPlatform.isDarwin "-c.mac.identity=null"} # disable code signing on macos, https://github.com/electron-userland/electron-builder/blob/77f977435c99247d5db395895618b150f5006e8f/docs/code-signing.md#how-to-disable-code-signing-during-the-build-process-on-macos
 
     runHook postBuild
   '';
@@ -110,34 +121,36 @@ stdenv.mkDerivation (finalAttrs: {
     popd
   '';
 
-  installPhase =
-    ''
-      runHook preInstall
-    ''
-    + lib.optionalString stdenv.hostPlatform.isLinux ''
-      mkdir -p $out/opt/Vesktop
-      cp -r dist/*unpacked/resources $out/opt/Vesktop/
+  installPhase = ''
+    runHook preInstall
+  ''
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
+    mkdir -p $out/opt/Vesktop
+    cp -r dist/*unpacked/resources $out/opt/Vesktop/
 
-      for file in build/icon_*x32.png; do
-        file_suffix=''${file//build\/icon_}
-        install -Dm0644 $file $out/share/icons/hicolor/''${file_suffix//x32.png}/apps/vesktop.png
-      done
-    ''
-    + lib.optionalString stdenv.hostPlatform.isDarwin ''
-      mkdir -p $out/{Applications,bin}
-      mv dist/mac*/Vesktop.App $out/Applications
-    ''
-    + ''
-      runHook postInstall
-    '';
+    for file in build/icon_*x32.png; do
+      file_suffix=''${file//build\/icon_}
+      install -Dm0644 $file $out/share/icons/hicolor/''${file_suffix//x32.png}/apps/vesktop.png
+    done
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    mkdir -p $out/{Applications,bin}
+    mv dist/mac*/Vesktop.app $out/Applications/Vesktop.app
+  ''
+  + ''
+    runHook postInstall
+  '';
 
   postFixup =
     lib.optionalString stdenv.hostPlatform.isLinux ''
       makeWrapper ${electron}/bin/electron $out/bin/vesktop \
         --add-flags $out/opt/Vesktop/resources/app.asar \
-        ${lib.optionalString withTTS "--add-flags \"--enable-speech-dispatcher\""} \
+        ${lib.strings.optionalString withTTS ''
+          --run 'if [[ "''${NIXOS_SPEECH:-default}" != "False" ]]; then NIXOS_SPEECH=True; else unset NIXOS_SPEECH; fi' \
+          --add-flags "\''${NIXOS_SPEECH:+--enable-speech-dispatcher}" \
+        ''} \
         ${lib.optionalString withMiddleClickScroll "--add-flags \"--enable-blink-features=MiddleClickAutoscroll\""} \
-        --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime}}"
+        --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
     ''
     + lib.optionalString stdenv.hostPlatform.isDarwin ''
       makeWrapper $out/Applications/Vesktop.app/Contents/MacOS/Vesktop $out/bin/vesktop
@@ -150,6 +163,7 @@ stdenv.mkDerivation (finalAttrs: {
     icon = "vesktop";
     startupWMClass = "Vesktop";
     genericName = "Internet Messenger";
+    comment = "Alternative Discord client with Vencord built-in";
     keywords = [
       "discord"
       "vencord"
@@ -161,6 +175,9 @@ stdenv.mkDerivation (finalAttrs: {
       "InstantMessaging"
       "Chat"
     ];
+    mimeTypes = [
+      "x-scheme-handler/discord"
+    ];
   });
 
   passthru = {
@@ -169,7 +186,7 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   meta = {
-    description = "Alternate client for Discord with Vencord built-in";
+    description = "Alternative Discord client with Vencord built-in";
     homepage = "https://github.com/Vencord/Vesktop";
     changelog = "https://github.com/Vencord/Vesktop/releases/tag/${finalAttrs.src.rev}";
     license = lib.licenses.gpl3Only;
@@ -183,7 +200,6 @@ stdenv.mkDerivation (finalAttrs: {
     platforms = [
       "x86_64-linux"
       "aarch64-linux"
-      "x86_64-darwin"
       "aarch64-darwin"
     ];
   };

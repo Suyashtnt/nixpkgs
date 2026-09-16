@@ -1,5 +1,10 @@
 # Tumbler
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
 
   cfg = config.services.tumbler;
@@ -9,13 +14,11 @@ in
 {
 
   imports = [
-    (lib.mkRemovedOptionModule
-      [ "services" "tumbler" "package" ]
-      "")
+    (lib.mkRemovedOptionModule [ "services" "tumbler" "package" ] "")
   ];
 
-  meta = with lib; {
-    maintainers = with lib.maintainers; [ ] ++ lib.teams.pantheon.members;
+  meta = {
+    teams = [ lib.teams.pantheon ];
   };
 
   ###### interface
@@ -30,16 +33,15 @@ in
 
   };
 
-
   ###### implementation
 
   config = lib.mkIf cfg.enable {
 
-    environment.systemPackages = with pkgs.xfce; [
+    environment.systemPackages = with pkgs; [
       tumbler
     ];
 
-    services.dbus.packages = with pkgs.xfce; [
+    services.dbus.packages = with pkgs; [
       tumbler
     ];
 

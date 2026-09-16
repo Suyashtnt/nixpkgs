@@ -4,8 +4,7 @@
   fetchFromGitHub,
 
   # build-system
-  setuptools,
-  setuptools-scm,
+  uv-build,
 
   # non-propagates
   django,
@@ -14,43 +13,48 @@
   beautifulsoup4,
 
   # tests
-  python,
+  pytest-django,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "django-bootstrap4";
-  version = "24.3";
-  format = "pyproject";
+  version = "26.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zostera";
     repo = "django-bootstrap4";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-sZY/0f1PbYQu9fN65H6H7xLvsdE9AXK0cMt9TyAKuUw=";
+    tag = "v${version}";
+    hash = "sha256-7MmooIDiZFlrOm/vwIU57wEzdIyw6dEDkgFCYydOFxo=";
   };
 
-  nativeBuildInputs = [
-    setuptools
-    setuptools-scm
-  ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.9.6,<0.13.0" uv_build
+  '';
 
-  propagatedBuildInputs = [ beautifulsoup4 ];
+  build-system = [ uv-build ];
+
+  dependencies = [ beautifulsoup4 ];
 
   pythonImportsCheck = [ "bootstrap4" ];
 
-  nativeCheckInputs = [ (django.override { withGdal = true; }) ];
+  nativeCheckInputs = [
+    (django.override { withGdal = true; })
+    pytest-django
+    pytestCheckHook
+  ];
 
-  checkPhase = ''
-    runHook preCheck
-    ${python.interpreter} manage.py test -v1 --noinput
-    runHook postCheck
+  preCheck = ''
+    export DJANGO_SETTINGS_MODULE=tests.app.settings
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Bootstrap 4 integration with Django";
     homepage = "https://github.com/zostera/django-bootstrap4";
-    changelog = "https://github.com/zostera/django-bootstrap4/blob/${src.rev}/CHANGELOG.md";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ hexa ];
+    changelog = "https://github.com/zostera/django-bootstrap4/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ hexa ];
   };
 }

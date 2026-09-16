@@ -1,32 +1,33 @@
-{ config, lib, pkgs, ... }: let
-  inherit
-    (lib)
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+let
+  inherit (lib)
     concatMapStringsSep
     generators
     mkEnableOption
     mkIf
     mkOption
     mkPackageOption
-    optionalString
     types
     ;
 
   cfg = config.services.typesense;
   settingsFormatIni = pkgs.formats.ini {
     listToValue = concatMapStringsSep " " (generators.mkValueStringDefault { });
-    mkKeyValue = generators.mkKeyValueDefault
-      {
-        mkValueString = v:
-          if v == null then ""
-          else generators.mkValueStringDefault { } v;
-      }
-      "=";
+    mkKeyValue = generators.mkKeyValueDefault {
+      mkValueString = v: if v == null then "" else generators.mkValueStringDefault { } v;
+    } "=";
   };
   configFile = settingsFormatIni.generate "typesense.ini" cfg.settings;
-in {
+in
+{
   options.services.typesense = {
     enable = mkEnableOption "typesense";
-    package = mkPackageOption pkgs "typesense" {};
+    package = mkPackageOption pkgs "typesense" { };
 
     apiKeyFile = mkOption {
       type = types.path;
@@ -39,7 +40,7 @@ in {
 
     settings = mkOption {
       description = "Typesense configuration. Refer to [the documentation](https://typesense.org/docs/0.24.1/api/server-configuration.html) for supported values.";
-      default = {};
+      default = { };
       type = types.submodule {
         freeformType = settingsFormatIni.type;
         options.server = {

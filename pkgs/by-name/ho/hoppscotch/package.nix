@@ -8,25 +8,23 @@
 
 let
   pname = "hoppscotch";
-  version = "24.8.1-0";
+  version = "26.8.0-0";
 
   src =
     fetchurl
       {
         aarch64-darwin = {
           url = "https://github.com/hoppscotch/releases/releases/download/v${version}/Hoppscotch_mac_aarch64.dmg";
-          hash = "sha256-Tc6lQbMZHX4Wl0R3fGClRr27fFTrYTxMtAkSPCw8mrw=";
-        };
-        x86_64-darwin = {
-          url = "https://github.com/hoppscotch/releases/releases/download/v${version}/Hoppscotch_mac_x64.dmg";
-          hash = "sha256-c3UHntrLRoXfmz8LL3Xu8mjBtyf952/tYMFqbTyECR0=";
+          hash = "sha256-oaumcSqAzzRqwFArZJ0d20FwdH5UIJ6YhT0gvwbLXzY=";
         };
         x86_64-linux = {
           url = "https://github.com/hoppscotch/releases/releases/download/v${version}/Hoppscotch_linux_x64.AppImage";
-          hash = "sha256-Aegc4kiLPtY+hlQtfYR3uztqs8Gj9fbUcAZ1XB8i1Pw=";
+          hash = "sha256-G+TmHOM3eS48TuGRCHznI9IxzF8wN6DtVDs9xOVdzPw=";
         };
       }
-      .${stdenv.system} or (throw "Unsupported system: ${stdenv.system}");
+      .${stdenv.hostPlatform.system} or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
+
+  passthru.updateScript = ./update.sh;
 
   meta = {
     description = "Open source API development ecosystem";
@@ -44,7 +42,6 @@ let
     mainProgram = "hoppscotch";
     platforms = [
       "aarch64-darwin"
-      "x86_64-darwin"
       "x86_64-linux"
     ];
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
@@ -56,6 +53,7 @@ if stdenv.hostPlatform.isDarwin then
       pname
       version
       src
+      passthru
       meta
       ;
 
@@ -78,16 +76,19 @@ else
       pname
       version
       src
+      passthru
       meta
       ;
 
     extraInstallCommands =
       let
-        appimageContents = appimageTools.extractType2 { inherit pname version src; };
+        appimageContents = appimageTools.extract { inherit pname version src; };
       in
       ''
         # Install .desktop files
-        install -Dm444 ${appimageContents}/hoppscotch.desktop -t $out/share/applications
-        install -Dm444 ${appimageContents}/hoppscotch.png -t $out/share/pixmaps
+        install -Dm444 ${appimageContents}/Hoppscotch.desktop $out/share/applications/hoppscotch.desktop
+        install -Dm444 ${appimageContents}/Hoppscotch.png $out/share/icons/hicolor/256x256/apps/hoppscotch.png
+        substituteInPlace $out/share/applications/hoppscotch.desktop \
+          --replace-fail "hoppscotch-desktop" "hoppscotch"
       '';
   }

@@ -1,12 +1,12 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, gtk3
-, pcre
-, pkg-config
-, vte
-, nixosTests
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  gtk3,
+  pkg-config,
+  vte,
+  nixosTests,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -20,7 +20,10 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-rhlUnRfyd7PmtMSyP+tiu+TxZNb/YyS0Yc5IkWft7/4=";
   };
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   nativeBuildInputs = [
     cmake
@@ -29,7 +32,6 @@ stdenv.mkDerivation (finalAttrs: {
 
   buildInputs = [
     gtk3
-    pcre
     vte
   ];
 
@@ -41,7 +43,7 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://github.com/orhun/kermit/releases/tag/${finalAttrs.version}";
     license = lib.licenses.gpl3Only;
     mainProgram = "kermit";
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
   };
 })

@@ -1,34 +1,38 @@
-{ lib
-, fetchFromGitHub
-, stdenv
-, curl
-, autoreconfHook
-, pkg-config
-, byacc
-, flex
+{
+  lib,
+  fetchFromSourcehut,
+  stdenv,
+  curl,
+  pkg-config,
+  byacc,
+  flex,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "gcli";
-  version = "2.2.0";
+  version = "2.13.0";
 
-  src = fetchFromGitHub {
-    owner = "herrhotzenplotz";
+  src = fetchFromSourcehut {
+    owner = "~herrhotzenplotz";
     repo = "gcli";
-    rev = version;
-    hash = "sha256-extVTaTWVFXSTiXlZ/MtiiFdc/KZEDkc+A7xxylJaM4=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-Ow899ehIln+2E5j/MNA7XCRSBNCeaJ16ePR/u0qXvos=";
   };
 
-  nativeBuildInputs = [ autoreconfHook pkg-config byacc flex ];
+  nativeBuildInputs = [
+    pkg-config
+    byacc
+    flex
+  ];
   buildInputs = [ curl ];
 
-  meta = with lib; {
+  meta = {
     description = "Portable Git(Hub|Lab|ea) CLI tool";
     homepage = "https://herrhotzenplotz.de/gcli/";
-    changelog = "https://github.com/herrhotzenplotz/gcli/releases/tag/${version}";
-    license = licenses.bsd2;
+    changelog = "https://git.sr.ht/~herrhotzenplotz/gcli/tree/v${finalAttrs.version}/item/Changelog.md";
+    license = lib.licenses.bsd2;
     mainProgram = "gcli";
-    maintainers = with maintainers; [ kenran ];
-    platforms = platforms.unix;
+    maintainers = with lib.maintainers; [ kenran ];
+    platforms = lib.platforms.unix;
   };
-}
+})

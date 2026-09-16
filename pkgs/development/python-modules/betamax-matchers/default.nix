@@ -4,7 +4,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   requests-toolbelt,
   setuptools,
 }:
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "0.4.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "betamaxpy";
     repo = "betamax_matchers";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-BV9DOfZLDAZIr2E75l988QxFWWvazBL9VttxGFIez1M=";
   };
 
@@ -34,11 +31,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "betamax_matchers" ];
 
-  meta = with lib; {
-    description = "A group of experimental matchers for Betamax";
+  meta = {
+    description = "Group of experimental matchers for Betamax";
     homepage = "https://github.com/sigmavirus24/betamax_matchers";
     changelog = "https://github.com/betamaxpy/betamax_matchers/blob/${version}/HISTORY.rst";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ pSub ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ pSub ];
   };
 }

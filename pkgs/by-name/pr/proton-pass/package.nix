@@ -1,44 +1,47 @@
 {
   lib,
-  stdenvNoCC,
+  stdenv,
+  callPackage,
   fetchurl,
-  dpkg,
-  makeWrapper,
-  electron,
+  writeShellScript,
+  curl,
+  jq,
+  common-updater-scripts,
 }:
-stdenvNoCC.mkDerivation (finalAttrs: {
+let
   pname = "proton-pass";
-  version = "1.22.1";
+  version = "1.38.1";
 
-  src = fetchurl {
-    url = "https://proton.me/download/PassDesktop/linux/x64/ProtonPass_${finalAttrs.version}.deb";
-    hash = "sha256-DIA54xxJ8Nhh8wb4p13yjdenqgTgenAH4Tmbqk3IXwo=";
+  passthru = {
+    sources = {
+      "x86_64-linux" = fetchurl {
+        url = "https://proton.me/download/pass/linux/x64/proton-pass_${version}_amd64.deb";
+        hash = "sha256-0DQy8ITOlR88aJiR4zLCIukd5KZ2U4PVSjNBvU/A9L8=";
+      };
+      "aarch64-darwin" = fetchurl {
+        url = "https://proton.me/download/pass/macos/ProtonPass_${version}.dmg";
+        hash = "sha256-lEc/tP84QU+WDTqLbUe5dMmYBLXaZZg8wmXSNgAOn7g=";
+      };
+    };
+    updateScript = writeShellScript "update-proton-pass" ''
+      set -o errexit
+      export PATH="${
+        lib.makeBinPath [
+          curl
+          jq
+          common-updater-scripts
+        ]
+      }"
+      NEW_VERSION=$(curl --silent https://proton.me/download/PassDesktop/linux/x64/version.json | jq -r '[.Releases[] | select(.CategoryName == "Stable")] | first | .Version')
+      if [[ "${version}" = "$NEW_VERSION" ]]; then
+          echo "The new version is the same as the old version."
+          exit 0
+      fi
+      for platform in ${lib.escapeShellArgs meta.platforms}; do
+        update-source-version "proton-pass" "$NEW_VERSION" --ignore-same-version --source-key="sources.$platform"
+      done
+    '';
   };
-
-  dontConfigure = true;
-  dontBuild = true;
-
-  nativeBuildInputs = [
-    dpkg
-    makeWrapper
-  ];
-
-  installPhase = ''
-    runHook preInstall
-    mkdir -p $out
-    cp -r usr/share/ $out/
-    cp -r usr/lib/proton-pass/resources/app.asar $out/share/
-    runHook postInstall
-  '';
-
-  preFixup = ''
-    makeWrapper ${lib.getExe electron} $out/bin/proton-pass \
-      --add-flags $out/share/app.asar \
-      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations}}" \
-      --set-default ELECTRON_FORCE_IS_PACKAGED 1 \
-      --set-default ELECTRON_IS_DEV 0 \
-      --inherit-argv0
-  '';
 
   meta = {
     description = "Desktop application for Proton Pass";
@@ -47,10 +50,18 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     maintainers = with lib.maintainers; [
       luftmensch-luftmensch
       massimogengarelli
-      sebtm
+      shunueda
     ];
-    platforms = [ "x86_64-linux" ];
+    platforms = builtins.attrNames passthru.sources;
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
     mainProgram = "proton-pass";
   };
-})
+in
+callPackage (if stdenv.hostPlatform.isDarwin then ./darwin.nix else ./linux.nix) {
+  inherit
+    pname
+    version
+    passthru
+    meta
+    ;
+}

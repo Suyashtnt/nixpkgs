@@ -1,53 +1,59 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, ninja
-, obs-studio
-, onnxruntime
-, opencv
-, qt6
-, curl
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  ninja,
+  pkg-config,
+  obs-studio,
+  onnxruntime,
+  opencv,
+  qt6,
+  curl,
 }:
 
 stdenv.mkDerivation rec {
   pname = "obs-backgroundremoval";
-  version = "1.1.13";
+  version = "1.4.1";
 
   src = fetchFromGitHub {
     owner = "occ-ai";
     repo = "obs-backgroundremoval";
-    rev = version;
-    hash = "sha256-QoC9/HkwOXMoFNvcOxQkGCLLAJmsja801LKCNT9O9T0=";
+    tag = version;
+    hash = "sha256-ND4owZCJvJmpuyYY5svGezVvid+Pi9hgU2W8EUv597s=";
   };
 
-  nativeBuildInputs = [ cmake ninja ];
-  buildInputs = [ obs-studio onnxruntime opencv qt6.qtbase curl ];
+  nativeBuildInputs = [
+    cmake
+    ninja
+    pkg-config
+  ];
+
+  buildInputs = [
+    obs-studio
+    onnxruntime
+    opencv.cxxdev
+    qt6.qtbase
+    curl
+  ];
 
   dontWrapQtApps = true;
 
   cmakeFlags = [
-    "--preset linux-x86_64"
-    "-DCMAKE_MODULE_PATH:PATH=${src}/cmake"
     "-DUSE_SYSTEM_ONNXRUNTIME=ON"
     "-DUSE_SYSTEM_OPENCV=ON"
-    "-DDISABLE_ONNXRUNTIME_GPU=ON"
+    "-DENABLE_FRONTEND_API=OFF"
+    "-DENABLE_QT=OFF"
   ];
 
-  buildPhase = ''
-     cd ..
-     cmake --build build_x86_64 --parallel
-  '';
-
-  installPhase = ''
-    cmake --install build_x86_64 --prefix "$out"
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "OBS plugin to replace the background in portrait images and video";
-    homepage = "https://github.com/royshil/obs-backgroundremoval";
-    maintainers = with maintainers; [ zahrun ];
-    license = licenses.mit;
-    platforms = [ "x86_64-linux" ];
+    homepage = "https://github.com/occ-ai/obs-backgroundremoval";
+    maintainers = with lib.maintainers; [
+      randomizedcoder
+      zahrun
+    ];
+    license = lib.licenses.mit;
+    inherit (obs-studio.meta) platforms;
   };
 }

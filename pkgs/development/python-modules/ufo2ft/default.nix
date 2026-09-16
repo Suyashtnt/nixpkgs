@@ -4,70 +4,68 @@
   buildPythonPackage,
   cffsubr,
   compreffor,
-  cu2qu,
   defcon,
-  fetchPypi,
+  fetchFromGitHub,
   fontmath,
   fonttools,
   pytestCheckHook,
-  pythonOlder,
+  setuptools,
   setuptools-scm,
   skia-pathops,
+  syrupy,
   ufolib2,
+  uharfbuzz,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "ufo2ft";
-  version = "3.2.8";
+  version = "3.9.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-HSD66FbCxZyACRq7b8p2uizoO4ZqPAn1O8BFoi1/Mkc=";
+  src = fetchFromGitHub {
+    owner = "googlefonts";
+    repo = "ufo2ft";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-McMhpGIvQHpsOe3jza6E3b72cKiY8gr8W9OY2Mg9JvE=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  pythonRelaxDeps = [ "cffsubr" ];
-
-  propagatedBuildInputs = [
-    cu2qu
+  dependencies = [
     fontmath
     fonttools
-    defcon
-    compreffor
     booleanoperations
     cffsubr
+  ]
+  ++ fonttools.optional-dependencies.lxml
+  ++ fonttools.optional-dependencies.ufo;
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    syrupy
     ufolib2
-    skia-pathops
-  ] ++ fonttools.optional-dependencies.lxml ++ fonttools.optional-dependencies.ufo;
+    uharfbuzz
+    defcon
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.compreffor
+  ++ finalAttrs.passthru.optional-dependencies.pathops;
 
-  nativeCheckInputs = [ pytestCheckHook ];
-
-  disabledTests = [
-    # Do not depend on skia.
-    "test_removeOverlaps_CFF_pathops"
-    "test_removeOverlaps_pathops"
-    "test_custom_filters_as_argument"
-    "test_custom_filters_as_argument"
-    # Some integration tests fail
-    "test_compileVariableCFF2"
-    "test_compileVariableTTF"
-    "test_drop_glyph_names_variable"
-    "test_drop_glyph_names_variable"
-  ];
+  optional-dependencies = {
+    compreffor = [ compreffor ];
+    cffsubr = [ ];
+    pathops = [ skia-pathops ];
+  };
 
   pythonImportsCheck = [ "ufo2ft" ];
 
-  meta = with lib; {
+  meta = {
     description = "Bridge from UFOs to FontTools objects";
     homepage = "https://github.com/googlefonts/ufo2ft";
-    changelog = "https://github.com/googlefonts/ufo2ft/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = [ ];
+    changelog = "https://github.com/googlefonts/ufo2ft/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jopejoe1 ];
   };
-}
+})

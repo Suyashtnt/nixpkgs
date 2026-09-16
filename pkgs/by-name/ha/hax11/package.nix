@@ -1,28 +1,32 @@
-{ lib
-, multiStdenv
-, fetchFromGitHub
-, libX11
-, libXxf86vm
-, xorgproto
-, unstableGitUpdater
+{
+  lib,
+  multiStdenv,
+  fetchFromGitHub,
+  libx11,
+  libxxf86vm,
+  xorgproto,
+  unstableGitUpdater,
 }:
 
 multiStdenv.mkDerivation (finalAttrs: {
   pname = "hax11";
-  version = "0-unstable-2024-06-24";
+  version = "0-unstable-2025-04-29";
 
   src = fetchFromGitHub {
     owner = "CyberShadow";
     repo = "hax11";
-    rev = "ef955862d7221d7714eafb33e28299eb758f4462";
-    hash = "sha256-ND3N1oMUjmDkF7btcFucDxKxxANL9IKf08/6Kt6LX9o=";
+    rev = "d82bf3ba655c1a823b77a9a47f30657c9a32c1fe";
+    hash = "sha256-Ykl/RdGRHmM+xko5a9tR2G1yFaY/Xq+BEoeXaLd39RQ=";
   };
 
-  outputs = [ "out" "doc" ];
+  outputs = [
+    "out"
+    "doc"
+  ];
 
   buildInputs = [
-    libX11
-    libXxf86vm
+    libx11
+    libxxf86vm
     xorgproto
   ];
 
@@ -43,8 +47,8 @@ multiStdenv.mkDerivation (finalAttrs: {
   meta = {
     homepage = "https://github.com/CyberShadow/hax11";
     description = "Hackbrary to Hook and Augment X11 protocol calls";
-    license = with lib.licenses; [ mit ];
-    maintainers = with lib.maintainers; [ AndersonTorres cybershadow ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ cybershadow ];
     platforms = lib.platforms.linux;
   };
 })

@@ -4,10 +4,10 @@
   fetchFromGitHub,
   poetry-core,
   pytestCheckHook,
-  fetchpatch
+  fetchpatch,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sigparse";
   version = "3.0.0";
   pyproject = true;
@@ -15,7 +15,7 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Lunarmagpie";
     repo = "sigparse";
-    rev = "refs/tags/v${version}";
+    tag = "v${finalAttrs.version}";
     hash = "sha256-VzWDqplYgwrJXXd5IUzEIp0YRuofybqmGrNKPaGqQFM=";
   };
 
@@ -38,4 +38,4 @@ buildPythonPackage rec {
     homepage = "https://github.com/Lunarmagpie/sigparse";
     maintainers = with lib.maintainers; [ sigmanificient ];
   };
-}
+})

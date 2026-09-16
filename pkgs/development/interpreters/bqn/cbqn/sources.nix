@@ -7,54 +7,55 @@
 }:
 
 {
-  cbqn = let
-    self = {
-      pname = "cbqn";
-      version = "0.7.0";
+  cbqn =
+    let
+      self = {
+        pname = "cbqn";
+        version = "0.11.0";
 
-      src = fetchFromGitHub {
-        owner = "dzaima";
-        repo = "CBQN";
-        rev = "v${self.version}";
-        hash = "sha256-TUK0HrJ1IyiVi9Y3S1IrK/d4/EZxdRdWyxsAwj79KEc=";
+        src = fetchFromGitHub {
+          owner = "dzaima";
+          repo = "CBQN";
+          rev = "v${self.version}";
+          hash = "sha256-ZXhCFLLUVJTgpJqMd97EMSoE4fwuqBJ742kzV662bnY=";
+        };
       };
-    };
-  in
+    in
     self;
 
   cbqn-bytecode = {
     pname = "cbqn-bytecode";
-    version = "0-unstable-2024-05-22";
+    version = "0-unstable-2026-01-24";
 
     src = fetchFromGitHub {
       owner = "dzaima";
       repo = "cbqnBytecode";
-      rev = "c5674783c11d7569e5a4d166600ffcde2409331d";
-      hash = "sha256-y7gqHzUxVUUVryutlq3Upuso8r3ZRSyF7ydMg1OVlwA=";
+      rev = "156b47caf895f6706811c5c34bbbbaf192b8018b";
+      hash = "sha256-xz4gs1b1yNbnR3v4Kw1xLCAb1I1uoBMdYJRQH9JVD/k=";
     };
   };
 
   replxx = {
     pname = "replxx";
-    version = "0-unstable-2023-10-31";
+    version = "0-unstable-2026-02-02";
 
     src = fetchFromGitHub {
       owner = "dzaima";
       repo = "replxx";
-      rev = "13f7b60f4f79c2f14f352a76d94860bad0fc7ce9";
-      hash = "sha256-xPuQ5YBDSqhZCwssbaN/FcTZlc3ampYl7nfl2bbsgBA=";
+      rev = "5e3bd870699007b9536d29f60e3a2b0a68ce0a7a";
+      hash = "sha256-B1N1d5K4E20OlbX4wTclEiXULM2FT3oT0btyrYCNQ20=";
     };
   };
 
   singeli = {
     pname = "singeli";
-    version = "0-unstable-2024-02-26";
+    version = "0-unstable-2025-11-19";
 
     src = fetchFromGitHub {
       owner = "mlochbaum";
       repo = "Singeli";
-      rev = "ce6ef5d06d35777f0016bbfe0c6c1cf6a9c1b48e";
-      hash = "sha256-dDoWoq4LYMD2CKyPxXDAwoeH2E+f0FDyvngtWPEr67w=";
+      rev = "2936c66b061b9df61cafc1f8d07a7ed53bf10bee";
+      hash = "sha256-vxxGmc0eQxKZN7G0GCGx7xjOWgB1a1jJIcbfbaQd2do=";
     };
   };
 }

@@ -4,7 +4,6 @@
   fetchPypi,
   setuptools-scm,
   setuptools,
-  pythonOlder,
   pydantic,
   openai,
   tiktoken,
@@ -29,8 +28,6 @@ buildPythonPackage rec {
     hash = "sha256-OEo6wIaDTktzAsP0rOmhxjFSHygTR/EpcRI6AXsu+6M=";
   };
 
-  disabled = pythonOlder "3.9";
-
   build-system = [
     setuptools
     setuptools-scm
@@ -47,7 +44,7 @@ buildPythonPackage rec {
     pyyaml
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     web = [
       fastapi
       uvicorn
@@ -55,7 +52,8 @@ buildPythonPackage rec {
     transformers = [
       accelerate
       transformers
-    ] ++ transformers.optional-dependencies.torch;
+    ]
+    ++ transformers.optional-dependencies.torch;
   };
 
   # Tests of llmx try to access openai, google, etc.
@@ -63,11 +61,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "llmx" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for LLM Text Generation";
     homepage = "https://github.com/victordibia/llmx";
     mainProgram = "llmx";
-    license = licenses.mit;
-    maintainers = with maintainers; [ moraxyc ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ moraxyc ];
   };
 }

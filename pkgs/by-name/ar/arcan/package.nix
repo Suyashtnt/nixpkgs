@@ -13,11 +13,11 @@
   jbig2dec,
   leptonica,
   libGL,
-  libX11,
-  libXau,
-  libXcomposite,
-  libXdmcp,
-  libXfixes,
+  libx11,
+  libxau,
+  libxcomposite,
+  libxdmcp,
+  libxfixes,
   libdrm,
   libffi,
   libjpeg,
@@ -27,8 +27,9 @@
   libvncserver,
   libxcb,
   libxkbcommon,
+  luajit,
   makeWrapper,
-  mesa,
+  libgbm,
   mupdf,
   openal,
   openjpeg,
@@ -42,17 +43,18 @@
   wayland,
   wayland-protocols,
   wayland-scanner,
-  xcbutil,
-  xcbutilwm,
+  libxcb-util,
+  libxcb-wm,
   xz,
   # Boolean flags
   buildManPages ? true,
-  useBuiltinLua ? true,
+  useBuiltinLua ? false,
   useEspeak ? !stdenv.hostPlatform.isDarwin,
   useStaticLibuvc ? true,
   useStaticOpenAL ? true,
   useStaticSqlite ? true,
-  useTracy ? true,
+  # For debugging only, disabled by upstream
+  useTracy ? false,
   # Configurable options
   sources ? callPackage ./sources.nix { },
 }:
@@ -65,7 +67,8 @@ stdenv.mkDerivation (finalAttrs: {
     makeWrapper
     pkg-config
     wayland-scanner
-  ] ++ lib.optionals buildManPages [ ruby ];
+  ]
+  ++ lib.optionals buildManPages [ ruby ];
 
   buildInputs = [
     SDL2
@@ -78,11 +81,11 @@ stdenv.mkDerivation (finalAttrs: {
     jbig2dec
     leptonica
     libGL
-    libX11
-    libXau
-    libXcomposite
-    libXdmcp
-    libXfixes
+    libx11
+    libxau
+    libxcomposite
+    libxdmcp
+    libxfixes
     libdrm
     libffi
     libjpeg
@@ -92,7 +95,7 @@ stdenv.mkDerivation (finalAttrs: {
     libvncserver
     libxcb
     libxkbcommon
-    mesa
+    libgbm
     mupdf
     openal
     openjpeg
@@ -102,10 +105,12 @@ stdenv.mkDerivation (finalAttrs: {
     valgrind
     wayland
     wayland-protocols
-    xcbutil
-    xcbutilwm
+    libxcb-util
+    libxcb-wm
     xz
-  ] ++ lib.optionals useEspeak [ espeak-ng ];
+  ]
+  ++ lib.optionals (!useBuiltinLua) [ luajit ]
+  ++ lib.optionals useEspeak [ espeak-ng ];
 
   cmakeFlags = [
     # The upstream project recommends tagging the distribution
@@ -120,7 +125,12 @@ stdenv.mkDerivation (finalAttrs: {
     "../src"
   ];
 
-  outputs = [ "out" "dev" "lib" "man" ];
+  outputs = [
+    "out"
+    "dev"
+    "lib"
+    "man"
+  ];
 
   hardeningDisable = [ "format" ];
 
@@ -188,7 +198,8 @@ stdenv.mkDerivation (finalAttrs: {
       gpl2Plus
       lgpl2Plus
     ];
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
+    teams = with lib.teams; [ ngi ];
     platforms = lib.platforms.unix;
   };
 })

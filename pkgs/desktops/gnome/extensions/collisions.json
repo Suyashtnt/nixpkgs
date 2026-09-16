@@ -3,49 +3,92 @@
     "Applications_Menu@rmy.pobox.com",
     "apps-menu@gnome-shell-extensions.gcampax.github.com"
   ],
-  "workspace-indicator": [
-    "horizontal-workspace-indicator@tty2.io",
-    "workspace-indicator@gnome-shell-extensions.gcampax.github.com"
-  ],
-  "persian-calendar": [
-    "persian-calendar@iamrezamousavi.gmail.com",
-    "PersianCalendar@oxygenws.com"
-  ],
-  "openweather": [
-    "openweather-extension@jenslody.de",
-    "openweather-extension@penguin-teal.github.io"
-  ],
-  "clipboard-indicator": [
-    "clipboard-indicator@tudmotu.com",
-    "clipboard-indicator@Dieg0Js.github.io"
-  ],
-  "system-monitor": [
-    "system-monitor@gnome-shell-extensions.gcampax.github.com",
-    "System_Monitor@bghome.gmail.com"
-  ],
-  "virtualbox-applet": [
-    "vbox-applet@gs.eros2.info",
-    "vbox-applet@buba98"
-  ],
-  "panel-date-format": [
-    "panel-date-format@atareao.es",
-    "panel-date-format@keiii.github.com"
+  "auto-select-headset": [
+    "autoselectheadset@Anduril97.github.com",
+    "autoselectheadset@josephlbarnett.github.com"
   ],
   "battery-time": [
-    "batterytime@typeof.pw",
-    "batime@martin.zurowietz.de"
+    "batime@martin.zurowietz.de",
+    "battery-time@eetumos.github.com",
+    "batterytime@typeof.pw"
   ],
-  "kernel-indicator": [
-    "kernel-indicator@elboulangero.gitlab.com",
-    "kernel-indicator@pvizc.gitlab.com"
+  "clipboard-history": [
+    "clipboard-history@Diyar1877",
+    "clipboard-history@alexsaveau.dev"
+  ],
+  "clipboard-line-cleaner": [
+    "clipboard-line-cleaner@epiphanius.github.io",
+    "clipboard-line-cleaner@example.com"
   ],
   "fuzzy-clock": [
-    "fuzzy-clock@keepawayfromfire.co.uk",
-    "FuzzyClock@johngoetz",
-    "FuzzyClock@fire-man-x"
+    "FuzzyClock@fire-man-x",
+    "FuzzyClock@johngoetz"
   ],
-  "power-profile-indicator": [
-    "power-profile-indicator@laux.wtf",
-    "power-profile@fthx"
+  "internet-speed-meter": [
+    "InternetSpeedMeter@alshakib.dev",
+    "speed-meter@mojahid.lunecode.com"
+  ],
+  "lock-keys": [
+    "lockkeys@febueldo.test",
+    "lockkeys@vaina.lt"
+  ],
+  "memento-mori": [
+    "memento-mori@paveloom",
+    "memento-mori@vedeshpadal"
+  ],
+  "nepali-calendar": [
+    "nepali-calendar-gs-extension@subashghimire.info.np",
+    "nepali-date@biplab"
+  ],
+  "net-speed": [
+    "netspeed@alynx.one",
+    "netspeed@shivamksharma.github.io"
+  ],
+  "night-light-toggle": [
+    "night-light-toggle@egoistpizza.github.com",
+    "nightlighttoggle@sam"
+  ],
+  "panel-workspace-scroll": [
+    "panel-scroll@taygun86",
+    "panel-workspace-scroll@polymeilex.github.io"
+  ],
+  "persian-calendar": [
+    "PersianCalendar@oxygenws.com",
+    "persian-calendar@iamrezamousavi.gmail.com"
+  ],
+  "power-menu": [
+    "power-menu@dodog.github.io",
+    "power-menu@e6ad2020"
+  ],
+  "proxy-switcher": [
+    "ProxySwitcher@flannaghan.com",
+    "proxy-switcher@seydef"
+  ],
+  "public-ip-address": [
+    "public-ip-address@fire-man-x",
+    "public-ip-address@theophilediot.github.io"
+  ],
+  "system-monitor": [
+    "System_Monitor@bghome.gmail.com",
+    "sysmonitor@talhasiddique7",
+    "system-monitor@axet.github.com",
+    "system-monitor@gnome-shell-extensions.gcampax.github.com",
+    "system-monitor@jtourteau"
+  ],
+  "system-monitor-panel": [
+    "system-monitor-panel@gnome-shell-extensions",
+    "system-monitor-panel@naimur"
+  ],
+  "systemquest": [
+    "system-rpg@conan513",
+    "system-rpg@gnome-rpg.local"
+  ],
+  "tailscale-qs": [
+    "tailscale-gnome-qs@tailscale-qs.github.io",
+    "tailscale@joaophi.github.com"
+  ],
+  "workspace-wallpapers": [
+    "workspace-wallpapers@ero",
+    "workspace-wallpapers@jonathan.aljl.eu"
   ]
 }

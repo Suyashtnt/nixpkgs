@@ -2,11 +2,11 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+  cyclopts,
   matplotlib,
   numpy,
   pillow,
   pooch,
-  pythonOlder,
   scooby,
   setuptools,
   typing-extensions,
@@ -15,21 +15,20 @@
 
 buildPythonPackage rec {
   pname = "pyvista";
-  version = "0.44.1";
+  version = "0.48.4";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "pyvista";
     repo = "pyvista";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-P4kmsaeZqwEUdLJmfTRHkh8zdlOGLw+YLp9fa05xLXU=";
+    tag = "v${version}";
+    hash = "sha256-VF84EMS/FnLl0y1LpWaYosyG0qEWI/QghZQq32ktlLg=";
   };
 
   build-system = [ setuptools ];
 
   dependencies = [
+    cyclopts
     matplotlib
     numpy
     pillow
@@ -44,11 +43,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pyvista" ];
 
-  meta = with lib; {
+  meta = {
     description = "Easier Pythonic interface to VTK";
     homepage = "https://pyvista.org";
-    changelog = "https://github.com/pyvista/pyvista/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ wegank ];
+    changelog = "https://github.com/pyvista/pyvista/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ wegank ];
   };
 }

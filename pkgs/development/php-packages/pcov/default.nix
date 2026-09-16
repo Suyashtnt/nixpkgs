@@ -1,13 +1,13 @@
 {
   buildPecl,
   lib,
-  php,
   pcre2,
   fetchFromGitHub,
+  fetchpatch,
 }:
 
 let
-  version = "1.0.11";
+  version = "1.0.12";
 in
 buildPecl {
   inherit version;
@@ -16,17 +16,17 @@ buildPecl {
   src = fetchFromGitHub {
     owner = "krakjoe";
     repo = "pcov";
-    rev = "v${version}";
-    sha256 = "sha256-lyY17Y9chpTO8oeWmDGSh0YSnipYqCuy1qmn9su5Eu8=";
+    tag = "v${version}";
+    hash = "sha256-yz+c1FrjGJAUgnu+azvebqoAN3I/GXLeAlKobNdDiHI=";
   };
 
   buildInputs = [ pcre2 ];
 
-  meta = with lib; {
+  meta = {
     changelog = "https://github.com/krakjoe/pcov/releases/tag/v${version}";
     description = "Self contained php-code-coverage compatible driver for PHP";
-    license = licenses.php301;
+    license = lib.licenses.php301;
     homepage = "https://github.com/krakjoe/pcov";
-    maintainers = teams.php.members;
+    teams = [ lib.teams.php ];
   };
 }

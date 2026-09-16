@@ -1,14 +1,11 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   pdm-backend,
   jschon,
   pyvcd,
   jinja2,
-  importlib-resources,
-  importlib-metadata,
   git,
 
   # for tests
@@ -20,30 +17,30 @@
 
 buildPythonPackage rec {
   pname = "amaranth";
-  format = "pyproject";
-  version = "0.5.2";
-  disabled = pythonOlder "3.8";
+  version = "0.5.9";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "amaranth-lang";
     repo = "amaranth";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-pf9X1B60FgqTbSw7D80ERHp4GCvCe5lqrlS96xPXLNo=";
+    tag = "v${version}";
+    hash = "sha256-FwRraLPTzRKpdmzHpoAI0V/qTigT89VP+B3ue++t+Vg=";
   };
 
-  nativeBuildInputs = [
-    git
-    pdm-backend
-  ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "pdm-backend~=2.3.0" "pdm-backend>=2.3.0"
+  '';
 
-  dependencies =
-    [
-      jschon
-      jinja2
-      pyvcd
-    ]
-    ++ lib.optional (pythonOlder "3.9") importlib-resources
-    ++ lib.optional (pythonOlder "3.8") importlib-metadata;
+  nativeBuildInputs = [ git ];
+
+  build-system = [ pdm-backend ];
+
+  dependencies = [
+    jschon
+    jinja2
+    pyvcd
+  ];
 
   nativeCheckInputs = [
     pytestCheckHook
@@ -54,14 +51,28 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "amaranth" ];
 
-  meta = with lib; {
+  disabledTests = [
+    "verilog"
+    "test_reversible"
+    "test_distance"
+  ];
+
+  disabledTestPaths = [
+    # Subprocesses
+    "tests/test_examples.py"
+    # Verification failures
+    "tests/test_lib_fifo.py"
+  ];
+
+  meta = {
     description = "Modern hardware definition language and toolchain based on Python";
-    mainProgram = "amaranth-rpc";
     homepage = "https://amaranth-lang.org/docs/amaranth";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [
+    changelog = "https://github.com/amaranth-lang/amaranth/blob/${src.tag}/docs/changes.rst";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [
       thoughtpolice
       pbsds
     ];
+    mainProgram = "amaranth-rpc";
   };
 }

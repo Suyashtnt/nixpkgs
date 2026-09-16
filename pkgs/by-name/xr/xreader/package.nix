@@ -1,38 +1,49 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, glib
-, gobject-introspection
-, intltool
-, shared-mime-info
-, gtk3
-, wrapGAppsHook3
-, libarchive
-, libxml2
-, xapp
-, meson
-, pkg-config
-, cairo
-, libsecret
-, poppler
-, libspectre
-, libgxps
-, webkitgtk_4_1
-, nodePackages
-, ninja
-, djvulibre
-, backends ? [ "pdf" "ps" /* "dvi" "t1lib" */ "djvu" "tiff" "pixbuf" "comics" "xps" "epub" ]
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  glib,
+  gobject-introspection,
+  intltool,
+  shared-mime-info,
+  gtk3,
+  wrapGAppsHook3,
+  libarchive,
+  libxml2,
+  xapp,
+  xapp-symbolic-icons,
+  meson,
+  pkg-config,
+  cairo,
+  libsecret,
+  poppler,
+  libspectre,
+  libgxps,
+  webkitgtk_4_1,
+  mathjax,
+  ninja,
+  djvulibre,
+  backends ? [
+    "pdf"
+    "ps" # "dvi" "t1lib"
+    "djvu"
+    "tiff"
+    "pixbuf"
+    "comics"
+    "xps"
+    "epub"
+  ],
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "xreader";
-  version = "4.2.2";
+  version = "4.6.5";
 
   src = fetchFromGitHub {
     owner = "linuxmint";
-    repo = pname;
-    rev = version;
-    hash = "sha256-c3oZ+PAsu180mlriQlF86TCBAnehLBv9Nc0SCtSkUuQ=";
+    repo = "xreader";
+    rev = finalAttrs.version;
+    hash = "sha256-wycQmScxuSlo6Ln6piSBF7kmzvi6FnTm/ES/Ds+/h8I=";
   };
 
   nativeBuildInputs = [
@@ -46,8 +57,11 @@ stdenv.mkDerivation rec {
   ];
 
   mesonFlags = [
-    "-Dmathjax-directory=${nodePackages.mathjax}"
-  ] ++ (map (x: "-D${x}=true") backends);
+    # FIXME: `MathJax.js` is only available in MathJax 2.7.x.
+    "-Dmathjax-directory=${mathjax}"
+    "-Dintrospection=true"
+  ]
+  ++ (map (x: "-D${x}=true") backends);
 
   buildInputs = [
     glib
@@ -61,16 +75,28 @@ stdenv.mkDerivation rec {
     libspectre
     libgxps
     webkitgtk_4_1
-    nodePackages.mathjax
+    mathjax
     djvulibre
   ];
 
-  meta = with lib; {
+  postInstall = ''
+    substituteInPlace $out/share/thumbnailers/xreader.thumbnailer \
+      --replace-fail "TryExec=xreader-thumbnailer" "TryExec=$out/bin/xreader-thumbnailer" \
+      --replace-fail "Exec=xreader-thumbnailer" "Exec=$out/bin/xreader-thumbnailer"
+  '';
+
+  preFixup = ''
+    gappsWrapperArgs+=(
+      --prefix XDG_DATA_DIRS : "${lib.makeSearchPath "share" [ xapp-symbolic-icons ]}"
+    )
+  '';
+
+  meta = {
     description = "Document viewer capable of displaying multiple and single page
 document formats like PDF and Postscript";
     homepage = "https://github.com/linuxmint/xreader";
-    license = licenses.gpl2Plus;
-    platforms = platforms.linux;
-    maintainers = teams.cinnamon.members;
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.cinnamon ];
   };
-}
+})

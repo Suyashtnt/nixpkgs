@@ -1,31 +1,58 @@
-{ lib, fetchFromGitHub, buildGoModule, git, openssh }:
+{
+  lib,
+  fetchFromGitHub,
+  buildGoModule,
+  git,
+  gnupg,
+  less,
+  openssh,
+  versionCheckHook,
+  nix-update-script,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "gittuf";
-  version = "0.6.0";
+  version = "0.15.0";
 
   src = fetchFromGitHub {
     owner = "gittuf";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-2G0vUVOruevHJYCYHbumLBYMUah1o5EqgvUqMCONWDs=";
+    repo = "gittuf";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-VWbM7y9XCs/pANJtPa3MDbDhuEtVQ97X5Cyo6yY0Rd8=";
   };
 
-  vendorHash = "sha256-mafN+Nrr0AtfMjnXNoEIuz90kJa58pgY2vUOlv7v+TE=";
+  vendorHash = "sha256-VTfS0bLq7B037qmFABO5JDrV98zik5ycR4s6NZr3H4s=";
 
-  ldflags = [ "-X github.com/gittuf/gittuf/internal/version.gitVersion=${version}" ];
+  ldflags = [ "-X github.com/gittuf/gittuf/internal/version.gitVersion=${finalAttrs.version}" ];
 
-  nativeCheckInputs = [ git openssh ];
-  checkFlags = [ "-skip=TestLoadRepository" "-skip=TestSSH" ];
+  __structuredAttrs = true;
+  strictDeps = true;
 
-  postInstall = "rm $out/bin/cli"; # remove gendoc cli binary
+  nativeCheckInputs = [
+    git
+    gnupg
+    less
+    openssh
+  ];
+  checkFlags = [ "-skip=TestLoadRepository|TestSSH" ];
 
-  meta = with lib; {
-    changelog = "https://github.com/gittuf/gittuf/blob/v${version}/CHANGELOG.md";
+  postInstall = "rm $out/bin/cli $out/bin/sandbox"; # remove gendoc helper binaries
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "version";
+  doInstallCheck = true;
+
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
+    changelog = "https://github.com/gittuf/gittuf/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     description = "Security layer for Git repositories";
     homepage = "https://gittuf.dev";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
     mainProgram = "gittuf";
-    maintainers = with maintainers; [ flandweber ];
+    maintainers = with lib.maintainers; [
+      flandweber
+      anish
+    ];
   };
-}
+})

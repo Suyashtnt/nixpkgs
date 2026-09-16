@@ -3,45 +3,38 @@
   stdenv,
   fetchFromGitHub,
   cmake,
+  pkg-config,
   cmark,
-  darwin,
-  extra-cmake-modules,
   gamemode,
-  ghc_filesystem,
   jdk17,
   kdePackages,
+  libarchive,
   ninja,
   nix-update-script,
+  qrencode,
   stripJavaArchivesHook,
   tomlplusplus,
+  vulkan-headers,
   zlib,
-
   msaClientID ? null,
-  gamemodeSupport ? stdenv.hostPlatform.isLinux,
 }:
-
 let
   libnbtplusplus = fetchFromGitHub {
     owner = "PrismLauncher";
     repo = "libnbtplusplus";
-    rev = "a5e8fd52b8bf4ab5d5bcc042b2a247867589985f";
-    hash = "sha256-A5kTgICnx+Qdq3Fir/bKTfdTt/T1NQP2SC+nhN1ENug=";
+    rev = "3538933614059f0f44388a2b16f3db25ce42285b";
+    hash = "sha256-6/8clF2yNhfonV16cfIkxVIzuB9i9ThxoLMxAo/fDuY=";
   };
 in
-
-assert lib.assertMsg (
-  gamemodeSupport -> stdenv.hostPlatform.isLinux
-) "gamemodeSupport is only available on Linux.";
-
 stdenv.mkDerivation (finalAttrs: {
   pname = "prismlauncher-unwrapped";
-  version = "8.4";
+  version = "11.1.0";
 
   src = fetchFromGitHub {
     owner = "PrismLauncher";
     repo = "PrismLauncher";
-    rev = finalAttrs.version;
-    hash = "sha256-460hB91M2hZm+uU1tywJEj20oRd5cz/NDvya8/vJdSA=";
+    tag = finalAttrs.version;
+    hash = "sha256-bt2ofUj4PXWKNmdACMpXtbVWdNz1aBOUTrPnOsM7NCA=";
   };
 
   postUnpack = ''
@@ -49,46 +42,49 @@ stdenv.mkDerivation (finalAttrs: {
     ln -s ${libnbtplusplus} source/libraries/libnbtplusplus
   '';
 
+  # Ensure that instance shortucts point to our final wrapper, rather than this unwrapped version
+  postPatch = ''
+    substituteInPlace launcher/minecraft/ShortcutUtils.cpp \
+      --replace-fail 'QApplication::applicationFilePath()' 'QProcessEnvironment::systemEnvironment().value("NIX_LAUNCHER_WRAPPER", "${placeholder "out"}/bin/prismlauncher")'
+  '';
+
   nativeBuildInputs = [
     cmake
+    pkg-config
     ninja
-    extra-cmake-modules
+    kdePackages.extra-cmake-modules
     jdk17
     stripJavaArchivesHook
   ];
 
-  buildInputs =
-    [
-      cmark
-      ghc_filesystem
-      kdePackages.qtbase
-      kdePackages.quazip
-      tomlplusplus
-      zlib
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ darwin.apple_sdk.frameworks.Cocoa ]
-    ++ lib.optional gamemodeSupport gamemode;
+  buildInputs = [
+    cmark
+    kdePackages.qtbase
+    kdePackages.qtnetworkauth
+    libarchive
+    qrencode
+    tomlplusplus
+    vulkan-headers
+    zlib
+  ]
+  ++ lib.optional stdenv.hostPlatform.isLinux gamemode;
 
-  hardeningEnable = lib.optionals stdenv.hostPlatform.isLinux [ "pie" ];
+  cmakeFlags = [
+    # downstream branding
+    (lib.cmakeFeature "Launcher_BUILD_PLATFORM" "nixpkgs")
+  ]
+  ++ lib.optionals (msaClientID != null) [
+    (lib.cmakeFeature "Launcher_MSA_CLIENT_ID" (toString msaClientID))
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # we wrap our binary manually
+    (lib.cmakeFeature "INSTALL_BUNDLE" "nodeps")
+    # disable built-in updater
+    (lib.cmakeFeature "MACOSX_SPARKLE_UPDATE_FEED_URL" "''")
+    (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "${placeholder "out"}/Applications/")
+  ];
 
-  cmakeFlags =
-    [
-      # downstream branding
-      (lib.cmakeFeature "Launcher_BUILD_PLATFORM" "nixpkgs")
-    ]
-    ++ lib.optionals (msaClientID != null) [
-      (lib.cmakeFeature "Launcher_MSA_CLIENT_ID" (toString msaClientID))
-    ]
-    ++ lib.optionals (lib.versionOlder kdePackages.qtbase.version "6") [
-      (lib.cmakeFeature "Launcher_QT_VERSION_MAJOR" "5")
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      # we wrap our binary manually
-      (lib.cmakeFeature "INSTALL_BUNDLE" "nodeps")
-      # disable built-in updater
-      (lib.cmakeFeature "MACOSX_SPARKLE_UPDATE_FEED_URL" "''")
-      (lib.cmakeFeature "CMAKE_INSTALL_PREFIX" "${placeholder "out"}/Applications/")
-    ];
+  doCheck = true;
 
   dontWrapQtApps = true;
 
@@ -104,7 +100,7 @@ stdenv.mkDerivation (finalAttrs: {
       their associated options with a simple interface.
     '';
     homepage = "https://prismlauncher.org/";
-    changelog = "https://github.com/PrismLauncher/PrismLauncher/releases/tag/${finalAttrs.src.rev}";
+    changelog = "https://github.com/PrismLauncher/PrismLauncher/releases/tag/${finalAttrs.version}";
     license = lib.licenses.gpl3Only;
     maintainers = with lib.maintainers; [
       minion3665

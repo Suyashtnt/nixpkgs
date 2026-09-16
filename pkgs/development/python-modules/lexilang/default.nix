@@ -3,25 +3,32 @@
   buildPythonPackage,
   fetchFromGitHub,
   setuptools,
-  pytestCheckHook,
   python,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "lexilang";
-  version = "1.0.2";
+  version = "1.0.7";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "LibreTranslate";
     repo = "LexiLang";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-/uSoEz/5HJnFVkXZndIlM+K0OJLJaorFQ6+kWYELjrs=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-5/P9u2naTTyG5l3uhrinRIAekyOYn8OKLwb/VEON2Vc=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  # Upstream builds in CI:
+  # https://github.com/LibreTranslate/LexiLang/blob/ba49108a736b9c077ea45cbe61d54fa635fe25d5/.github/workflows/publish.yml#L30-L31
+  postInstall = ''
+    ${lib.getExe python} -c "from lexilang.utils import compile_data; compile_data()"
+    rm -f lexilang/data/.gitignore
+    cp -r lexilang/data $out/${python.sitePackages}/lexilang/data
+  '';
+
+  pythonImportsCheck = [ "lexilang" ];
 
   checkPhase = ''
     runHook preCheck
@@ -29,10 +36,10 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Simple, fast dictionary-based language detector for short texts";
     homepage = "https://github.com/LibreTranslate/LexiLang";
-    license = licenses.agpl3Only;
-    maintainers = with maintainers; [ izorkin ];
+    license = lib.licenses.agpl3Only;
+    maintainers = with lib.maintainers; [ izorkin ];
   };
-}
+})

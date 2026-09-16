@@ -1,37 +1,44 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, runtimeShell
-, installShellFiles
-, bc
-, ncurses
-, testers
-, fzf
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  runtimeShell,
+  installShellFiles,
+  bc,
+  ncurses,
+  versionCheckHook,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "fzf";
-  version = "0.55.0";
+  version = "0.74.4";
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "junegunn";
     repo = "fzf";
-    rev = "v${version}";
-    hash = "sha256-4ikNCepLF7odkaEO+tzgrHb4528LetPEeMStJVZyjWg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QQ4hwbTeZ6MSojjCFn7dlISz1aGQbewGq4wnfs3/4K0=";
   };
 
-  vendorHash = "sha256-b7hCXDJ/EJr1sEvmS2RYaxBMkdWOo2LWe76mamD3BSY=";
+  vendorHash = "sha256-NojjUf/3c4q4B96eQ/qcI+GdRvHakHUyMRaQ6/IZpEw=";
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = 0;
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
   nativeBuildInputs = [ installShellFiles ];
 
   buildInputs = [ ncurses ];
 
   ldflags = [
-    "-s" "-w" "-X main.version=${version} -X main.revision=${src.rev}"
+    "-s"
+    "-w"
+    "-X main.version=${finalAttrs.version} -X main.revision=${finalAttrs.src.rev}"
   ];
 
   # The vim plugin expects a relative path to the binary; patch it to abspath.
@@ -59,12 +66,6 @@ buildGoModule rec {
 
     # Install shell integrations
     install -D shell/* -t $out/share/fzf/
-    install -D shell/key-bindings.fish $out/share/fish/vendor_functions.d/fzf_key_bindings.fish
-    mkdir -p $out/share/fish/vendor_conf.d
-    cat << EOF > $out/share/fish/vendor_conf.d/load-fzf-key-bindings.fish
-      status is-interactive; or exit 0
-      fzf_key_bindings
-    EOF
 
     cat <<SCRIPT > $out/bin/fzf-share
     #!${runtimeShell}
@@ -75,17 +76,19 @@ buildGoModule rec {
     chmod +x $out/bin/fzf-share
   '';
 
-  passthru.tests.version = testers.testVersion {
-    package = fzf;
-  };
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
 
   meta = {
-    changelog = "https://github.com/junegunn/fzf/blob/${src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/junegunn/fzf/blob/${finalAttrs.src.rev}/CHANGELOG.md";
     description = "Command-line fuzzy finder written in Go";
     homepage = "https://github.com/junegunn/fzf";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ Br1ght0ne ma27 zowoq ];
+    maintainers = with lib.maintainers; [
+      ma27
+      zowoq
+    ];
     mainProgram = "fzf";
     platforms = lib.platforms.unix;
   };
-}
+})

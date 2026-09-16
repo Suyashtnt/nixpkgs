@@ -1,14 +1,13 @@
 { config, lib, ... }:
 
 let
-  inherit (lib) mkOption types;
+  inherit (lib) mkOption;
   cfg = config.services.xserver.windowManager;
 in
 
 {
   imports = [
     ./2bwm.nix
-    ./afterstep.nix
     ./berry.nix
     ./bspwm.nix
     ./cwm.nix
@@ -34,9 +33,7 @@ in
     ./openbox.nix
     ./pekwm.nix
     ./notion.nix
-    ./ragnarwm.nix
     ./ratpoison.nix
-    ./sawfish.nix
     ./smallwm.nix
     ./stumpwm.nix
     ./spectrwm.nix
@@ -46,9 +43,9 @@ in
     ./wmderland.nix
     ./wmii.nix
     ./xmonad.nix
-    ./yeahwm.nix
     ./qtile.nix
-    ./none.nix ];
+    ./none.nix
+  ];
 
   options = {
 
@@ -56,19 +53,25 @@ in
 
       session = mkOption {
         internal = true;
-        default = [];
-        example = [{
-          name = "wmii";
-          start = "...";
-        }];
+        default = [ ];
+        example = [
+          {
+            name = "wmii";
+            start = "...";
+          }
+        ];
         description = ''
           Internal option used to add some common line to window manager
           scripts before forwarding the value to the
           `displayManager`.
         '';
-        apply = map (d: d // {
-          manage = "window";
-        });
+        apply = map (
+          d:
+          d
+          // {
+            manage = "window";
+          }
+        );
       };
 
     };

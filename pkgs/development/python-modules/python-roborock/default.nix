@@ -2,68 +2,92 @@
   lib,
   stdenv,
   aiohttp,
-  async-timeout,
+  aiomqtt,
+  aioresponses,
   buildPythonPackage,
   click,
   construct,
-  dacite,
   fetchFromGitHub,
+  freezegun,
+  hatchling,
   paho-mqtt,
-  poetry-core,
+  protobuf,
   pycryptodome,
   pycryptodomex,
+  pyrate-limiter,
+  pyshark,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
+  pyyaml,
+  vacuum-map-parser-roborock,
+  click-shell,
+  syrupy,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-roborock";
-  version = "2.6.0";
+  version = "7.4.2";
   pyproject = true;
 
-  disabled = pythonOlder "3.10";
-
   src = fetchFromGitHub {
-    owner = "humbertogontijo";
+    owner = "Python-roborock";
     repo = "python-roborock";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-Mszy1p7TOEynCePCEiLhwdWiKXfFnlo3/a3vc9TxGeY=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-dSkIO5XgnT+NsNeiq4wCTsGXrgN/uSnxYMrxcBdFMio=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail "poetry-core==1.8.0" "poetry-core"
-  '';
+  pythonRelaxDeps = [
+    "protobuf"
+    "pycryptodome"
+  ];
 
-  pythonRelaxDeps = [ "pycryptodome" ];
+  build-system = [ hatchling ];
 
-  build-system = [ poetry-core ];
-
-
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
-    async-timeout
-    click
+    aiomqtt
     construct
-    dacite
     paho-mqtt
+    protobuf
     pycryptodome
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ pycryptodomex ];
+    pyrate-limiter
+    vacuum-map-parser-roborock
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ pycryptodomex ];
+
+  optional-dependencies.cli = [
+    click
+    click-shell
+    pyyaml
+    pyshark
+  ];
 
   nativeCheckInputs = [
+    aioresponses
+    freezegun
     pytest-asyncio
     pytestCheckHook
+    syrupy
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  disabledTests = [
+    # url mocking mismatch, probably due to yarl update
+    "test_url_cycling"
   ];
+
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "roborock" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library & console tool for controlling Roborock vacuum";
-    homepage = "https://github.com/humbertogontijo/python-roborock";
-    changelog = "https://github.com/humbertogontijo/python-roborock/blob/v${version}/CHANGELOG.md";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/Python-roborock/python-roborock";
+    changelog = "https://github.com/Python-roborock/python-roborock/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
     mainProgram = "roborock";
   };
-}
+})

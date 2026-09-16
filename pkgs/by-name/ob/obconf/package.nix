@@ -7,7 +7,7 @@
   wrapGAppsHook3,
   gtk3,
   imlib2,
-  libSM,
+  libsm,
   libstartup_notification,
   libxml2,
   openbox,
@@ -23,6 +23,8 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-qwm66VA/ueRMFtSUcrmuObNkz+KYgWRnmR7TnQwpxiE=";
   };
 
+  patches = [ ./fix-implicit-declarations.patch ];
+
   nativeBuildInputs = [
     autoreconfHook
     pkg-config
@@ -32,20 +34,22 @@ stdenv.mkDerivation (finalAttrs: {
   buildInputs = [
     gtk3
     imlib2
-    libSM
+    libsm
     libstartup_notification
     libxml2
     openbox
   ];
 
+  strictDeps = true;
+
   postPatch = ''
-    substituteInPlace configure.ac --replace 2.0.4 ${finalAttrs.version}
+    substituteInPlace configure.ac --replace-fail 2.0.4 ${finalAttrs.version}
   '';
 
   meta = {
     description = "GUI configuration tool for openbox";
-    homepage = "http://openbox.org/wiki/ObConf";
-    changelog = "http://openbox.org/wiki/ObConf:Changelog";
+    homepage = "https://openbox.org/obconf";
+    changelog = "https://openbox.org/obconf_changelog";
     license = lib.licenses.gpl2Plus;
     maintainers = [ lib.maintainers.sfrijters ];
     platforms = lib.platforms.linux;

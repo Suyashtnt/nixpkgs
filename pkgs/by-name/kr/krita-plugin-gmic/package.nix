@@ -1,23 +1,26 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, extra-cmake-modules
-, fftw
-, krita
-, libsForQt5
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  curl,
+  fftw,
+  krita-unwrapped,
+  kdePackages,
+  qt6,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "krita-plugin-gmic";
-  version = "3.2.4.1";
+  version = "3.7.4.1";
 
   src = fetchFromGitHub {
-    owner = "amyspark";
+    owner = "vanyossi";
     repo = "gmic";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-SYE8kGvN7iD5OqiEEZpB/eRle67PrB5DojMC79qAQtg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-xyln60z9r4spPtN3r2+3a1e5yzd8+B7d9UAR3VsRZ78=";
   };
+
   sourceRoot = "${finalAttrs.src.name}/gmic-qt";
   dontWrapQtApps = true;
 
@@ -27,14 +30,21 @@ stdenv.mkDerivation (finalAttrs: {
       translations/lrelease.sh
   '';
 
-  nativeBuildInputs = [ cmake extra-cmake-modules ];
+  nativeBuildInputs = [
+    cmake
+    kdePackages.extra-cmake-modules
+    qt6.qttools
+  ];
 
   buildInputs = [
+    curl
     fftw
-    krita.unwrapped
-    libsForQt5.kcoreaddons
-    libsForQt5.qttools
+    krita-unwrapped
+    kdePackages.kcoreaddons
+    qt6.qtbase
   ];
+
+  strictDeps = true;
 
   cmakeFlags = [
     (lib.cmakeFeature "GMIC_QT_HOST" "krita-plugin")
@@ -42,10 +52,10 @@ stdenv.mkDerivation (finalAttrs: {
     (lib.cmakeBool "ENABLE_SYSTEM_GMIC" false)
   ];
 
-  meta = with lib; {
-    homepage = "https://github.com/amyspark/gmic";
+  meta = {
+    homepage = "https://krita.org";
     description = "GMic plugin for Krita";
     license = lib.licenses.cecill21;
-    maintainers = with maintainers; [ lelgenio ];
+    maintainers = with lib.maintainers; [ lelgenio ];
   };
 })

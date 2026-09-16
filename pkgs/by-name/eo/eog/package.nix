@@ -1,44 +1,49 @@
-{ lib
-, stdenv
-, fetchurl
-, meson
-, ninja
-, gettext
-, itstool
-, pkg-config
-, libxml2
-, libjpeg
-, libpeas
-, libportal-gtk3
-, gnome
-, gtk3
-, libhandy
-, glib
-, gsettings-desktop-schemas
-, gnome-desktop
-, lcms2
-, gdk-pixbuf
-, exempi
-, shared-mime-info
-, wrapGAppsHook3
-, libjxl
-, librsvg
-, webp-pixbuf-loader
-, libheif
-, libexif
-, gobject-introspection
-, gi-docgen
+{
+  lib,
+  stdenv,
+  fetchurl,
+  meson,
+  ninja,
+  gettext,
+  itstool,
+  pkg-config,
+  libxml2,
+  libjpeg,
+  libpeas,
+  libportal-gtk3,
+  gnome,
+  gtk3,
+  libhandy,
+  glib,
+  gsettings-desktop-schemas,
+  gnome-desktop,
+  lcms2,
+  gdk-pixbuf,
+  exempi,
+  shared-mime-info,
+  wrapGAppsHook3,
+  libjxl,
+  librsvg,
+  webp-pixbuf-loader,
+  libheif,
+  libexif,
+  gobject-introspection,
+  gi-docgen,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "eog";
-  version = "45.4";
+  version = "50.2";
 
-  outputs = [ "out" "dev" "devdoc" ];
+  outputs = [
+    "out"
+    "dev"
+    "devdoc"
+  ];
 
   src = fetchurl {
-    url = "mirror://gnome/sources/eog/${lib.versions.major version}/eog-${version}.tar.xz";
-    hash = "sha256-tQ8yHHCsZK97yqW0Rg3GdbPKYP2tOFYW86x7dw4GZv4=";
+    url = "mirror://gnome/sources/eog/${lib.versions.major finalAttrs.version}/eog-${finalAttrs.version}.tar.xz";
+    hash = "sha256-xsKv3+QKg43gxrJkiEqA04jxwu+j9zoV7eCIJMRr4LM=";
   };
 
   patches = [
@@ -84,14 +89,16 @@ stdenv.mkDerivation rec {
   postInstall = ''
     # Pull in WebP and JXL support for gnome-backgrounds.
     # In postInstall to run before gappsWrapperArgsHook.
-    export GDK_PIXBUF_MODULE_FILE="${gnome._gdkPixbufCacheBuilder_DO_NOT_USE {
-      extraLoaders = [
-        libjxl
-        librsvg
-        webp-pixbuf-loader
-        libheif.out
-      ];
-    }}"
+    export GDK_PIXBUF_MODULE_FILE="${
+      gnome._gdkPixbufCacheBuilder_DO_NOT_USE {
+        extraLoaders = [
+          libjxl
+          librsvg
+          webp-pixbuf-loader
+          libheif.lib
+        ];
+      }
+    }"
   '';
 
   preFixup = ''
@@ -115,12 +122,13 @@ stdenv.mkDerivation rec {
     };
   };
 
-  meta = with lib; {
+  meta = {
     description = "GNOME image viewer";
     homepage = "https://gitlab.gnome.org/GNOME/eog";
-    license = licenses.gpl2Plus;
-    maintainers = teams.gnome.members;
-    platforms = platforms.unix;
+    changelog = "https://gitlab.gnome.org/GNOME/eog/-/blob/${finalAttrs.version}/NEWS?ref_type=tags";
+    license = lib.licenses.gpl2Plus;
+    teams = [ lib.teams.gnome ];
+    platforms = lib.platforms.unix;
     mainProgram = "eog";
   };
-}
+})

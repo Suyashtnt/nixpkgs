@@ -1,16 +1,23 @@
-{ lib, fetchFromGitHub, buildDunePackage, ocaml, mdx, gitUpdater }:
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  ocaml,
+  mdx,
+  gitUpdater,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "printbox";
-  version = "0.11";
+  version = "0.12";
 
   minimalOCamlVersion = "4.04";
 
   src = fetchFromGitHub {
     owner = "c-cube";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-f5iTesEakULlLdDGtX+5i3vesUIbFLjcV3kJ7ZPia0Y=";
+    repo = "printbox";
+    rev = "v${finalAttrs.version}";
+    sha256 = "sha256-PQbr2sjASoWz0OHAMV6buAJERpnUJxVpLAigIVnADIc=";
   };
 
   nativeCheckInputs = [ mdx.bin ];
@@ -26,4 +33,4 @@ buildDunePackage rec {
     license = lib.licenses.isc;
     maintainers = [ lib.maintainers.romildo ];
   };
-}
+})

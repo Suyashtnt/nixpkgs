@@ -4,25 +4,25 @@
   fetchFromGitHub,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "kbld";
-  version = "0.44.1";
+  version = "0.47.3";
 
   src = fetchFromGitHub {
     owner = "carvel-dev";
     repo = "kbld";
-    rev = "v${version}";
-    hash = "sha256-sEzCA32r3nSY1hT1r4EPPWsF9Kgn0rXnaAKlatFjZIo=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-BuISF6PmtFPHTYmByJ021WICGXVVc+ZNjxeb40J7exA=";
   };
 
   vendorHash = null;
 
   subPackages = [ "cmd/kbld" ];
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = 0;
 
   ldflags = [
-    "-X=carvel.dev/kbld/pkg/kbld/version.Version=${version}"
+    "-X=carvel.dev/kbld/pkg/kbld/version.Version=${finalAttrs.version}"
   ];
 
   meta = {
@@ -32,4 +32,4 @@ buildGoModule rec {
     maintainers = with lib.maintainers; [ benchand ];
     mainProgram = "kbld";
   };
-}
+})

@@ -2,17 +2,17 @@
   stdenv,
   lib,
   fetchurl,
+  blueprint-compiler,
   meson,
   ninja,
   gettext,
-  python3,
   pkg-config,
   gnome,
   glib,
   gtk4,
   gobject-introspection,
   gdk-pixbuf,
-  librest_1_0,
+  librest,
   libgweather,
   geoclue2,
   wrapGAppsHook4,
@@ -26,20 +26,22 @@
   libadwaita,
   geocode-glib_2,
   tzdata,
+  writeText,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "gnome-maps";
-  version = "46.11";
+  version = "50.3";
 
   src = fetchurl {
     url = "mirror://gnome/sources/gnome-maps/${lib.versions.major finalAttrs.version}/gnome-maps-${finalAttrs.version}.tar.xz";
-    hash = "sha256-lAtBuXQLCBMyXjkWdYcWz4+g7k4MkZHyYM7AbZITWDU=";
+    hash = "sha256-CJyo4Vq9cqyD2zhs7xnOveBe74t26qyBkGpLBTVUTiw=";
   };
 
   doCheck = !stdenv.hostPlatform.isDarwin;
 
   nativeBuildInputs = [
+    blueprint-compiler
     gettext
     meson
     ninja
@@ -64,9 +66,16 @@ stdenv.mkDerivation (finalAttrs: {
     libshumate
     libgweather
     libadwaita
-    librest_1_0
+    librest
     libsecret
     libsoup_3
+  ];
+
+  mesonFlags = [
+    "--cross-file=${writeText "crossfile.ini" ''
+      [binaries]
+      gjs = '${lib.getExe gjs}'
+    ''}"
   ];
 
   postPatch = ''
@@ -75,8 +84,8 @@ stdenv.mkDerivation (finalAttrs: {
     # entry point to the wrapped binary we get back to a wrapped
     # binary.
     substituteInPlace "data/org.gnome.Maps.service.in" \
-        --replace "Exec=@pkgdatadir@/@app-id@" \
-                  "Exec=$out/bin/gnome-maps"
+      --replace-fail "Exec=@pkgdatadir@/@app-id@" \
+                     "Exec=$out/bin/gnome-maps"
   '';
 
   preCheck = ''
@@ -97,16 +106,22 @@ stdenv.mkDerivation (finalAttrs: {
     rm $out/lib/gnome-maps/libgnome-maps.so.0
   '';
 
+  preFixup = ''
+    substituteInPlace "$out/share/applications/org.gnome.Maps.desktop" \
+      --replace-fail "Exec=gapplication launch org.gnome.Maps" \
+                     "Exec=gnome-maps"
+  '';
+
   passthru = {
     updateScript = gnome.updateScript { packageName = "gnome-maps"; };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://apps.gnome.org/Maps/";
     description = "Map application for GNOME 3";
     mainProgram = "gnome-maps";
-    maintainers = teams.gnome.members;
-    license = licenses.gpl2Plus;
-    platforms = platforms.unix;
+    teams = [ lib.teams.gnome ];
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.unix;
   };
 })

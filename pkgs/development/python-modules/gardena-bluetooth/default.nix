@@ -1,32 +1,33 @@
 {
   lib,
   asyncclick,
-  bleak,
   bleak-retry-connector,
+  bleak,
   buildPythonPackage,
   fetchFromGitHub,
-  poetry-core,
+  hatchling,
   pytest-asyncio,
   pytestCheckHook,
-  pythonOlder,
   tzlocal,
+  uv-dynamic-versioning,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "gardena-bluetooth";
-  version = "1.4.3";
+  version = "2.10.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
 
   src = fetchFromGitHub {
     owner = "elupus";
     repo = "gardena-bluetooth";
-    rev = "refs/tags/${version}";
-    hash = "sha256-H2v96G/mu17puq8jNyk6L9iuWUvRombPd+s6byNQ4Zw=";
+    tag = finalAttrs.version;
+    hash = "sha256-7f+2EpjG5Ea4kWvhFP+UWxgYvOM/V3B4ZBMAfvZpRLw=";
   };
 
-  build-system = [ poetry-core ];
+  build-system = [
+    hatchling
+    uv-dynamic-versioning
+  ];
 
   dependencies = [
     bleak
@@ -34,7 +35,7 @@ buildPythonPackage rec {
     tzlocal
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     cli = [ asyncclick ];
   };
 
@@ -45,11 +46,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "gardena_bluetooth" ];
 
-  meta = with lib; {
+  meta = {
     description = "Module for interacting with Gardena Bluetooth";
     homepage = "https://github.com/elupus/gardena-bluetooth";
-    changelog = "https://github.com/elupus/gardena-bluetooth/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/elupus/gardena-bluetooth/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

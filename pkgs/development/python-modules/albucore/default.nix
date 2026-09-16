@@ -1,48 +1,64 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
-  setuptools,
-  pytestCheckHook,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  numkong,
   numpy,
-  opencv4,
-  typing-extensions,
+  opencv-python,
+  stringzilla,
+
+  # tests
+  hypothesis,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "albucore";
-  version = "0.0.17";
+  version = "0.2.4";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "albumentations-team";
     repo = "albucore";
-    rev = "refs/tags/${version}";
-    hash = "sha256-9fv5jewfL3JKhZyD0YS1WDNZ7wWt+8iF2DcygCOl168=";
+    tag = finalAttrs.version;
+    hash = "sha256-gI6q9ODkc2JoDfV8RA2NzwbC9A6QyZFa7C24prqMydU=";
   };
 
-  pythonRemoveDeps = [ "opencv-python" ];
-
-  build-system = [ setuptools ];
+  build-system = [
+    hatchling
+  ];
 
   dependencies = [
+    numkong
     numpy
-    opencv4
-    typing-extensions
+    opencv-python
+    stringzilla
   ];
 
   pythonImportsCheck = [ "albucore" ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    hypothesis
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # Flaky on some CPUs:
+    #   AssertionError: Not equal to tolerance rtol=1e-05, atol=1e-05
+    "test_normalize_consistency_across_shapes"
+  ];
 
   meta = {
     description = "High-performance image processing library to optimize and extend Albumentations with specialized functions for image transformations";
     homepage = "https://github.com/albumentations-team/albucore";
-    changelog = "https://github.com/albumentations-team/albucore/releases/tag/${version}";
+    changelog = "https://github.com/albumentations-team/albucore/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ bcdarwin ];
   };
-}
+})

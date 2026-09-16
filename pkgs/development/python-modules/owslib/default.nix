@@ -2,46 +2,47 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-
   lxml,
-  pyproj,
+  pytest-cov-stub,
+  pytest-httpserver,
   pytestCheckHook,
   python-dateutil,
-  pythonOlder,
-  pytz,
   pyyaml,
   requests,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "owslib";
-  version = "0.31.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "0.36.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "geopython";
     repo = "OWSLib";
-    rev = version;
-    hash = "sha256-vjJsLavVOqTTrVtYbtA0G+nl0HanKeGtzNFFj92Frw8=";
+    tag = version;
+    hash = "sha256-Of/CSLcNnpTYHRm4toQK4/HXTWNcuEMkW6obWpg96Tc=";
   };
 
   postPatch = ''
-    substituteInPlace tox.ini \
-      --replace " --doctest-modules --doctest-glob 'tests/**/*.txt' --cov-report term-missing --cov owslib" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools<69" "setuptools"
   '';
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     lxml
-    pyproj
     python-dateutil
-    pytz
     pyyaml
     requests
   ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytest-httpserver
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "owslib" ];
 
@@ -50,16 +51,21 @@ buildPythonPackage rec {
     export PY_IGNORE_IMPORTMISMATCH=1
   '';
 
-  pytestFlagsArray = [
-    # disable tests which require network access
-    "-m 'not online'"
+  disabledTestMarks = [
+    # Disable tests which require network access
+    "online"
   ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    # Tests requires network access
+    "tests/test_ogcapi_connectedsystems_osh.py"
+  ];
+
+  meta = {
     description = "Client for Open Geospatial Consortium web service interface standards";
     homepage = "https://www.osgeo.org/projects/owslib/";
-    changelog = "https://github.com/geopython/OWSLib/releases/tag/${version}";
-    license = licenses.bsd3;
-    maintainers = teams.geospatial.members;
+    changelog = "https://github.com/geopython/OWSLib/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.geospatial ];
   };
 }

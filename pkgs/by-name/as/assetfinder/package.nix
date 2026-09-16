@@ -1,16 +1,17 @@
-{ lib
-, fetchFromGitHub
-, buildGoModule
+{
+  lib,
+  fetchFromGitHub,
+  buildGoModule,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "assetfinder";
   version = "0.1.1";
 
   src = fetchFromGitHub {
     owner = "tomnomnom";
     repo = "assetfinder";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-7+YF1VXBcFehKw9JzurmXNu8yeZPdqfQEuaqwtR4AuA=";
   };
 
@@ -20,13 +21,16 @@ buildGoModule rec {
 
   vendorHash = null;
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/tomnomnom/assetfinder";
     description = "Find domains and subdomains related to a given domain";
     mainProgram = "assetfinder";
-    maintainers = with maintainers; [ shard7 ];
-    platforms = platforms.unix;
-    sourceProvenance = with sourceTypes; [ fromSource binaryNativeCode ];
-    license = with licenses; [ mit ];
+    maintainers = with lib.maintainers; [ shard7 ];
+    platforms = lib.platforms.unix;
+    sourceProvenance = with lib.sourceTypes; [
+      fromSource
+      binaryNativeCode
+    ];
+    license = lib.licenses.mit;
   };
-}
+})

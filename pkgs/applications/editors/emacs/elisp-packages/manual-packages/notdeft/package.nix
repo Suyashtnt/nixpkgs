@@ -18,21 +18,23 @@
 
 melpaBuild {
   pname = "notdeft";
-  version = "0-unstable-2021-12-04";
+  version = "0-unstable-2025-06-14";
 
   src = fetchFromGitHub {
     owner = "hasu";
     repo = "notdeft";
-    rev = "1b7054dcfc3547a7cafeb621552cec01d0540478";
-    hash = "sha256-LMMLJFVpmoE/y3MqrgY2fmsehmzk6TkLsVoHmFUxiSw=";
+    rev = "e0426807f608f550df14b7cd50b8455dee4dbfb3";
+    hash = "sha256-RB7KL04JNJ0d+wH9Q7aHCLYJHevy67XfXEyDxpjTbvg=";
   };
 
   packageRequires = lib.optional withHydra hydra ++ lib.optional withIvy ivy;
 
+  patches = [
+    ./notdeft-xapian-program.diff
+  ];
   postPatch = ''
     substituteInPlace notdeft-xapian.el \
-      --replace-fail 'defcustom notdeft-xapian-program nil' \
-                     "defcustom notdeft-xapian-program \"$out/bin/notdeft-xapian\""
+      --replace-fail "@notdeft-xapian@" "$out/bin/notdeft-xapian"
   '';
 
   files = ''
@@ -41,8 +43,6 @@ melpaBuild {
      ${lib.optionalString withHydra ''"extras/notdeft-mode-hydra.el"''}
      ${lib.optionalString withIvy ''"extras/notdeft-ivy.el"''})
   '';
-
-  strictDeps = true;
 
   nativeBuildInputs = [ pkg-config ];
 
@@ -58,8 +58,6 @@ melpaBuild {
   preInstall = ''
     install -D --target-directory=$out/bin notdeft-xapian
   '';
-
-  ignoreCompilationError = false;
 
   passthru = {
     updateScript = unstableGitUpdater { hardcodeZeroVersion = true; };

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.heartbeat;
 
@@ -29,7 +34,7 @@ in
 
       tags = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = "Tags to place on the shipped log messages";
       };
 
@@ -59,15 +64,13 @@ in
       "d '${cfg.stateDir}' - nobody nogroup - -"
     ];
 
-    systemd.services.heartbeat = with pkgs; {
+    systemd.services.heartbeat = {
       description = "heartbeat log shipper";
       wantedBy = [ "multi-user.target" ];
-      preStart = ''
-        mkdir -p "${cfg.stateDir}"/{data,logs}
-      '';
       serviceConfig = {
         User = "nobody";
         AmbientCapabilities = "cap_net_raw";
+        ExecStartPre = "${lib.getExe' pkgs.coreutils "mkdir"} -p '${cfg.stateDir}'/data '${cfg.stateDir}'/logs";
         ExecStart = "${cfg.package}/bin/heartbeat -c \"${heartbeatYml}\" -path.data \"${cfg.stateDir}/data\" -path.logs \"${cfg.stateDir}/logs\"";
       };
     };

@@ -3,8 +3,9 @@
   buildPythonPackage,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
+  hatchling,
   aiohttp,
+  async-timeout,
   attrs,
   multidict,
   colorlog,
@@ -14,15 +15,16 @@
   pytest-asyncio,
   mock,
 }:
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hikari";
-  version = "2.0.0.dev126";
+  version = "2.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "hikari-py";
     repo = "hikari";
-    rev = version;
-    hash = "sha256-KpF9P92IciILV7zlYTCgtMqhudT9uOR2SQJdWDtxYaA=";
+    tag = finalAttrs.version;
+    hash = "sha256-Da/gBYyhEUge9KteK3U5lNeGCFglazt/g2yfuqR1+2U=";
     # The git commit is part of the `hikari.__git_sha1__` original output;
     # leave that output the same in nixpkgs. Use the `.git` directory
     # to retrieve the commit SHA, and remove the directory afterwards,
@@ -35,6 +37,7 @@ buildPythonPackage rec {
     '';
   };
 
+  build-system = [ hatchling ];
 
   propagatedBuildInputs = [
     aiohttp
@@ -45,7 +48,7 @@ buildPythonPackage rec {
 
   pythonRelaxDeps = true;
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     server = [ pynacl ];
   };
 
@@ -55,11 +58,10 @@ buildPythonPackage rec {
     pytest-cov-stub
     pytest-randomly
     mock
+    async-timeout
   ];
 
   pythonImportsCheck = [ "hikari" ];
-
-  disabled = pythonOlder "3.7";
 
   postPatch = ''
     substituteInPlace hikari/_about.py \
@@ -69,8 +71,11 @@ buildPythonPackage rec {
   meta = {
     description = "Discord API wrapper for Python written with asyncio";
     homepage = "https://www.hikari-py.dev/";
-    changelog = "https://github.com/hikari-py/hikari/releases/tag/${version}";
+    changelog = "https://github.com/hikari-py/hikari/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ tomodachi94 sigmanificient ];
+    maintainers = with lib.maintainers; [
+      tomodachi94
+      sigmanificient
+    ];
   };
-}
+})

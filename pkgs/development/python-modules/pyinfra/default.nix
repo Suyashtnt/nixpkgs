@@ -1,67 +1,84 @@
 {
   lib,
   buildPythonPackage,
-  click,
-  colorama,
-  configparser,
-  distro,
   fetchFromGitHub,
+
+  # build-system
+  hatchling,
+  uv-dynamic-versioning,
+
+  # dependencies
+  click,
+  distro,
   gevent,
   jinja2,
   packaging,
   paramiko,
-  pytestCheckHook,
+  pydantic,
   python-dateutil,
-  pythonOlder,
-  pywinrm,
-  pyyaml,
-  setuptools,
   typeguard,
-  typing-extensions,
+  types-paramiko,
+
+  # tests
+  freezegun,
+  pyinfra-testgen,
+  pytest-testinfra,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyinfra";
-  version = "3.1.1";
+  version = "3.9.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
-    owner = "Fizzadar";
+    owner = "pyinfra-dev";
     repo = "pyinfra";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-NHQpYOXlqFU4BtiwiESGV8pM0O8kqCz2TpXOGz8T4zQ=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-5qgPfBtPqysEtNCLFAgGAxlVK/CRH9VYmiC/98VWomI=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [
+    hatchling
+    uv-dynamic-versioning
+  ];
 
   dependencies = [
     click
-    colorama
-    configparser
     distro
     gevent
     jinja2
     packaging
     paramiko
+    pydantic
     python-dateutil
-    pywinrm
-    pyyaml
-    setuptools
     typeguard
-  ] ++ lib.optionals (pythonOlder "3.10") [ typing-extensions ];
+    types-paramiko
+  ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    freezegun
+    pyinfra-testgen
+    pytest-testinfra
+    pytestCheckHook
+    versionCheckHook
+  ];
 
   pythonImportsCheck = [ "pyinfra" ];
+
+  pythonRelaxDeps = [
+    "paramiko"
+    "types-paramiko"
+  ];
 
   disabledTests = [
     # Test requires SSH binary
     "test_load_ssh_config"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python-based infrastructure automation";
     longDescription = ''
       pyinfra automates/provisions/manages/deploys infrastructure. It can be used for
@@ -69,9 +86,12 @@ buildPythonPackage rec {
     '';
     homepage = "https://pyinfra.com";
     downloadPage = "https://pyinfra.com/Fizzadar/pyinfra/releases";
-    changelog = "https://github.com/Fizzadar/pyinfra/blob/v${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ totoroot ];
+    changelog = "https://github.com/pyinfra-dev/pyinfra/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      robsliwi
+      totoroot
+    ];
     mainProgram = "pyinfra";
   };
-}
+})

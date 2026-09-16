@@ -1,14 +1,14 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, openssl
-, libiconv
-, makeWrapper
-, imagemagick
-, makeFontsConf
-}:
-stdenv.mkDerivation
 {
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  openssl,
+  libiconv,
+  makeWrapper,
+  imagemagick,
+  makeFontsConf,
+}:
+stdenv.mkDerivation {
   pname = "sgfutils";
   version = "0.25-unstable-2017-11-27";
   src = fetchFromGitHub {
@@ -17,6 +17,10 @@ stdenv.mkDerivation
     rev = "11ab171c46cc16cc71ac6fc901d38ea88d6532a4";
     hash = "sha256-KWYgTxz32WK3MKouj1WAJtZmleKt5giCpzQPwfWruZQ=";
   };
+  patches = [
+    # FIx gcc-15 build failure: https://github.com/yangboz/sgfutils/pull/3
+    ./gcc-15.patch
+  ];
   nativeBuildInputs = [ makeWrapper ];
   buildInputs = [ openssl ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ];
   buildPhase = ''
@@ -36,17 +40,17 @@ stdenv.mkDerivation
   postFixup = ''
     wrapProgram $out/bin/sgftopng \
       --prefix PATH : ${lib.makeBinPath [ imagemagick ]} \
-      --set-default FONTCONFIG_FILE ${makeFontsConf { fontDirectories = []; }}
+      --set-default FONTCONFIG_FILE ${makeFontsConf { fontDirectories = [ ]; }}
   '';
-  meta = with lib; {
+  meta = {
     homepage = "https://homepages.cwi.nl/~aeb/go/sgfutils/html/sgfutils.html";
     description = "Command line utilities that help working with SGF files";
     longDescription = ''
       The package sgfutils is a collection of command line utilities that help working with SGF files,
       especially when they describe go (igo, weiqi, baduk) games.
     '';
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ ggpeti ];
-    platforms = platforms.all; # tested on x86_64-linux and aarch64-darwin
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ ggpeti ];
+    platforms = lib.platforms.all; # tested on x86_64-linux and aarch64-darwin
   };
 }

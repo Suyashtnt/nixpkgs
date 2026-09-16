@@ -1,11 +1,16 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.xdg.portal.lxqt;
 
 in
 {
   meta = {
-    maintainers = lib.teams.lxqt.members;
+    teams = [ lib.teams.lxqt ];
   };
 
   options.xdg.portal.lxqt = {
@@ -19,12 +24,12 @@ in
 
     styles = lib.mkOption {
       type = lib.types.listOf lib.types.package;
-      default = [];
-      example = lib.literalExpression ''[
-        pkgs.libsForQt5.qtstyleplugin-kvantum
-        pkgs.breeze-qt5
-        pkgs.qtcurve
-      ];
+      default = [ ];
+      example = lib.literalExpression ''
+        [
+          pkgs.libsForQt5.qtstyleplugin-kvantum
+          pkgs.breeze-qt5
+        ];
       '';
       description = ''
         Extra Qt styles that will be available to the

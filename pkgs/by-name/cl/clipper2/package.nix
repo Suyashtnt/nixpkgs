@@ -1,21 +1,23 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  nix-update-script,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "clipper2";
-  version = "1.4.0";
+  version = "2.0.1";
 
   src = fetchFromGitHub {
     owner = "AngusJohnson";
     repo = "Clipper2";
-    rev = "Clipper2_${version}";
-    hash = "sha256-ASL9uKkXsWyIbD1qaKEL7gf/JuCqzZQZSKHwLT5dKJU=";
+    tag = "Clipper2_${finalAttrs.version}";
+    hash = "sha256-Pqmrj9SDooM+VU4ObQrtaU9+GN//FsD+Brp+OsN0cPM=";
   };
 
-  sourceRoot = "${src.name}/CPP";
+  sourceRoot = "${finalAttrs.src.name}/CPP";
 
   nativeBuildInputs = [
     cmake
@@ -27,9 +29,7 @@ stdenv.mkDerivation rec {
     "-DBUILD_SHARED_LIBS=ON"
   ];
 
-  patches = [
-    ./0001-fix-pc-paths.patch
-  ];
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Polygon Clipping and Offsetting - C++ Only";
@@ -42,4 +42,4 @@ stdenv.mkDerivation rec {
     maintainers = [ lib.maintainers.cadkin ];
     platforms = lib.platforms.all;
   };
-}
+})

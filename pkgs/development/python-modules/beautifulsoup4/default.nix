@@ -2,14 +2,27 @@
   lib,
   buildPythonPackage,
   fetchPypi,
-  chardet,
+  fetchpatch,
+
+  # build-system
   hatchling,
+
+  # docs
+  sphinxHook,
+
+  # dependencies
+  soupsieve,
+  typing-extensions,
+
+  # optional-dependencies
+  chardet,
+  charset-normalizer,
+  faust-cchardet,
   html5lib,
   lxml,
+
+  # tests
   pytestCheckHook,
-  pythonOlder,
-  soupsieve,
-  sphinxHook,
 
   # for passthru.tests
   html-sanitizer,
@@ -22,7 +35,7 @@
 
 buildPythonPackage rec {
   pname = "beautifulsoup4";
-  version = "4.12.3";
+  version = "4.15.0";
   pyproject = true;
 
   outputs = [
@@ -30,31 +43,38 @@ buildPythonPackage rec {
     "doc"
   ];
 
-  disabled = pythonOlder "3.6";
-
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-dOPRko7cBw0hdIGFxG4/szSQ8i9So63e6a7g9Pd4EFE=";
+    hash = "sha256-KI48p9VLBvKsGRlwvCdcGTnLRtRQslW/ZxiwSqN6tPc=";
   };
 
-  nativeBuildInputs = [
-    hatchling
-    sphinxHook
-  ];
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs = [
-    chardet
+  nativeBuildInputs = [ sphinxHook ];
+
+  dependencies = [
     soupsieve
+    typing-extensions
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
+    chardet = [ chardet ];
+    cchardet = [ faust-cchardet ];
+    charset-normalizer = [ charset-normalizer ];
     html5lib = [ html5lib ];
     lxml = [ lxml ];
   };
 
   nativeCheckInputs = [
     pytestCheckHook
-  ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  disabledTests = [
+    # fail with latest libxml, by not actually rejecting
+    "test_rejected_markup"
+    "test_rejected_input"
+  ];
 
   pythonImportsCheck = [ "bs4" ];
 
@@ -69,11 +89,11 @@ buildPythonPackage rec {
       ;
   };
 
-  meta = with lib; {
+  meta = {
     changelog = "https://git.launchpad.net/beautifulsoup/tree/CHANGELOG?h=${version}";
     description = "HTML and XML parser";
     homepage = "http://crummy.com/software/BeautifulSoup/bs4/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ domenkozar ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

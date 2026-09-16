@@ -2,8 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonAtLeast,
-  pythonOlder,
 
   # build-system
   setuptools,
@@ -12,30 +10,22 @@
   # tests
   asttokens,
   littleutils,
-  rich,
   pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "executing";
-  version = "2.0.1";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "2.2.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "alexmojaki";
-    repo = pname;
+    repo = "executing";
     rev = "v${version}";
-    hash = "sha256-PBvfkv9GQ5Vj5I5SygtmHXtqqHMJ4XgNV1/I+lSU0/U=";
+    hash = "sha256-UlXuXBW9TmJ0xG/0yMdx8EDQDSzVgtsgFJIj/O7pmio=";
   };
 
-  patches = [
-    # TODO: replace after the PR is merged or tagged
-    ./get_iter.patch
-  ];
-
-  nativeBuildInputs = [
+  build-system = [
     setuptools
     setuptools-scm
   ];
@@ -44,7 +34,7 @@ buildPythonPackage rec {
     asttokens
     littleutils
     pytestCheckHook
-  ] ++ lib.optionals (pythonAtLeast "3.11") [ rich ];
+  ];
 
   disabledTests = [
     # requires ipython, which causes a circular dependency
@@ -58,10 +48,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "executing" ];
 
-  meta = with lib; {
+  meta = {
     description = "Get information about what a frame is currently doing, particularly the AST node being executed";
     homepage = "https://github.com/alexmojaki/executing";
-    license = licenses.mit;
-    maintainers = with maintainers; [ renatoGarcia ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ renatoGarcia ];
   };
 }

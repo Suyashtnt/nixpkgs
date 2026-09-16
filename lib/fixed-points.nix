@@ -108,6 +108,12 @@ rec {
     `f`
 
     : 1\. Function argument
+
+    # Type
+
+    ```
+    fix' :: (a -> a) -> a
+    ```
   */
   fix' =
     f:
@@ -119,7 +125,7 @@ rec {
     x;
 
   /**
-    Return the fixpoint that `f` converges to when called iteratively, starting
+    Returns the fixpoint that `f` converges to when called iteratively, starting
     with the input `x`.
 
     ```
@@ -140,7 +146,7 @@ rec {
     # Type
 
     ```
-    (a -> a) -> a -> a
+    converge :: (a -> a) -> a -> a
     ```
   */
   converge =
@@ -160,7 +166,9 @@ rec {
     A fixed-point function returning an attribute set has the form
 
     ```nix
-    final: { # attributes }
+    final: {
+      # attributes
+    }
     ```
 
     where `final` refers to the lazily evaluated attribute set returned by the fixed-point function.
@@ -168,7 +176,9 @@ rec {
     An overlay to such a fixed-point function has the form
 
     ```nix
-    final: prev: { # attributes }
+    final: prev: {
+      # attributes
+    }
     ```
 
     where `prev` refers to the result of the original function to `final`, and `final` is the result of the composition of the overlay and the original function.
@@ -177,8 +187,12 @@ rec {
 
     ```nix
     let
-      f = final: { # attributes };
-      overlay = final: prev: { # attributes };
+      f = final: {
+        # attributes
+      };
+      overlay = final: prev: {
+        # attributes
+      };
     in extends overlay f;
     ```
 
@@ -186,8 +200,12 @@ rec {
 
     ```nix
     let
-      f = final: { # attributes };
-      overlay = final: prev: { # attributes };
+      f = final: {
+        # attributes
+      };
+      overlay = final: prev: {
+        # attributes
+      };
       g = extends overlay f;
     in fix g
     ```
@@ -277,9 +295,9 @@ rec {
     # Type
 
     ```
-    extends :: (Attrs -> Attrs -> Attrs) # The overlay to apply to the fixed-point function
-            -> (Attrs -> Attrs) # A fixed-point function
-            -> (Attrs -> Attrs) # The resulting fixed-point function
+    extends :: (AttrSet -> AttrSet -> AttrSet) # The overlay to apply to the fixed-point function
+            -> (AttrSet -> AttrSet) # A fixed-point function
+            -> (AttrSet -> AttrSet) # The resulting fixed-point function
     ```
 
     # Examples
@@ -317,7 +335,7 @@ rec {
 
   /**
     Compose two overlay functions and return a single overlay function that combines them.
-    For more details see: [composeManyExtensions](#function-library-lib.fixedPoints.composeManyExtensions).
+    For more details see: [`composeManyExtensions`](#function-library-lib.fixedPoints.composeManyExtensions).
   */
   composeExtensions =
     f: g: final: prev:
@@ -358,7 +376,7 @@ rec {
       #                 ↓          ↓
       OverlayFn = { ... } -> { ... } -> { ... };
     in
-      composeManyExtensions :: ListOf OverlayFn -> OverlayFn
+    composeManyExtensions :: [OverlayFn] -> OverlayFn
     ```
 
     # Examples
@@ -377,7 +395,7 @@ rec {
 
       extensions = composeManyExtensions [ overlayA overlayB ];
 
-      # Caluculate the fixed point of all composed overlays.
+      # Calculate the fixed point of all composed overlays.
       fixedpoint = lib.fix (lib.extends extensions original );
 
     in fixedpoint
@@ -462,14 +480,11 @@ rec {
     # Type
 
     ```
-    toExtension ::
-      b' -> Any -> Any -> b'
+    toExtension :: b' -> Any -> Any -> b'
     or
-    toExtension ::
-      (a -> b') -> Any -> a -> b'
+    toExtension :: (a -> b') -> Any -> a -> b'
     or
-    toExtension ::
-      (a -> a -> b) -> a -> a -> b
+    toExtension :: (a -> a -> b) -> a -> a -> b
     where b' = ! Callable
 
     Set a = b = b' = AttrSet & ! Callable to make toExtension return an extending function.

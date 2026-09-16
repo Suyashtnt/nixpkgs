@@ -1,18 +1,25 @@
-{ kernelPackages ? null, mkXfsFlags ? "" }:
-import ../make-test-python.nix ({ pkgs, lib, ... }: {
+{
+  lib,
+  kernelPackages ? null,
+  mkXfsFlags ? "",
+  ...
+}:
+{
   name = "lvm2-vdo";
-  meta.maintainers = lib.teams.helsinki-systems.members;
+  meta.maintainers = [ ];
 
-  nodes.machine = { pkgs, lib, ... }: {
-    # Minimum required size for VDO volume: 5063921664 bytes
-    virtualisation.emptyDiskImages = [ 8192 ];
-    services.lvm = {
-      boot.vdo.enable = true;
-      dmeventd.enable = true;
+  nodes.machine =
+    { pkgs, lib, ... }:
+    {
+      # Minimum required size for VDO volume: 5063921664 bytes
+      virtualisation.emptyDiskImages = [ 8192 ];
+      services.lvm = {
+        boot.vdo.enable = true;
+        dmeventd.enable = true;
+      };
+      environment.systemPackages = with pkgs; [ xfsprogs ];
+      boot = lib.mkIf (kernelPackages != null) { inherit kernelPackages; };
     };
-    environment.systemPackages = with pkgs; [ xfsprogs ];
-    boot = lib.mkIf (kernelPackages != null) { inherit kernelPackages; };
-  };
 
   testScript = ''
     machine.succeed("vgcreate test_vg /dev/vdb")
@@ -24,4 +31,4 @@ import ../make-test-python.nix ({ pkgs, lib, ... }: {
     machine.succeed("vdostats")
     machine.succeed("vgchange -a n")
   '';
-})
+}

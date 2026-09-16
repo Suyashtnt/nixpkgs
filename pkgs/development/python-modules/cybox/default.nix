@@ -7,7 +7,6 @@
   mixbox,
   pytestCheckHook,
   python-dateutil,
-  pythonOlder,
   setuptools,
 }:
 
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "2.1.0.21";
   pyproject = true;
 
-  disabled = pythonOlder "3.9";
-
   src = fetchFromGitHub {
     owner = "CybOXProject";
     repo = "python-cybox";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-Gn/gH7pvvOqLIGExgCNa5KswPazIZUZXdQe3LRAUVjw=";
   };
 

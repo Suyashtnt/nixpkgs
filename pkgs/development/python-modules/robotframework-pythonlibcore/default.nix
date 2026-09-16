@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   setuptools,
   robotframework,
@@ -13,17 +12,15 @@
 
 buildPythonPackage rec {
   pname = "robotframework-pythonlibcore";
-  version = "4.4.1";
-
-  disabled = pythonOlder "3.8";
+  version = "4.6.0";
 
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "robotframework";
     repo = "PythonLibCore";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-5RUi65+DljCqWoB8vZxc0hyIefEFOWuKluplXrD0SkI=";
+    tag = "v${version}";
+    hash = "sha256-H13b25M4vEymXZzhAm/EXMx7v5u/9rgkBXv7nBaxAvo=";
   };
 
   build-system = [ setuptools ];
@@ -40,7 +37,7 @@ buildPythonPackage rec {
   pythonImportsCheck = [ "robotlibcore" ];
 
   meta = {
-    changelog = "https://github.com/robotframework/PythonLibCore/blob/${src.rev}/docs/PythonLibCore-${version}.rst";
+    changelog = "https://github.com/robotframework/PythonLibCore/blob/${src.tag}/docs/PythonLibCore-${src.tag}.rst";
     description = "Tools to ease creating larger test libraries for Robot Framework using Python";
     homepage = "https://github.com/robotframework/PythonLibCore";
     license = lib.licenses.asl20;

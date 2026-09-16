@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  docopt,
   fetchFromGitHub,
   pytestCheckHook,
   requests,
@@ -11,34 +10,29 @@
   setuptools,
   tqdm,
   urllib3,
-  pythonOlder,
-  importlib-metadata,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "internetarchive";
-  version = "4.1.0";
+  version = "5.10.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "jjjake";
     repo = "internetarchive";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-CqfwAKhrq4VEBU258x19JT8+ay2vOYIzVoFWjAzh3wY=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-OVjvx7Ne2NLXl5eA1HP89HyoTttR9XAx2AJdXiWMkqY=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     tqdm
-    docopt
     requests
     jsonpatch
     schema
     urllib3
-  ] ++ lib.optionals (pythonOlder "3.10") [ importlib-metadata ];
+  ];
 
   nativeCheckInputs = [
     responses
@@ -63,12 +57,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "internetarchive" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python and Command-Line Interface to Archive.org";
     homepage = "https://github.com/jjjake/internetarchive";
-    changelog = "https://github.com/jjjake/internetarchive/blob/v${version}/HISTORY.rst";
-    license = licenses.agpl3Plus;
-    maintainers = [ ];
+    changelog = "https://github.com/jjjake/internetarchive/blob/${finalAttrs.src.tag}/HISTORY.rst";
+    license = lib.licenses.agpl3Plus;
+    maintainers = with lib.maintainers; [ pyrox0 ];
     mainProgram = "ia";
   };
-}
+})

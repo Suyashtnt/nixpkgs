@@ -1,38 +1,44 @@
 {
   "twentynineteen": {
-    "path": "twentynineteen/2.9",
-    "rev": "235020",
-    "sha256": "0980471ha06dj5kcwij7rmrg2dr0cj53r72qym4sqzyfj0aj1lkx",
-    "version": "2.9"
+    "path": "twentynineteen/3.4",
+    "rev": "344804",
+    "sha256": "090c669hldn1hxha555pq68vnp05d6hf7z9m2iba6j66r9h0bsvs",
+    "version": "3.4"
   },
   "twentytwenty": {
-    "path": "twentytwenty/2.7",
-    "rev": "235021",
-    "sha256": "0y9r1jhlbr4bxhv0a73kgkg6klgg05l6iy3shhkp130s3hlkhfg1",
-    "version": "2.7"
+    "path": "twentytwenty/3.2",
+    "rev": "344810",
+    "sha256": "11mwx0mwba4n4wbzmcjc3x4nbb55z0x9fhbndmw04s0vpcdf2fpp",
+    "version": "3.2"
   },
-  "twentytwentyfour": {
-    "path": "twentytwentyfour/1.2",
-    "rev": "235025",
-    "sha256": "16d7sgpcw9hkih5ji9h5wc9pv5nw0rv0q5glv6iq8k9mbms3295w",
-    "version": "1.2"
-  },
-  "twentytwentyone": {
-    "path": "twentytwentyone/2.3",
-    "rev": "235022",
-    "sha256": "0nxrlim9mcdn7db5v93shlq1yxani909gwccvsly2wjv777dbakx",
-    "version": "2.3"
-  },
-  "twentytwentythree": {
-    "path": "twentytwentythree/1.5",
-    "rev": "235024",
-    "sha256": "09xaxqrrzgmmjlbbpm9jfhajfc90am4qp2dihcx4bbkczb5ahgc3",
+  "twentytwentyfive": {
+    "path": "twentytwentyfive/1.5",
+    "rev": "329589",
+    "sha256": "0vi6ing7d47qsdxgxvynwvq38dn8c7p0i8gd85hcik7bq82gjdzx",
     "version": "1.5"
   },
+  "twentytwentyfour": {
+    "path": "twentytwentyfour/1.6",
+    "rev": "344811",
+    "sha256": "0xixvqkzasf2pn7sy1z1wclvka937xzps4lh5laqh6b7aadjkrvd",
+    "version": "1.6"
+  },
+  "twentytwentyone": {
+    "path": "twentytwentyone/2.9",
+    "rev": "344812",
+    "sha256": "1njg8nxqifydzn09aaimmfc228r8094q6dnhnz3frp8nr117gim7",
+    "version": "2.9"
+  },
+  "twentytwentythree": {
+    "path": "twentytwentythree/1.7",
+    "rev": "344813",
+    "sha256": "0ww2nba529rwq02dis7bp4n4pkg4zcsymlncryaz5pbbi65i4x49",
+    "version": "1.7"
+  },
   "twentytwentytwo": {
-    "path": "twentytwentytwo/1.8",
-    "rev": "235023",
-    "sha256": "0m35rl6gxjl4idsfaqhjqzgmhspn55iy7zxa8qn5mbl0ls6b5m8q",
-    "version": "1.8"
+    "path": "twentytwentytwo/2.2",
+    "rev": "344814",
+    "sha256": "0s21isj1wda1wwhpv391kgnfmw7ggvqqnn47qjjp85x8b6v8yqjc",
+    "version": "2.2"
   }
 }

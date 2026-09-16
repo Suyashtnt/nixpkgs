@@ -1,54 +1,61 @@
 {
   lib,
-  buildPythonPackage,
-  fetchFromGitHub,
-  fetchpatch2,
-  poetry-core,
-  pytestCheckHook,
-  pytest-mock,
   bitvector-for-humans,
+  buildPythonPackage,
+  busylight-core,
+  fastapi,
+  fetchFromGitHub,
   hidapi,
+  httpx,
   loguru,
   pyserial,
+  pytest-mock,
+  pytestCheckHook,
   typer,
+  udevCheckHook,
+  uv-build,
+  uvicorn,
   webcolors,
 }:
-buildPythonPackage rec {
+
+buildPythonPackage (finalAttrs: {
   pname = "busylight-for-humans";
-  version = "0.32.0";
+  version = "1.0.1";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "JnyJny";
     repo = "busylight";
-    rev = version;
-    hash = "sha256-rdgkTk9x3bO5H01Bo2yOGIIxkoLv1k7kkJidJu/1HDQ=";
+    tag = "busylight-cli/v${finalAttrs.version}";
+    hash = "sha256-h+YPrcf32SgzdQDYCeQlh4enzsXfsHr470W3tiFBO7g=";
+    rootDir = "packages/busylight";
   };
 
-  patches = [
-    (fetchpatch2 {
-      # https://github.com/JnyJny/busylight/pull/369
-      name = "fix-poetry-core.patch";
-      url = "https://github.com/helsinki-systems/busylight/commit/74ca283e2250564f422d904ece1b9ab0dd9a8f6c.patch";
-      hash = "sha256-eif9ycSYL8ZpXsvNCOHDJlpj12oauyzlMKUScZMzllc=";
-    })
-  ];
+  build-system = [ uv-build ];
 
-  build-system = [ poetry-core ];
   dependencies = [
-    bitvector-for-humans
+    busylight-core
     hidapi
     loguru
     pyserial
     typer
     webcolors
   ];
-  nativeCheckInputs = [
-    pytestCheckHook
-    pytest-mock
-  ];
 
-  disabledTestPaths = [ "tests/test_pydantic_models.py" ];
+  optional-dependencies = {
+    web = [ fastapi ];
+    webapi = [
+      fastapi
+      uvicorn
+    ];
+  };
+
+  nativeCheckInputs = [
+    httpx
+    pytestCheckHook
+    udevCheckHook
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "busylight" ];
 
@@ -57,11 +64,12 @@ buildPythonPackage rec {
     $out/bin/busylight udev-rules -o $out/lib/udev/rules.d/99-busylight.rules
   '';
 
-  meta = with lib; {
+  meta = {
+    description = "Control USB connected presence lights from multiple vendors via the command-line or web API";
     homepage = "https://github.com/JnyJny/busylight";
-    description = "Control USB connected presence lights from multiple vendors via the command-line or web API.";
+    changelog = "https://github.com/JnyJny/busylight/blob/${finalAttrs.src.tag}/${finalAttrs.src.rootDir}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ helsinki-Jo ];
     mainProgram = "busylight";
-    license = licenses.asl20;
-    maintainers = teams.helsinki-systems.members;
   };
-}
+})

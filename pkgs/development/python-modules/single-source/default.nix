@@ -6,7 +6,6 @@
   toml,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "0.4.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "rabbit72";
     repo = "single-source";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-4l9ochlscQoWJVkYN8Iq2DsiU7qoOf7nUFYgBOebK/g=";
   };
 

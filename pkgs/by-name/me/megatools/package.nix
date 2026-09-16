@@ -1,26 +1,26 @@
-{ lib
-, stdenv
-, fetchgit
-, asciidoc
-, docbook_xml_dtd_45
-, docbook2x
-, libxml2
-, meson
-, ninja
-, pkg-config
-, curl
-, glib
-, fuse
+{
+  lib,
+  stdenv,
+  fetchgit,
+  asciidoc,
+  docbook_xml_dtd_45,
+  docbook2x,
+  libxml2,
+  meson,
+  ninja,
+  pkg-config,
+  curl,
+  glib,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "megatools";
-  version = "1.11.0";
+  version = "1.11.5";
 
   src = fetchgit {
-    url = "https://megous.com/git/megatools";
-    rev = version;
-    sha256 = "sha256-Q9hMJBQBenufubbmeAw8Q8w+Oo+UcZLWathKNDwTv3s=";
+    url = "https://xff.cz/git/megatools";
+    rev = finalAttrs.version;
+    hash = "sha256-XOGjdvMw8wfhBwyOBnQqiiJeOGvYXKMYxiJ6BZeEwDQ=";
   };
 
   nativeBuildInputs = [
@@ -36,16 +36,20 @@ stdenv.mkDerivation rec {
   buildInputs = [
     curl
     glib
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [ fuse ];
+  ];
 
   enableParallelBuilding = true;
   strictDeps = true;
 
-  meta = with lib; {
+  meta = {
     description = "Command line client for Mega.co.nz";
-    homepage = "https://megatools.megous.com/";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ viric AndersonTorres ];
-    platforms = platforms.unix;
+    homepage = "https://xff.cz/megatools/";
+    changelog = "https://xff.cz/megatools/builds/NEWS";
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [
+      viric
+      vji
+    ];
+    platforms = lib.platforms.unix;
   };
-}
+})

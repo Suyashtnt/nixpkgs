@@ -5,28 +5,28 @@
   httpx,
   pydantic,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pycfmodel";
-  version = "1.0.0";
+  version = "2.1.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "Skyscanner";
     repo = "pycfmodel";
-    rev = "refs/tags/${version}";
-    hash = "sha256-iCjOSwW6rdG3H4e/B/um+QioP45nOr9OcPAwXxZs3mU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-JtURuaCP7xJvBsHheuuJgGlTrvVoUyI/Uv7ndNPNlBo=";
   };
 
   pythonRelaxDeps = [ "pydantic" ];
 
-  build-system = [ setuptools ];
-
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
   dependencies = [ pydantic ];
 
@@ -45,16 +45,20 @@ buildPythonPackage rec {
     "test_loose_ip"
     "test_extra_fields_not_allowed_s3_bucket"
     "test_raise_error_if_invalid_fields_in_resource"
-    ""
+  ];
+
+  disabledTestPaths = [
+    # Test requires network access
+    "tests/test_resource_generator.py"
   ];
 
   pythonImportsCheck = [ "pycfmodel" ];
 
-  meta = with lib; {
+  meta = {
     description = "Model for Cloud Formation scripts";
     homepage = "https://github.com/Skyscanner/pycfmodel";
-    changelog = "https://github.com/Skyscanner/pycfmodel/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/Skyscanner/pycfmodel/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

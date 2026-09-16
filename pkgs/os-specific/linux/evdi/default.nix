@@ -1,32 +1,45 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, kernel
-, libdrm
-, python3
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+  libdrm,
+  python3,
 }:
-
 let
-  python3WithLibs = python3.withPackages (ps: with ps; [
-    pybind11
-  ]);
+  python3WithLibs = python3.withPackages (
+    ps: with ps; [
+      pybind11
+    ]
+  );
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "evdi";
-  version = "1.14.6";
+  version = "1.15.0";
 
   src = fetchFromGitHub {
     owner = "DisplayLink";
     repo = "evdi";
-    rev = "refs/tags/v${finalAttrs.version}";
-    hash = "sha256-/XIWacrsB7qBqlLUwIGuDdahvt2dAwiK7dauFaYh7lU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-CXF7PvmrPjjNoWXbWxEkFE/Sw4bO6YqDplPwF/OxhB0=";
   };
 
-  env.NIX_CFLAGS_COMPILE = toString [
+  patches = [
+    # Fix feature probes on kernels with allocation profiling enabled.
+    # Upstream: https://github.com/DisplayLink/evdi/pull/592
+    ./fix-conftest-probes.patch
+  ];
+
+  env.CFLAGS = toString [
     "-Wno-error"
-    "-Wno-error=discarded-qualifiers" # for Linux 4.19 compatibility
     "-Wno-error=sign-compare"
   ];
+
+  postBuild = ''
+    # Don't use makeFlags for userspace stuff
+    make library pyevdi
+  '';
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
@@ -36,12 +49,17 @@ stdenv.mkDerivation (finalAttrs: {
     python3WithLibs
   ];
 
-  makeFlags = kernel.makeFlags ++ [
+  makeFlags = kernelModuleMakeFlags ++ [
     "KVER=${kernel.modDirVersion}"
     "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "module"
   ];
 
-  hardeningDisable = [ "format" "pic" "fortify" ];
+  hardeningDisable = [
+    "format"
+    "pic"
+    "fortify"
+  ];
 
   installPhase = ''
     runHook preInstall
@@ -52,13 +70,17 @@ stdenv.mkDerivation (finalAttrs: {
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     broken = kernel.kernelOlder "4.19";
     changelog = "https://github.com/DisplayLink/evdi/releases/tag/v${finalAttrs.version}";
     description = "Extensible Virtual Display Interface";
     homepage = "https://www.displaylink.com/";
-    license = with licenses; [ lgpl21Only gpl2Only ];
+    license = with lib.licenses; [
+      mit
+      lgpl21Plus
+      gpl2Only
+    ];
     maintainers = [ ];
-    platforms = platforms.linux;
+    platforms = lib.platforms.linux;
   };
 })

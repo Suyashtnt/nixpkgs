@@ -3,37 +3,38 @@
   buildPythonPackage,
   fetchFromGitHub,
   poetry-core,
-  pythonOlder,
   setuptools,
+  prettytable,
 }:
 
 buildPythonPackage rec {
   pname = "chispa";
-  version = "0.10.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "0.12.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "MrPowers";
     repo = "chispa";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-r3/Uae/Bu/+ZpWt19jetfIRpew1hBB24WWQRJIcYqFs=";
+    tag = "v${version}";
+    hash = "sha256-G65+3GbIGNwZVSFc89tXlYgPimtJPFo9ZK23fZgrCF4=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [ setuptools ];
+  dependencies = [
+    setuptools
+    prettytable
+  ];
 
   # Tests require a spark installation
   doCheck = false;
 
   # pythonImportsCheck needs spark installation
 
-  meta = with lib; {
+  meta = {
     description = "PySpark test helper methods with beautiful error messages";
     homepage = "https://github.com/MrPowers/chispa";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ratsclub ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ratsclub ];
   };
 }

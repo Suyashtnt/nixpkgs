@@ -61,7 +61,7 @@ let
 
     if ! nodeVersion=$($serverNode -v); then
       echo "Unable to fix Node binary, quitting"
-      fail_with_exitcode ''${o.InstallExitCode.ServerTransferFailed}
+      fail_with_exitcode ''${f.UnifiedStatusCode.ServerTransferFailed}
     fi
 
     ${lib.optionalString useLocalExtensions ''
@@ -84,8 +84,8 @@ buildVscodeMarketplaceExtension {
   mktplcRef = {
     name = "remote-ssh";
     publisher = "ms-vscode-remote";
-    version = "0.78.0";
-    hash = "sha256-vd+9d86Z8429QpQVCZm8gtiJDcMpD++aiFVwvCrPg5w=";
+    version = "0.124.0";
+    hash = "sha256-GokSJOEpHomkBbkPUBhVXWZCrGbi5oZTlw5PFV12ZBY=";
   };
 
   postPatch = ''
@@ -100,6 +100,6 @@ buildVscodeMarketplaceExtension {
   meta = {
     description = "Use any remote machine with a SSH server as your development environment";
     license = lib.licenses.unfree;
-    maintainers = [ lib.maintainers.tbenst ];
+    maintainers = [ ];
   };
 }

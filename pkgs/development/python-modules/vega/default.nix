@@ -1,9 +1,7 @@
 {
   lib,
   buildPythonPackage,
-  fetchpatch,
   fetchPypi,
-  pythonOlder,
   altair,
   ipytablewidgets,
   ipywidgets,
@@ -17,24 +15,13 @@
 
 buildPythonPackage rec {
   pname = "vega";
-  version = "4.0.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "4.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-v1/8taHdN1n9+gy7L+g/wAJ2x9FwYCaxZiEdFqLct1Y=";
+    hash = "sha256-8lrmhCvwczqBpiQRCkPjmiYsJPHEFnZab/Azkh+i7ls=";
   };
-
-  patches = [
-    # https://github.com/vega/ipyvega/pull/507
-    (fetchpatch {
-      name = "replace-poetry-with-poetry-core.patch";
-      url = "https://github.com/vega/ipyvega/commit/1a5028ee5d54e24b9650b66685f54c42b72c7899.patch";
-      hash = "sha256-W8UmMit7DJGKCM9+/OSRLTuRvC0ZR42AP/b/frVEvsk=";
-    })
-  ];
 
   nativeBuildInputs = [
     poetry-core
@@ -49,7 +36,7 @@ buildPythonPackage rec {
     pandas
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     widget = [ ipywidgets ];
     jupyterlab = [ jupyterlab ];
   };
@@ -66,7 +53,7 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "vega" ];
 
-  meta = with lib; {
+  meta = {
     description = "IPython/Jupyter widget for Vega and Vega-Lite";
     longDescription = ''
       To use this you have to enter a nix-shell with vega. Then run:
@@ -75,7 +62,7 @@ buildPythonPackage rec {
       jupyter nbextension enable --user vega
     '';
     homepage = "https://github.com/vega/ipyvega";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ teh ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ teh ];
   };
 }

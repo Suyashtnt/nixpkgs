@@ -1,10 +1,11 @@
-{ lib
-, fetchurl
-, stdenvNoCC
-, runtimeShell
-, copyDesktopItems
-, makeDesktopItem
-, wineWowPackages
+{
+  lib,
+  fetchurl,
+  stdenvNoCC,
+  runtimeShell,
+  copyDesktopItems,
+  makeDesktopItem,
+  wineWow64Packages,
 }:
 
 let
@@ -25,14 +26,17 @@ stdenvNoCC.mkDerivation rec {
       comment = meta.description;
       exec = "synthesia";
       icon = "synthesia";
-      categories = [ "Game" "Audio" ];
+      categories = [
+        "Game"
+        "Audio"
+      ];
       startupWMClass = "synthesia.exe";
     })
   ];
 
   nativeBuildInputs = [
     copyDesktopItems
-    wineWowPackages.stable
+    wineWow64Packages.stable
   ];
 
   src = fetchurl {
@@ -49,7 +53,7 @@ stdenvNoCC.mkDerivation rec {
     mkdir -p $out/bin
     cat <<'EOF' > $out/bin/synthesia
     #!${runtimeShell}
-    export PATH=${wineWowPackages.stable}/bin:$PATH
+    export PATH=${wineWow64Packages.stable}/bin:$PATH
     export WINEARCH=win64
     export WINEPREFIX="''${SYNTHESIA_HOME:-"''${XDG_DATA_HOME:-"''${HOME}/.local/share"}/synthesia"}/wine"
     export WINEDLLOVERRIDES="mscoree=" # disable mono
@@ -64,13 +68,13 @@ stdenvNoCC.mkDerivation rec {
     runHook postInstall
   '';
 
-  meta = with lib; {
-    description = "A fun way to learn how to play the piano";
+  meta = {
+    description = "Fun way to learn how to play the piano";
     homepage = "https://synthesiagame.com/";
     downloadPage = "https://synthesiagame.com/download";
-    sourceProvenance = with sourceTypes; [ binaryNativeCode ];
-    license = licenses.unfree;
-    maintainers = with maintainers; [ ners ];
-    platforms = wineWowPackages.stable.meta.platforms;
+    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    license = lib.licenses.unfree;
+    maintainers = with lib.maintainers; [ ners ];
+    platforms = wineWow64Packages.stable.meta.platforms;
   };
 }

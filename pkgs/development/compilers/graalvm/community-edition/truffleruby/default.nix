@@ -1,12 +1,13 @@
-{ lib
-, stdenv
-, fetchurl
-, graalvmCEPackages
-, libyaml
-, openssl
+{
+  lib,
+  stdenv,
+  fetchurl,
+  graalvmPackages,
+  libyaml,
+  openssl,
 }:
 
-graalvmCEPackages.buildGraalvmProduct {
+graalvmPackages.buildGraalvmProduct {
   src = fetchurl (import ./hashes.nix).hashes.${stdenv.system};
   version = (import ./hashes.nix).version;
 
@@ -30,9 +31,26 @@ graalvmCEPackages.buildGraalvmProduct {
     export LANG=C
     export LC_ALL=C
     $out/bin/ruby -e 'puts(1 + 1)'
-    ${# broken in darwin with sandbox enabled
+    ${
+      # broken in darwin with sandbox enabled
       lib.optionalString stdenv.hostPlatform.isLinux ''
-      echo '1 + 1' | $out/bin/irb
-    ''}
+        echo '1 + 1' | $out/bin/irb
+      ''
+    }
   '';
+
+  meta = {
+    description = "High-performance implementation of Ruby built on GraalVM";
+    homepage = "https://truffleruby.dev/";
+    mainProgram = "ruby";
+    maintainers = with lib.maintainers; [ nirvdrum ];
+
+    license =
+      with lib.licenses;
+      OR [
+        epl20
+        gpl2Only
+        lgpl21Only
+      ];
+  };
 }

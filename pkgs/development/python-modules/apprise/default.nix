@@ -11,27 +11,30 @@
   markdown,
   paho-mqtt,
   pytest-mock,
-  pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
   pyyaml,
   requests,
   requests-oauthlib,
   setuptools,
+  stdenv,
+  terminal-notifier,
   testers,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "apprise";
-  version = "1.9.0";
+  version = "1.13.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-tck6/WMxr+S2OlXRzqkHbke+y0uom1YrGBwT4luwx9Y=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-mlaWS/PKAEs+DbmKuKjYf60FHY7bN3vBZtxL6CZmbIE=";
   };
+
+  postPatch = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace apprise/plugins/macosx.py \
+    --replace-fail "/opt/homebrew/bin/terminal-notifier" "${lib.getExe' terminal-notifier "terminal-notifier"}"
+  '';
 
   nativeBuildInputs = [ installShellFiles ];
 
@@ -53,28 +56,7 @@ buildPythonPackage rec {
     gntp
     paho-mqtt
     pytest-mock
-    pytest-xdist
     pytestCheckHook
-  ];
-
-  disabledTests = [
-    "test_apprise_cli_nux_env"
-    # Nondeterministic. Fails with `assert 0 == 1`
-    "test_notify_emoji_general"
-    "test_plugin_mqtt_general"
-    # Nondeterministic. Fails with `assert 3 == 2`
-    "test_plugin_matrix_transaction_ids_api_v3"
-    # Nondeterministic. Fails with `AssertionError`
-    "test_plugin_xbmc_kodi_urls"
-    # Nondeterministic. Fails with `AssertionError`
-    "test_plugin_zulip_urls"
-  ];
-
-  disabledTestPaths = [
-    # AttributeError: module 'apprise.plugins' has no attribute 'NotifyBulkSMS'
-    "test/test_plugin_bulksms.py"
-    # Nondeterministic. Multiple tests will fail with `AssertionError`
-    "test/test_plugin_workflows.py"
   ];
 
   postInstall = ''
@@ -86,16 +68,16 @@ buildPythonPackage rec {
   passthru = {
     tests.version = testers.testVersion {
       package = apprise;
-      version = "v${version}";
+      version = "v${finalAttrs.version}";
     };
   };
 
   meta = {
     description = "Push Notifications that work with just about every platform";
-    homepage = "https://github.com/caronc/apprise";
-    changelog = "https://github.com/caronc/apprise/releases/tag/v${version}";
-    license = lib.licenses.bsd3;
+    homepage = "https://appriseit.com/";
+    changelog = "https://github.com/caronc/apprise/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.bsd2;
     maintainers = with lib.maintainers; [ getchoo ];
     mainProgram = "apprise";
   };
-}
+})

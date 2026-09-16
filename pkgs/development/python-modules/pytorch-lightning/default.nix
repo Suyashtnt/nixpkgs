@@ -12,7 +12,6 @@
   numpy,
   packaging,
   pyyaml,
-  tensorboardx,
   torch,
   torchmetrics,
   tqdm,
@@ -23,21 +22,20 @@
   pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pytorch-lightning";
-  version = "2.4.0";
+  version = "2.6.6";
   pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "Lightning-AI";
     repo = "pytorch-lightning";
-    rev = "refs/tags/${version}";
-    hash = "sha256-FngD3nYTGVEjS1VrXAVps2/B8VlS7BZMDAsmIDtAyW0=";
+    tag = finalAttrs.version;
+    hash = "sha256-VKEd9Psj4DdOSdIXqwbmLl23FJWrQJEr9b34+t//c9w=";
   };
 
-  preConfigure = ''
-    export PACKAGE_NAME=pytorch
-  '';
+  env.PACKAGE_NAME = "pytorch";
 
   build-system = [ setuptools ];
 
@@ -47,12 +45,12 @@ buildPythonPackage rec {
     numpy
     packaging
     pyyaml
-    tensorboardx
     torch
     torchmetrics
     tqdm
     traitlets
-  ] ++ fsspec.optional-dependencies.http;
+  ]
+  ++ fsspec.optional-dependencies.http;
 
   nativeCheckInputs = [
     psutil
@@ -68,8 +66,8 @@ buildPythonPackage rec {
   meta = {
     description = "Lightweight PyTorch wrapper for machine learning researchers";
     homepage = "https://github.com/Lightning-AI/pytorch-lightning";
-    changelog = "https://github.com/Lightning-AI/pytorch-lightning/releases/tag/${lib.removePrefix "refs/tags/" src.rev}";
+    changelog = "https://github.com/Lightning-AI/pytorch-lightning/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ tbenst ];
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

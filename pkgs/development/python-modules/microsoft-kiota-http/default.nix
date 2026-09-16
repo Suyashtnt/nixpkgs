@@ -10,23 +10,23 @@
   pytest-asyncio,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
   urllib3,
+  gitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "microsoft-kiota-http";
-  version = "1.3.3";
+  version = "1.12.3";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "microsoft";
-    repo = "kiota-http-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-dtSTrsLVDNJ+s5B3wLvZ9qGerZ8fdYpEsqrBoPf7Lrk=";
+    repo = "kiota-python";
+    tag = "microsoft-kiota-http-v${finalAttrs.version}";
+    hash = "sha256-kzpOKvPw8D19Go1wnNYZLR5NUbsr9aZyCQNCUim1tUw=";
   };
+
+  sourceRoot = "${finalAttrs.src.name}/packages/http/httpx/";
 
   build-system = [ flit-core ];
 
@@ -35,7 +35,8 @@ buildPythonPackage rec {
     microsoft-kiota-abstractions
     opentelemetry-api
     opentelemetry-sdk
-  ] ++ httpx.optional-dependencies.http2;
+  ]
+  ++ httpx.optional-dependencies.http2;
 
   nativeCheckInputs = [
     pytest-asyncio
@@ -46,11 +47,15 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "kiota_http" ];
 
-  meta = with lib; {
-    description = "HTTP request adapter implementation for Kiota clients for Python";
-    homepage = "https://github.com/microsoft/kiota-http-python";
-    changelog = "https://github.com/microsoft/kiota-http-python/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+  passthru.updateScript = gitUpdater {
+    rev-prefix = "microsoft-kiota-http-v";
   };
-}
+
+  meta = {
+    description = "HTTP request adapter implementation for Kiota clients for Python";
+    homepage = "https://github.com/microsoft/kiota-python/tree/main/packages/http/httpx";
+    changelog = "https://github.com/microsoft/kiota-python/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+  };
+})

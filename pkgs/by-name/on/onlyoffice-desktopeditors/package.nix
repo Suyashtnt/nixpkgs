@@ -22,11 +22,12 @@
   gst_all_1,
   gtk2,
   gtk3,
+  libnotify,
   libpulseaudio,
   libudev0-shim,
   libdrm,
   makeWrapper,
-  mesa,
+  libgbm,
   noto-fonts-cjk-sans,
   nspr,
   nss,
@@ -34,7 +35,18 @@
   qt5,
   wrapGAppsHook3,
   xkeyboard_config,
-  xorg,
+  libxtst,
+  libxscrnsaver,
+  libxrender,
+  libxrandr,
+  libxi,
+  libxfixes,
+  libxext,
+  libxdamage,
+  libxcursor,
+  libxcomposite,
+  libx11,
+  libxcb,
 }:
 let
 
@@ -66,11 +78,11 @@ let
 
   derivation = stdenv.mkDerivation rec {
     pname = "onlyoffice-desktopeditors";
-    version = "8.1.1";
+    version = "9.1.0";
     minor = null;
     src = fetchurl {
       url = "https://github.com/ONLYOFFICE/DesktopEditors/releases/download/v${version}/onlyoffice-desktopeditors_amd64.deb";
-      hash = "sha256-RwWIYcbYljDqWRJcXCDODjVeYnp9xreNGO2l2aqWJ9w=";
+      hash = "sha256-D36E7hYCTJ9Lw9XnB8nxMGMJDJRhM+K+bviuM9uuzhk=";
     };
 
     nativeBuildInputs = [
@@ -95,34 +107,31 @@ let
       gst_all_1.gstreamer
       gtk2
       gtk3
+      libnotify
       libpulseaudio
       libdrm
       nspr
       nss
-      mesa # libgbm
+      libgbm
       qt5.qtbase
       qt5.qtdeclarative
       qt5.qtsvg
       qt5.qtwayland
-      xorg.libX11
-      xorg.libxcb
-      xorg.libXcomposite
-      xorg.libXcursor
-      xorg.libXdamage
-      xorg.libXext
-      xorg.libXfixes
-      xorg.libXi
-      xorg.libXrandr
-      xorg.libXrender
-      xorg.libXScrnSaver
-      xorg.libXtst
+      libx11
+      libxcb
+      libxcomposite
+      libxcursor
+      libxdamage
+      libxext
+      libxfixes
+      libxi
+      libxrandr
+      libxrender
+      libxscrnsaver
+      libxtst
     ];
 
     dontWrapQtApps = true;
-
-    unpackPhase = ''
-      dpkg-deb --fsys-tarfile $src | tar -x --no-same-permissions --no-same-owner
-    '';
 
     installPhase = ''
       runHook preInstall
@@ -141,7 +150,7 @@ let
       done;
 
       substituteInPlace $out/bin/onlyoffice-desktopeditors \
-        --replace "/opt/onlyoffice/" "$out/share/"
+        --replace-fail "/opt/onlyoffice/" "$out/share/"
 
       ln -s $out/share/desktopeditors/DesktopEditors $out/bin/DesktopEditors
 
@@ -152,7 +161,7 @@ let
       gappsWrapperArgs+=(
         --prefix LD_LIBRARY_PATH : "${runtimeLibs}" \
         --set QT_XKB_CONFIG_ROOT "${xkeyboard_config}/share/X11/xkb" \
-        --set QTCOMPOSE "${xorg.libX11.out}/share/X11/locale" \
+        --set QTCOMPOSE "${libx11.out}/share/X11/locale" \
         --set QT_QPA_PLATFORM "xcb"
         # the bundled version of qt does not support wayland
       )
@@ -180,7 +189,7 @@ buildFHSEnv {
     ln -s ${derivation}/share/icons $out/share
     cp -r ${derivation}/share/applications $out/share
     substituteInPlace $out/share/applications/onlyoffice-desktopeditors.desktop \
-        --replace "/usr/bin/onlyoffice-desktopeditors" "$out/bin/onlyoffice-desktopeditors"
+        --replace-fail "/usr/bin/onlyoffice-desktopeditors" "$out/bin/onlyoffice-desktopeditors"
   '';
 
   passthru.updateScript = ./update.sh;

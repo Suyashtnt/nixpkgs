@@ -1,56 +1,79 @@
 {
   lib,
-  albumentations,
   buildPythonPackage,
-  cython,
-  easydict,
   fetchPypi,
-  insightface,
-  matplotlib,
+
+  # build-system
+  cython,
+  setuptools,
+
+  # dependencies
   mxnet,
   numpy,
   onnx,
   onnxruntime,
-  opencv4,
-  prettytable,
-  pythonOlder,
+  opencv-python,
+  requests,
   scikit-image,
-  scikit-learn,
-  tensorboard,
-  testers,
+  scipy,
   tqdm,
+
+  # optional-dependencies
+  # gui:
+  pillow,
+  pyside6,
+  reportlab,
+  scikit-learn,
+  # face3d
+  albumentationsx,
+  matplotlib,
+
+  insightface,
+  testers,
   stdenv,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "insightface";
-  version = "0.7.3";
+  version = "1.0.1";
   pyproject = true;
+  __structuredAttrs = true;
 
-  disabled = pythonOlder "3.8";
-
+  # No tags on GitHub
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-8ZH3GWEuuzcBj0GTaBRQBUTND4bm/NZ2wCPzVMZo3fc=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-J68kiRu7pHDLNXOzZqD8yomJ/IUDyfjygejLpv1xYHU=";
   };
 
-  build-system = [ cython ];
+  build-system = [
+    cython
+    setuptools
+  ];
 
   dependencies = [
-    easydict
-    matplotlib
-    mxnet
+    mxnet # used in insightface/commands/rec_add_mask_param.py
     numpy
     onnx
     onnxruntime
-    opencv4
-    scikit-learn
+    opencv-python
+    requests
     scikit-image
-    tensorboard
+    scipy
     tqdm
-    albumentations
-    prettytable
   ];
+
+  optional-dependencies = {
+    gui = [
+      pillow
+      pyside6
+      reportlab
+      scikit-learn
+    ];
+    face3d = [
+      albumentationsx
+      matplotlib
+    ];
+  };
 
   pythonImportsCheck = [
     "insightface"
@@ -58,15 +81,18 @@ buildPythonPackage rec {
     "insightface.data"
   ];
 
-  passthru.tests.version = testers.testVersion {
-    package = insightface;
-    command = "insightface-cli --help";
-    # Doesn't support --version but we still want to make sure the cli is executable
-    # and returns the help output
-    version = "help";
-  };
+  # No tests in the Pypi archive
+  doCheck = false;
 
-  doCheck = false; # Upstream has no tests
+  passthru.tests = {
+    version = testers.testVersion {
+      package = insightface;
+      command = "insightface-cli --help";
+      # Doesn't support --version but we still want to make sure the cli is executable
+      # and returns the help output
+      version = "help";
+    };
+  };
 
   meta = {
     description = "State-of-the-art 2D and 3D Face Analysis Project";
@@ -74,7 +100,5 @@ buildPythonPackage rec {
     homepage = "https://github.com/deepinsight/insightface";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ oddlama ];
-    # terminate called after throwing an instance of 'onnxruntime::OnnxRuntimeException'
-    broken = stdenv.system == "aarch64-linux";
   };
-}
+})

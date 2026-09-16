@@ -1,32 +1,27 @@
 {
   lib,
   aiohttp,
-  attrs,
   buildPythonPackage,
   fetchPypi,
   python-socks,
-  pythonOlder,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "aiohttp-socks";
-  version = "0.9.0";
+  version = "0.12.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchPypi {
     inherit version;
     pname = "aiohttp_socks";
-    hash = "sha256-IhWaGvAmsinP5eoAfgZbs/5WOFqVGoJiOm9FiKZ1gAM=";
+    hash = "sha256-PK+fWkFkYREi1BK8EbL5EU/SnIXhuie7OAYNPCNr3I0=";
   };
 
   build-system = [ setuptools ];
 
   dependencies = [
     aiohttp
-    attrs
     python-socks
   ];
 

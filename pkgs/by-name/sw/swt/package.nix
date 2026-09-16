@@ -1,13 +1,9 @@
 {
-  atk,
   fetchzip,
-  gtk2,
+  gtk3,
   jdk,
   lib,
-  libGL,
   libGLU,
-  libXt,
-  libXtst,
   pkg-config,
   stdenv,
   stripJavaArchivesHook,
@@ -15,18 +11,27 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "swt";
-  version = "4.5";
-  fullVersion = "${finalAttrs.version}-201506032000";
+  # NOTE: In case you wish to override, don't override version, override
+  # `fullVersion`.
+  version = builtins.elemAt (lib.splitString "-" finalAttrs.fullVersion) 1;
+  fullVersion = "R-4.34-202411201800";
 
   hardeningDisable = [ "format" ];
 
   passthru.srcMetadataByPlatform = {
+    # Note: This may look like an error but the content of the src.zip is in fact
+    # equal on all linux systems as well as all darwin systems. Even though each
+    # of these zip archives themselves contains a different hash.
     x86_64-linux.platform = "gtk-linux-x86_64";
-    x86_64-linux.hash = "sha256-JhzRCrVzsM2NBf65l6CDZdgchlbECHGUg0J0bQVT2Z0=";
-    i686-linux.platform = "gtk-linux-x86";
-    i686-linux.hash = "sha256-C7H1CUFkl7GPpqDFSzYnlLWa1XcawI2hbtsn9fIJio0=";
-    x86_64-darwin.platform = "cocoa-macosx-x86_64";
-    x86_64-darwin.hash = "sha256-CrSFkrlnSP2uQzRrRzv8F0lXEA7TNK9RFe2neDjtXnI=";
+    x86_64-linux.hash = "sha256-lKAB2aCI3dZdt3pE7uSvSfxc8vc3oMSTCx5R+71Aqdk=";
+    aarch64-linux.platform = "gtk-linux-aarch64";
+    aarch64-linux.hash = "sha256-lKAB2aCI3dZdt3pE7uSvSfxc8vc3oMSTCx5R+71Aqdk=";
+    ppc64le-linux.platform = "gtk-linux-ppc64le";
+    ppc64le-linux.hash = "sha256-lKAB2aCI3dZdt3pE7uSvSfxc8vc3oMSTCx5R+71Aqdk=";
+    riscv64-linux.platform = "gtk-linux-riscv64";
+    riscv64-linux.hash = "sha256-lKAB2aCI3dZdt3pE7uSvSfxc8vc3oMSTCx5R+71Aqdk=";
+    aarch64-darwin.platform = "cocoa-macosx-aarch64";
+    aarch64-darwin.hash = "sha256-jvxmoRFGquYClPgMqWi2ylw26YiGSG5bONnM1PcjlTM=";
   };
   passthru.srcMetadata =
     finalAttrs.passthru.srcMetadataByPlatform.${stdenv.hostPlatform.system} or null;
@@ -39,105 +44,92 @@ stdenv.mkDerivation (finalAttrs: {
     in
     assert srcMetadata != null;
     fetchzip {
-      url = "https://archive.eclipse.org/eclipse/downloads/drops4/R-${finalAttrs.fullVersion}/swt-${finalAttrs.version}-${srcMetadata.platform}.zip";
+      url = "https://download.eclipse.org/eclipse/downloads/drops4/${finalAttrs.fullVersion}/swt-${finalAttrs.version}-${srcMetadata.platform}.zip";
       inherit (srcMetadata) hash;
       stripRoot = false;
-      postFetch = ''
-        mkdir "$unpackDir"
-        cd "$unpackDir"
+      postFetch =
+        # On Linux, extract and use only the sources from src.zip
+        lib.optionalString stdenv.hostPlatform.isLinux ''
+          mkdir "$unpackDir"
+          cd "$unpackDir"
 
-        renamed="$TMPDIR/src.zip"
-        mv -- "$out/src.zip" "$renamed"
-        unpackFile "$renamed"
-        rm -r -- "$out"
+          renamed="$TMPDIR/src.zip"
+          mv -- "$out/src.zip" "$renamed"
+          unpackFile "$renamed"
+          rm -r -- "$out"
 
-        mv -- "$unpackDir" "$out"
-      '';
+          mv -- "$unpackDir" "$out"
+        '';
     };
 
   nativeBuildInputs = [
+    jdk
     stripJavaArchivesHook
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     pkg-config
   ];
-  buildInputs = [
-    atk
-    gtk2
-    jdk
-    libGL
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    gtk3
     libGLU
-    libXtst
-  ] ++ lib.optionals (lib.hasPrefix "8u" jdk.version) [ libXt ];
-
-  patches = [
-    ./awt-libs.patch
-    ./gtk-libs.patch
   ];
 
-  prePatch = ''
-    # clear whitespace from makefiles (since we match on EOL later)
-    sed -i 's/ \+$//' ./*.mak
+  # GTK4 is not supported yet. See:
+  # https://github.com/eclipse-platform/eclipse.platform.swt/issues/652
+  makeFlags = lib.optionals stdenv.hostPlatform.isLinux [ "gtk3" ];
+
+  env = {
+    SWT_JAVA_HOME = jdk;
+    AWT_LIB_PATH = "${jdk}/lib/openjdk/lib";
+    # Used by the makefile which is responsible for the shared objects only
+    OUTPUT_DIR = "${placeholder "out"}/lib";
+  }
+  // lib.optionalAttrs stdenv.hostPlatform.isLinux {
+    NIX_CFLAGS_COMPILE = "-std=gnu17";
+  };
+
+  postPatch = lib.optionalString stdenv.hostPlatform.isLinux "substituteInPlace library/make_linux.mak --replace-fail 'CFLAGS += -Werror' ''";
+  preBuild = lib.optionalString stdenv.hostPlatform.isLinux ''
+    cd library
+    mkdir -p $OUTPUT_DIR
   '';
 
-  postPatch =
-    let
-      makefile-sed = builtins.toFile "swt-makefile.sed" ''
-        # fix pkg-config invocations in CFLAGS/LIBS pairs.
-        #
-        # change:
-        #     FOOCFLAGS = `pkg-config --cflags `foo bar`
-        #     FOOLIBS = `pkg-config --libs-only-L foo` -lbaz
-        # into:
-        #     FOOCFLAGS = `pkg-config --cflags foo bar`
-        #     FOOLIBS = `pkg-config --libs foo bar`
-        #
-        # the latter works more consistently.
-        /^[A-Z0-9_]\+CFLAGS = `pkg-config --cflags [^`]\+`$/ {
-          N
-          s/${''
-            ^\([A-Z0-9_]\+\)CFLAGS = `pkg-config --cflags \(.\+\)`\
-            \1LIBS = `pkg-config --libs-only-L .\+$''}/${''
-            \1CFLAGS = `pkg-config --cflags \2`\
-            \1LIBS = `pkg-config --libs \2`''}/
-        }
-        # fix WebKit libs not being there
-        s/\$(WEBKIT_LIB) \$(WEBKIT_OBJECTS)$/\0 `pkg-config --libs glib-2.0`/g
-      '';
-    in
-    ''
-      declare -a makefiles=(./*.mak)
-      sed -i -f ${makefile-sed} "''${makefiles[@]}"
-      # assign Makefile variables eagerly & change backticks to `$(shell …)`
-      sed -i -e 's/ = `\([^`]\+\)`/ := $(shell \1)/' \
-        -e 's/`\([^`]\+\)`/$(shell \1)/' \
-        "''${makefiles[@]}"
-    '';
-
-  buildPhase = ''
-    runHook preBuild
-
-    export JAVA_HOME=${jdk}
-
-    ./build.sh
-
+  # Build the jar (Linux only, Darwin uses prebuilt)
+  postBuild = lib.optionalString stdenv.hostPlatform.isLinux ''
+    cd ../
     mkdir out
-    find org/ -name '*.java' -type f -exec javac -d out/ {} +
-
-    runHook postBuild
+    find org/ -name '*.java' -type f -exec javac -encoding utf8 -d out/ {} +
+    # Copy non Java resource files
+    find org/ -not -name '*.java' -not -name '*.html' -type f -exec cp {} out/{} \;
   '';
 
+  # The makefile doesn't have an install target, the installation of the shared
+  # objects is part of the `all` target.
   installPhase = ''
     runHook preInstall
 
-    if [[ -n "$prefix" ]]; then
-      install -d -- "$prefix"
-    fi
-
-    install -Dm 644 -t "$out/lib" -- *.so
-
     install -d -- "$out/jars"
+
+  ''
+  # On Darwin, use the prebuilt swt.jar which includes native libraries
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    # Remove signature files to avoid validation errors after stripJavaArchivesHook modifies the jar
+    mkdir -p jar-temp
+    cd jar-temp
+    ${jdk}/bin/jar -xf ../swt.jar
+    rm -f META-INF/*.SF META-INF/*.RSA META-INF/*.DSA
+    ${jdk}/bin/jar -cf "$out/jars/swt.jar" *
+    cd ..
+    rm -rf jar-temp
+
+  ''
+  # On Linux, build from source
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
     install -m 644 -t out -- version.txt
     (cd out && jar -c *) > "$out/jars/swt.jar"
 
+  ''
+  + ''
     runHook postInstall
   '';
 
@@ -147,8 +139,20 @@ stdenv.mkDerivation (finalAttrs: {
       A widget toolkit for Java to access the user-interface facilities of
       the operating systems on which it is implemented.
     '';
-    license = lib.licenses.epl10;
-    maintainers = [ ];
-    platforms = lib.platforms.linux;
+    license = with lib.licenses; [
+      # All of these are located in the about_files directory of the source
+      ijg
+      lgpl21
+      mpl11
+      mpl20
+    ];
+    maintainers = with lib.maintainers; [ mio ];
+    # The darwin src zip file holds simply a prebuilt swt.jar file
+    sourceProvenance = lib.optionals stdenv.hostPlatform.isDarwin [
+      lib.sourceTypes.binaryNativeCode
+    ];
+    platforms = lib.attrNames finalAttrs.passthru.srcMetadataByPlatform;
+    # Fails with: `java.nio.file.NoSuchFileException: ../swt.jar`
+    broken = stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64;
   };
 })

@@ -1,43 +1,51 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
   fonttools,
-  fs,
   pyclipper,
   defcon,
   fontpens,
+  setuptools,
   setuptools-scm,
-  pytest,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "booleanoperations";
-  version = "0.9.0";
+  version = "0.10.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    pname = "booleanOperations";
-    inherit version;
-    sha256 = "1f41lb19m8azchl1aqz6j5ycbspb8jsf1cnn42hlydxd68f85ylc";
-    extension = "zip";
+  src = fetchFromGitHub {
+    owner = "typemytype";
+    repo = "booleanOperations";
+    tag = finalAttrs.version;
+    hash = "sha256-IJyb6g2xwWj82Vm33Mtkqen1X/w0tSaP+Q/DtFc8Dd4=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-
-  propagatedBuildInputs = [
-    fonttools
-    fs
-    pyclipper
-    defcon
-    fontpens
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  nativeCheckInputs = [ pytest ];
+  dependencies = [
+    fonttools
+    pyclipper
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "booleanOperations" ];
+
+  nativeCheckInputs = [
+    defcon
+    fontpens
+    pytestCheckHook
+  ];
+
+  meta = {
+    changelog = "https://github.com/typemytype/booleanOperations/releases/tag/${finalAttrs.src.tag}";
     description = "Boolean operations on paths";
     homepage = "https://github.com/typemytype/booleanOperations";
-    license = licenses.mit;
-    maintainers = [ maintainers.sternenseemann ];
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

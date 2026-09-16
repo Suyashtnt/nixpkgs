@@ -13,7 +13,7 @@
   tqdm,
   pandas,
 
-  # test dependencies
+  # tests
   cleanvision,
   datasets,
   fasttext,
@@ -27,21 +27,29 @@
   torch,
   torchvision,
   wget,
+  pythonAtLeast,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cleanlab";
-  version = "2.7.0";
+  version = "2.9.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "cleanlab";
     repo = "cleanlab";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-0kCEIHNOXIkdwDH5zCVWnR/W79ppc/1PFsJ/a4goGzk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-0H4JTAc2tCtIFklGciXQ+TCWOiJ6kRkqcycJNeIpero=";
   };
 
-  build-system = [ setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools>=65.0,<70.0" "setuptools"
+  '';
+
+  build-system = [
+    setuptools
+  ];
 
   dependencies = [
     numpy
@@ -50,13 +58,6 @@ buildPythonPackage rec {
     tqdm
     pandas
   ];
-
-  # This is ONLY turned off when we have testing enabled.
-  # The reason we do this is because of duplicate packages in the enclosure
-  # when using the packages in nativeCheckInputs.
-  # Affected packages: grpcio protobuf tensorboard tensorboard-plugin-profile
-  catchConflicts = (!doCheck);
-  doCheck = true;
 
   nativeCheckInputs = [
     cleanvision
@@ -75,8 +76,29 @@ buildPythonPackage rec {
   ];
 
   disabledTests = [
+    # Incorrect snapshots (AssertionError)
+    "test_color_sentence"
+
     # Requires the datasets we prevent from downloading
     "test_create_imagelab"
+
+    # AssertionError: assert np.int64(36) == 35
+    "test_num_label_issues"
+
+    # Non-trivial numpy2 incompatibilities
+    # assert np.float64(0.492) == 0.491
+    "test_duplicate_points_have_similar_scores"
+    # AssertionError: assert 'Annotators [1] did not label any examples.'
+    "test_label_quality_scores_multiannotator"
+    # AttributeError: module 'numpy' has no attribute 'in1d' (deprecated since numpy 2.x)
+    "test_bad_input_find_label_issues_internal"
+    "test_return_issues_ranked_by_scores"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.12") [
+    # AttributeError: 'called_once_with' is not a valid assertion.
+    # Use a spec for the mock if 'called_once_with' is meant to be an attribute..
+    # Did you mean: 'assert_called_once_with'?
+    "test_custom_issue_manager_not_registered"
   ];
 
   disabledTestPaths = [
@@ -91,8 +113,8 @@ buildPythonPackage rec {
   meta = {
     description = "Standard data-centric AI package for data quality and machine learning with messy, real-world data and labels";
     homepage = "https://github.com/cleanlab/cleanlab";
-    changelog = "https://github.com/cleanlab/cleanlab/releases/tag/v${version}";
+    changelog = "https://github.com/cleanlab/cleanlab/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.agpl3Only;
     maintainers = with lib.maintainers; [ happysalada ];
   };
-}
+})

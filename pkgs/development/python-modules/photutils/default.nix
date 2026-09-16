@@ -9,7 +9,6 @@
   gwcs,
   matplotlib,
   numpy,
-  pythonOlder,
   rasterio,
   scikit-image,
   scikit-learn,
@@ -18,32 +17,23 @@
   setuptools,
   shapely,
   tqdm,
-  wheel,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "photutils";
-  version = "1.13.0";
+  version = "3.0.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
 
   src = fetchFromGitHub {
     owner = "astropy";
     repo = "photutils";
-    rev = "refs/tags/${version}";
-    hash = "sha256-J1i1H7AfQdiUIyBpgJK3dkH6C8MoEOwug4YQP+NEPbk=";
+    tag = finalAttrs.version;
+    hash = "sha256-jfmC3pAQa/PrdEUa7QSYGW5zWzX43ghYCpmgRYup/Ks=";
   };
-
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace-fail "'numpy>=2.0.0rc1'," ""
-  '';
 
   build-system = [
     setuptools
     setuptools-scm
-    wheel
   ];
 
   nativeBuildInputs = [
@@ -55,9 +45,10 @@ buildPythonPackage rec {
   dependencies = [
     astropy
     numpy
+    scipy
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     all = [
       bottleneck
       gwcs
@@ -65,7 +56,6 @@ buildPythonPackage rec {
       rasterio
       scikit-image
       scikit-learn
-      scipy
       shapely
       tqdm
     ];
@@ -76,11 +66,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "photutils" ];
 
-  meta = with lib; {
+  meta = {
     description = "Astropy package for source detection and photometry";
     homepage = "https://github.com/astropy/photutils";
-    changelog = "https://github.com/astropy/photutils/blob/${version}/CHANGES.rst";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/astropy/photutils/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

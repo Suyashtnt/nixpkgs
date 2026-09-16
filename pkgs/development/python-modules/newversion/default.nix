@@ -3,39 +3,43 @@
   buildPythonPackage,
   fetchFromGitHub,
   packaging,
-  poetry-core,
+  pyprojectVersionPatchHook,
   pytestCheckHook,
-  pythonOlder,
+  setuptools,
+  typing-extensions,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "newversion";
-  version = "2.0.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "3.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "vemel";
     repo = "newversion";
-    rev = "refs/tags/${version}";
-    hash = "sha256-v9hfk2/hBkWtOobQdaYXNOZTTcEqnMV6JYqtjjoidOs=";
+    tag = finalAttrs.version;
+    hash = "sha256-R26yZQnQN/+e8XD3YKl+3bJKGnZaVzOVoTlGHOyratg=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ packaging ];
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  dependencies = [
+    packaging
+    typing-extensions
+  ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "newversion" ];
 
-  meta = with lib; {
+  meta = {
     description = "PEP 440 version manager";
-    mainProgram = "newversion";
     homepage = "https://github.com/vemel/newversion";
-    changelog = "https://github.com/vemel/newversion/releases/tag/${version}";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/vemel/newversion/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "newversion";
   };
-}
+})

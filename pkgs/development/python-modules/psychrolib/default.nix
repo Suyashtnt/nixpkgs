@@ -3,7 +3,6 @@
   buildPythonPackage,
   fetchFromGitHub,
   setuptools,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -11,12 +10,10 @@ buildPythonPackage rec {
   version = "2.5.0";
   format = "setuptools";
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "psychrometrics";
     repo = "psychrolib";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-OkjoYIakF7NXluNTaJnUHk5cI5t8GnpqrbqHYwnLOts=";
   };
 
@@ -29,11 +26,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "psychrolib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library of psychrometric functions to calculate thermodynamic properties";
     homepage = "https://github.com/psychrometrics/psychrolib";
     changelog = "https://github.com/psychrometrics/psychrolib/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

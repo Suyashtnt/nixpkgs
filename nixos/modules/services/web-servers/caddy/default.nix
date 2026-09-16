@@ -1,28 +1,43 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  options,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
 let
   cfg = config.services.caddy;
 
+  certs = config.security.acme.certs;
   virtualHosts = attrValues cfg.virtualHosts;
-  acmeVHosts = filter (hostOpts: hostOpts.useACMEHost != null) virtualHosts;
+  acmeEnabledVhosts = filter (hostOpts: hostOpts.useACMEHost != null) virtualHosts;
+  vhostCertNames = unique (map (hostOpts: hostOpts.useACMEHost) acmeEnabledVhosts);
 
-  mkVHostConf = hostOpts:
+  mkVHostConf =
+    hostOpts:
     let
-      sslCertDir = config.security.acme.certs.${hostOpts.useACMEHost}.directory;
+      sslCertDir = certs.${hostOpts.useACMEHost}.directory;
     in
-      ''
-        ${hostOpts.hostName} ${concatStringsSep " " hostOpts.serverAliases} {
-          ${optionalString (hostOpts.listenAddresses != [ ]) "bind ${concatStringsSep " " hostOpts.listenAddresses}"}
-          ${optionalString (hostOpts.useACMEHost != null) "tls ${sslCertDir}/cert.pem ${sslCertDir}/key.pem"}
+    ''
+      ${hostOpts.hostName} ${concatStringsSep " " hostOpts.serverAliases} {
+        ${optionalString (
+          hostOpts.listenAddresses != [ ]
+        ) "bind ${concatStringsSep " " hostOpts.listenAddresses}"}
+        ${optionalString (
+          hostOpts.useACMEHost != null
+        ) "tls ${sslCertDir}/cert.pem ${sslCertDir}/key.pem"}
+        ${optionalString (hostOpts.logFormat != null) ''
           log {
             ${hostOpts.logFormat}
           }
+        ''}
 
-          ${hostOpts.extraConfig}
-        }
-      '';
+        ${hostOpts.extraConfig}
+      }
+    '';
 
   settingsFormat = pkgs.formats.json { };
 
@@ -39,25 +54,29 @@ let
           ${concatMapStringsSep "\n" mkVHostConf virtualHosts}
         '';
 
-        Caddyfile-formatted = pkgs.runCommand "Caddyfile-formatted" { nativeBuildInputs = [ cfg.package ]; } ''
+        Caddyfile-formatted = pkgs.runCommand "Caddyfile-formatted" { } ''
           mkdir -p $out
           cp --no-preserve=mode ${Caddyfile}/Caddyfile $out/Caddyfile
-          caddy fmt --overwrite $out/Caddyfile
+          ${lib.getExe cfg.package} fmt --overwrite $out/Caddyfile
         '';
       in
-      "${if pkgs.stdenv.buildPlatform == pkgs.stdenv.hostPlatform then Caddyfile-formatted else Caddyfile}/Caddyfile";
+      "${
+        if pkgs.stdenv.buildPlatform == pkgs.stdenv.hostPlatform then Caddyfile-formatted else Caddyfile
+      }/Caddyfile";
 
   etcConfigFile = "caddy/caddy_config";
 
   configPath = "/etc/${etcConfigFile}";
 
-  acmeHosts = unique (catAttrs "useACMEHost" acmeVHosts);
-
-  mkCertOwnershipAssertion = import ../../../security/acme/mk-cert-ownership-assertion.nix;
+  mkCertOwnershipAssertion = import ../../../security/acme/mk-cert-ownership-assertion.nix lib;
 in
 {
   imports = [
-    (mkRemovedOptionModule [ "services" "caddy" "agree" ] "this option is no longer necessary for Caddy 2")
+    (mkRemovedOptionModule [
+      "services"
+      "caddy"
+      "agree"
+    ] "this option is no longer necessary for Caddy 2")
     (mkRenamedOptionModule [ "services" "caddy" "ca" ] [ "services" "caddy" "acmeCA" ])
     (mkRenamedOptionModule [ "services" "caddy" "config" ] [ "services" "caddy" "extraConfig" ])
   ];
@@ -164,9 +183,13 @@ in
     };
 
     adapter = mkOption {
-      default = if ((cfg.configFile != configFile) || (builtins.baseNameOf cfg.configFile) == "Caddyfile") then "caddyfile" else null;
+      default =
+        if ((cfg.configFile != configFile) || (baseNameOf cfg.configFile) == "Caddyfile") then
+          "caddyfile"
+        else
+          null;
       defaultText = literalExpression ''
-        if ((cfg.configFile != configFile) || (builtins.baseNameOf cfg.configFile) == "Caddyfile") then "caddyfile" else null
+        if ((cfg.configFile != configFile) || (baseNameOf cfg.configFile) == "Caddyfile") then "caddyfile" else null
       '';
       example = literalExpression "nginx";
       type = with types; nullOr str;
@@ -235,7 +258,7 @@ in
 
     virtualHosts = mkOption {
       type = with types; attrsOf (submodule (import ./vhost-options.nix { inherit cfg; }));
-      default = {};
+      default = { };
       example = literalExpression ''
         {
           "hydra.example.com" = {
@@ -283,6 +306,23 @@ in
       '';
     };
 
+    httpPort = mkOption {
+      default = 80;
+      type = with types; nullOr port;
+      description = ''
+        The default port to listen on for HTTP traffic.
+      '';
+    };
+
+    httpsPort = mkOption {
+      default = 443;
+      type = with types; nullOr port;
+      description = ''
+        The default port to listen on for HTTPS traffic.
+        Will also be used for HTTP/3.
+      '';
+    };
+
     enableReload = mkOption {
       default = true;
       type = types.bool;
@@ -301,7 +341,7 @@ in
 
     settings = mkOption {
       type = settingsFormat.type;
-      default = {};
+      default = { };
       description = ''
         Structured configuration for Caddy to generate a Caddy JSON configuration file.
         See <https://caddyserver.com/docs/json/> for available options.
@@ -319,68 +359,143 @@ in
         :::
       '';
     };
+
+    environmentFile = mkOption {
+      type = with types; nullOr path;
+      default = null;
+      example = "/run/secrets/caddy.env";
+      description = ''
+        Environment file as defined in {manpage}`systemd.exec(5)`.
+
+        You can use environment variables to pass secrets to the service without adding
+        them to the world-redable nix store.
+
+        ```
+        # in configuration.nix
+        services.caddy.environmentFile = "/run/secrets/caddy.env";
+        services.caddy.globalConfig = '''
+          {
+            acme_ca https://acme.zerossl.com/v2/DV90
+            acme_eab {
+              key_id {$EAB_KEY_ID}
+              mac_key {$EAB_MAC_KEY}
+            }
+          }
+        ''';
+        ```
+
+        ```
+        # in /run/secrets/caddy.env
+        EAB_KEY_ID=secret
+        EAB_MAC_KEY=secret
+        ```
+
+        Find more examples
+        [here](https://caddyserver.com/docs/caddyfile/concepts#environment-variables)
+      '';
+    };
+    openFirewall = mkOption {
+      type = types.bool;
+      default = false;
+      example = true;
+      description = ''
+        Whether to enable opening the specified http(s) ports in the firewall.
+        Any port set to `null` will not be opened.
+
+        ::: {.note}
+        If you use other ports for your virtual hosts, you need to open them manually.
+        :::
+      '';
+    };
   };
 
   # implementation
   config = mkIf cfg.enable {
 
     assertions = [
-      { assertion = cfg.configFile == configFile -> cfg.adapter == "caddyfile" || cfg.adapter == null;
+      {
+        assertion = cfg.configFile == configFile -> cfg.adapter == "caddyfile" || cfg.adapter == null;
         message = "To specify an adapter other than 'caddyfile' please provide your own configuration via `services.caddy.configFile`";
       }
-    ] ++ map (name: mkCertOwnershipAssertion {
-      inherit (cfg) group user;
-      cert = config.security.acme.certs.${name};
-      groups = config.users.groups;
-    }) acmeHosts;
+    ]
+    ++ map (
+      name:
+      mkCertOwnershipAssertion {
+        cert = certs.${name};
+        groups = config.users.groups;
+        services = [ config.systemd.services.caddy ];
+      }
+    ) vhostCertNames;
 
     services.caddy.globalConfig = ''
       ${optionalString (cfg.email != null) "email ${cfg.email}"}
       ${optionalString (cfg.acmeCA != null) "acme_ca ${cfg.acmeCA}"}
+      ${optionalString (
+        !elem cfg.httpPort [
+          null
+          options.services.caddy.httpPort.default
+        ]
+      ) "http_port ${toString cfg.httpPort}"}
+      ${optionalString (
+        !elem cfg.httpsPort [
+          null
+          options.services.caddy.httpsPort.default
+        ]
+      ) "https_port ${toString cfg.httpsPort}"}
       log {
         ${cfg.logFormat}
       }
     '';
 
     # https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes
-    boot.kernel.sysctl."net.core.rmem_max" = mkDefault 2500000;
-    boot.kernel.sysctl."net.core.wmem_max" = mkDefault 2500000;
+    boot.kernel.sysctl."net.core.rmem_max" = mkDefault 7500000;
+    boot.kernel.sysctl."net.core.wmem_max" = mkDefault 7500000;
 
     systemd.packages = [ cfg.package ];
     systemd.services.caddy = {
-      wants = map (hostOpts: "acme-finished-${hostOpts.useACMEHost}.target") acmeVHosts;
-      after = map (hostOpts: "acme-selfsigned-${hostOpts.useACMEHost}.service") acmeVHosts;
-      before = map (hostOpts: "acme-${hostOpts.useACMEHost}.service") acmeVHosts;
+      wants = map (certName: "acme-${certName}.service") vhostCertNames;
+      after = map (certName: "acme-${certName}.service") vhostCertNames;
 
       wantedBy = [ "multi-user.target" ];
       startLimitIntervalSec = 14400;
       startLimitBurst = 10;
       reloadTriggers = optional cfg.enableReload cfg.configFile;
-      restartTriggers = optional (! cfg.enableReload) cfg.configFile;
+      restartTriggers = optional (!cfg.enableReload) cfg.configFile;
 
-      serviceConfig = let
-        runOptions = ''--config ${configPath} ${optionalString (cfg.adapter != null) "--adapter ${cfg.adapter}"}'';
-      in {
-        # Override the `ExecStart` line from upstream's systemd unit file by our own:
-        # https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStart=
-        # If the empty string is assigned to this option, the list of commands to start is reset, prior assignments of this option will have no effect.
-        ExecStart = [ "" ''${cfg.package}/bin/caddy run ${runOptions} ${optionalString cfg.resume "--resume"}'' ];
-        # Validating the configuration before applying it ensures we’ll get a proper error that will be reported when switching to the configuration
-        ExecReload = [ "" ] ++ lib.optional cfg.enableReload "${lib.getExe cfg.package} reload ${runOptions} --force";
-        User = cfg.user;
-        Group = cfg.group;
-        ReadWritePaths = [ cfg.dataDir ];
-        StateDirectory = mkIf (cfg.dataDir == "/var/lib/caddy") [ "caddy" ];
-        LogsDirectory = mkIf (cfg.logDir == "/var/log/caddy") [ "caddy" ];
-        Restart = "on-failure";
-        RestartPreventExitStatus = 1;
-        RestartSec = "5s";
+      serviceConfig =
+        let
+          runOptions = "--config ${configPath} ${
+            optionalString (cfg.adapter != null) "--adapter ${cfg.adapter}"
+          }";
+        in
+        {
+          # Override the `ExecStart` line from upstream's systemd unit file by our own:
+          # https://www.freedesktop.org/software/systemd/man/systemd.service.html#ExecStart=
+          # If the empty string is assigned to this option, the list of commands to start is reset, prior assignments of this option will have no effect.
+          ExecStart = [
+            ""
+            "${lib.getExe cfg.package} run ${runOptions} ${optionalString cfg.resume "--resume"}"
+          ];
+          # Validating the configuration before applying it ensures we’ll get a proper error that will be reported when switching to the configuration
+          ExecReload = [
+            ""
+          ]
+          ++ lib.optional cfg.enableReload "${lib.getExe cfg.package} reload ${runOptions} --force";
+          User = cfg.user;
+          Group = cfg.group;
+          ReadWritePaths = [ cfg.dataDir ];
+          StateDirectory = mkIf (cfg.dataDir == "/var/lib/caddy") [ "caddy" ];
+          LogsDirectory = mkIf (cfg.logDir == "/var/log/caddy") [ "caddy" ];
+          Restart = "on-failure";
+          RestartPreventExitStatus = 1;
+          RestartSec = "5s";
+          EnvironmentFile = optional (cfg.environmentFile != null) cfg.environmentFile;
 
-        # TODO: attempt to upstream these options
-        NoNewPrivileges = true;
-        PrivateDevices = true;
-        ProtectHome = true;
-      };
+          # TODO: attempt to upstream these options
+          NoNewPrivileges = true;
+          PrivateDevices = true;
+          ProtectHome = true;
+        };
     };
 
     users.users = optionalAttrs (cfg.user == "caddy") {
@@ -397,13 +512,24 @@ in
 
     security.acme.certs =
       let
-        certCfg = map (useACMEHost: nameValuePair useACMEHost {
-          group = mkDefault cfg.group;
-          reloadServices = [ "caddy.service" ];
-        }) acmeHosts;
+        certCfg = map (
+          certName:
+          nameValuePair certName {
+            group = mkDefault cfg.group;
+            reloadServices = [ "caddy.service" ];
+          }
+        ) vhostCertNames;
       in
-        listToAttrs certCfg;
+      listToAttrs certCfg;
 
     environment.etc.${etcConfigFile}.source = cfg.configFile;
+
+    networking.firewall = mkIf cfg.openFirewall {
+      allowedTCPPorts = filter (port: port != null) [
+        cfg.httpPort
+        cfg.httpsPort
+      ];
+      allowedUDPPorts = optional (cfg.httpsPort != null) cfg.httpsPort;
+    };
   };
 }

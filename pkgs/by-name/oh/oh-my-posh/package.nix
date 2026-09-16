@@ -1,32 +1,28 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, installShellFiles
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  nix-update-script,
+  versionCheckHook,
 }:
-
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "oh-my-posh";
-  version = "23.14.1";
+  version = "30.9.0";
 
   src = fetchFromGitHub {
     owner = "jandedobbeleer";
-    repo = pname;
-    rev = "refs/tags/v${version}";
-    hash = "sha256-yOp4DnPfigdpz32/78w+pjFXpsXEAK9N4Bvv2tmT6iI=";
+    repo = "oh-my-posh";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-IuvK0hwXiGmkjRiLYeayqTQkZqziW03nfykMIfHeQHI=";
   };
 
-  vendorHash = "sha256-EBLfbdTV15wSTOThzBY0d2KrSJzRaB8vNH53Uwc+XfM=";
+  vendorHash = "sha256-qH8ftZyeyTTwqHYalDT+OHZ0/fjH6AWXvKroPXYcYyc=";
 
-  sourceRoot = "${src.name}/src";
-
-  nativeBuildInputs = [
-    installShellFiles
-  ];
+  sourceRoot = "${finalAttrs.src.name}/src";
 
   ldflags = [
     "-s"
-    "-w"
-    "-X github.com/jandedobbeleer/oh-my-posh/src/build.Version=${version}"
+    "-X github.com/jandedobbeleer/oh-my-posh/src/build.Version=${finalAttrs.version}"
     "-X github.com/jandedobbeleer/oh-my-posh/src/build.Date=1970-01-01T00:00:00Z"
   ];
 
@@ -38,25 +34,29 @@ buildGoModule rec {
 
   postPatch = ''
     # these tests requires internet access
-    rm image/image_test.go config/migrate_glyphs_test.go upgrade/notice_test.go
+    rm config/migrate_glyphs_test.go cli/upgrade/notice_test.go segments/upgrade_test.go
   '';
 
   postInstall = ''
     mv $out/bin/{src,oh-my-posh}
     mkdir -p $out/share/oh-my-posh
-    cp -r ${src}/themes $out/share/oh-my-posh/
-    installShellCompletion --cmd oh-my-posh \
-      --bash <($out/bin/oh-my-posh completion bash) \
-      --fish <($out/bin/oh-my-posh completion fish) \
-      --zsh <($out/bin/oh-my-posh completion zsh)
+    cp -r $src/themes $out/share/oh-my-posh/
   '';
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  meta = {
     description = "Prompt theme engine for any shell";
     mainProgram = "oh-my-posh";
     homepage = "https://ohmyposh.dev";
-    changelog = "https://github.com/JanDeDobbeleer/oh-my-posh/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ lucperkins urandom ];
+    changelog = "https://github.com/JanDeDobbeleer/oh-my-posh/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      lucperkins
+      olillin
+    ];
   };
-}
+})

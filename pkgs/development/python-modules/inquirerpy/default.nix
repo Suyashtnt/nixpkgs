@@ -6,7 +6,6 @@
   poetry-core,
   prompt-toolkit,
   pytestCheckHook,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "0.3.4";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "kazhala";
     repo = "InquirerPy";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-Ap0xZHEU458tjm6oEN5EtDoSRlnpZ7jvDq1L7fTlQQc=";
   };
 
@@ -42,11 +39,11 @@ buildPythonPackage rec {
     "tests/base/test_list.py"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python port of Inquirer.js";
     homepage = "https://github.com/kazhala/InquirerPy";
     changelog = "https://github.com/kazhala/InquirerPy/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

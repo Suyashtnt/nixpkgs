@@ -1,16 +1,20 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+}:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "xcaddy";
-  version = "0.4.2";
+  version = "0.4.6";
 
   subPackages = [ "cmd/xcaddy" ];
 
   src = fetchFromGitHub {
     owner = "caddyserver";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-4evqpkDb6/sduPuqRlnvvi/kS4H2zpYB8LB2PXmoopA=";
+    repo = "xcaddy";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-SXCOKrGaTwcdrVhPenQGjdBaDl8/bUGmm1B3spk8eUA=";
   };
 
   patches = [
@@ -21,16 +25,15 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
-    "-X github.com/caddyserver/xcaddy/cmd.customVersion=v${version}"
+    "-X github.com/caddyserver/xcaddy/cmd.customVersion=v${finalAttrs.version}"
   ];
 
-  vendorHash = "sha256-NoOEvvaD3oUejlFIe1s95SjL/YRsuCSHFElnxaweA/s=";
+  vendorHash = "sha256-K5+Gj4Lqla6q9vx95BtCS67mZMWkMjgIHVYpBUdx/Wc=";
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/caddyserver/xcaddy";
     description = "Build Caddy with plugins";
     mainProgram = "xcaddy";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ tjni emilylange ];
+    license = lib.licenses.asl20;
   };
-}
+})

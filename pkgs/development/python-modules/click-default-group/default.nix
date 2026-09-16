@@ -4,7 +4,6 @@
   click,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   flit-core,
 }:
 
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "1.2.4";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "click-contrib";
     repo = "click-default-group";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-9Vk4LdgLDAWG2YCQPLKR6PIVnULmpOoe7RtS8DgWARo=";
   };
 
@@ -30,10 +27,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "click_default_group" ];
 
-  meta = with lib; {
+  meta = {
     description = "Group to invoke a command without explicit subcommand name";
     homepage = "https://github.com/click-contrib/click-default-group";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ jakewaksbaum ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ jakewaksbaum ];
   };
 }

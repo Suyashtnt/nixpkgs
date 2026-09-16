@@ -1,70 +1,143 @@
 {
   autoPatchelfHook,
+  copyDesktopItems,
   fetchurl,
   glib,
   glib-networking,
   gtk3,
+  jdk21_headless,
+  jre_minimal,
   lib,
   libsecret,
   makeDesktopItem,
-  openjdk17,
+  makeWrapper,
   stdenvNoCC,
-  swt,
-  webkitgtk,
+  webkitgtk_4_1,
   wrapGAppsHook3,
+  imagemagick,
   gitUpdater,
 }:
 let
-  desktopItem = makeDesktopItem {
-    name = "Portfolio";
-    exec = "portfolio";
-    icon = "portfolio";
-    comment = "Calculate Investment Portfolio Performance";
-    desktopName = "Portfolio Performance";
-    categories = [ "Office" ];
+  jre = jre_minimal.override {
+    jdk = jdk21_headless;
+    modules = [
+      "java.base"
+      "java.desktop"
+      "jdk.localedata"
+      "java.management"
+      "java.naming"
+      "java.net.http"
+      "java.security.jgss"
+      "java.sql"
+      "java.xml"
+      "jdk.crypto.ec"
+      "jdk.net"
+      "jdk.httpserver"
+      "jdk.unsupported"
+      "jdk.xml.dom"
+    ];
   };
 
-  runtimeLibs = lib.makeLibraryPath [
+  runtimeDeps = [
     glib
     glib-networking
     gtk3
     libsecret
-    swt
-    webkitgtk
+    webkitgtk_4_1
   ];
 in
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "PortfolioPerformance";
-  version = "0.71.1";
+  version = "0.87.0";
 
   src = fetchurl {
     url = "https://github.com/buchen/portfolio/releases/download/${finalAttrs.version}/PortfolioPerformance-${finalAttrs.version}-linux.gtk.x86_64.tar.gz";
-    hash = "sha256-bZZTsL2jf4m6Gvc9cXDbAsiPoluljnb1AKshMM4325Q=";
+    hash = "sha256-HCgMc8w7rT2vkM1PglsR8CaAOTqpe/KMZg90vC+R55I=";
   };
 
   nativeBuildInputs = [
     autoPatchelfHook
+    copyDesktopItems
+    imagemagick
+    makeWrapper
     wrapGAppsHook3
   ];
+
+  buildInputs = runtimeDeps;
+
+  dontWrapGApps = true;
 
   dontConfigure = true;
   dontBuild = true;
 
   installPhase = ''
+    runHook preInstall
+
     mkdir -p $out/portfolio
     cp -av ./* $out/portfolio
 
-    makeWrapper $out/portfolio/PortfolioPerformance $out/bin/portfolio \
-      --prefix LD_LIBRARY_PATH : "${runtimeLibs}" \
-      --prefix CLASSPATH : "${swt}/jars/swt.jar" \
-      --prefix PATH : ${openjdk17}/bin
+    # Remove all jna plugins that does not match the system
+    rm -fR $out/portfolio/plugins/com.sun.jna*/com/sun/jna/{\
+    aix-ppc,\
+    aix-ppc64,\
+    darwin-aarch64,\
+    darwin-x86-64,\
+    dragonflybsd-x86-64,\
+    freebsd-aarch64,\
+    freebsd-x86,\
+    freebsd-x86-64,\
+    linux-aarch64,\
+    linux-arm,\
+    linux-armel,\
+    linux-loongarch64,\
+    linux-mips64el,\
+    linux-ppc,\
+    linux-ppc64le,\
+    linux-riscv64,\
+    linux-s390x,\
+    linux-x86,\
+    openbsd-x86,\
+    openbsd-x86-64,\
+    sunos-sparc,\
+    sunos-sparcv9,\
+    sunos-x86,\
+    sunos-x86-64,\
+    win32,\
+    win32-aarch64,\
+    win32-x86,\
+    win32-x86-64\
+    }
 
-    # Create desktop item
-    mkdir -p $out/share/applications
-    cp ${desktopItem}/share/applications/* $out/share/applications
-    mkdir -p $out/share/pixmaps
-    ln -s $out/portfolio/icon.xpm $out/share/pixmaps/portfolio.xpm
+    # Eclipse source bundles are not needed at runtime.
+    rm -f $out/portfolio/plugins/*.source_*.jar
+    rm -rf $out/portfolio/configuration/org.eclipse.equinox.source
+
+    mkdir -p $out/share/icons/hicolor/256x256/apps
+    magick $out/portfolio/icon.xpm $out/share/icons/hicolor/256x256/apps/portfolio.png
+
+    runHook postInstall
   '';
+
+  postFixup = ''
+    mkdir -p $out/bin
+    makeWrapper $out/portfolio/PortfolioPerformance $out/bin/portfolio \
+      "''${gappsWrapperArgs[@]}" \
+      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath runtimeDeps}" \
+      --prefix PATH : ${lib.makeBinPath [ jre ]} \
+      --set JAVA_HOME "${jre}"
+  '';
+
+  desktopItems = [
+    (makeDesktopItem {
+      name = "Portfolio";
+      exec = "portfolio";
+      icon = "portfolio";
+      comment = "Calculate Investment Portfolio Performance";
+      desktopName = "Portfolio Performance";
+      categories = [ "Office" ];
+      startupWMClass = "Portfolio Performance";
+    })
+  ];
 
   passthru.updateScript = gitUpdater { url = "https://github.com/buchen/portfolio.git"; };
 

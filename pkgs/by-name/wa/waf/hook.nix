@@ -1,5 +1,7 @@
-{ makeSetupHook
-, waf
+{
+  lib,
+  makeSetupHook,
+  waf,
 }:
 
 makeSetupHook {
@@ -15,5 +17,6 @@ makeSetupHook {
   meta = {
     description = "Setup hook for using Waf in Nixpkgs";
     inherit (waf.meta) maintainers platforms broken;
+    license = lib.licenses.mit;
   };
 } ./setup-hook.sh

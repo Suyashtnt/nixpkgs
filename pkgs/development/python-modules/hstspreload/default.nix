@@ -2,22 +2,19 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hstspreload";
-  version = "2024.9.1";
+  version = "2026.9.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "sethmlarson";
     repo = "hstspreload";
-    rev = "refs/tags/${version}";
-    hash = "sha256-mpHJG2TqhlTNZ9fbyOZsoKusAvx8EiiP7dATCZh19dQ=";
+    tag = finalAttrs.version;
+    hash = "sha256-9j5B8vrqSThzv148GIbhDh+Vp4dCxS4cddT4gxcoABs=";
   };
 
   build-system = [ setuptools ];
@@ -27,10 +24,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "hstspreload" ];
 
-  meta = with lib; {
-    description = "Chromium HSTS Preload list as a Python package and updated daily";
+  meta = {
+    description = "Chromium HSTS Preload list";
     homepage = "https://github.com/sethmlarson/hstspreload";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
-}
+})

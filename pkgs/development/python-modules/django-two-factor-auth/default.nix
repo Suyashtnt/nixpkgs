@@ -8,7 +8,6 @@
   fetchFromGitHub,
   phonenumbers,
   pydantic,
-  pythonOlder,
   qrcode,
   setuptools-scm,
   twilio,
@@ -17,25 +16,24 @@
 
 buildPythonPackage rec {
   pname = "django-two-factor-auth";
-  version = "1.15.5";
+  version = "1.18.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "jazzband";
     repo = "django-two-factor-auth";
-    rev = "refs/tags/${version}";
-    hash = "sha256-Sr7L3ioeofyADHb1NSgs0GmVbzX7rro7yhhG9Gq6GJE=";
+    tag = version;
+    hash = "sha256-rhcEVmh5Am1TKO+01rb9VBKJdFVa8uRdTimEKq2pA7w=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
+  build-system = [ setuptools-scm ];
+
+  pythonRelaxDeps = [
+    "django-phonenumber-field"
+    "qrcode"
   ];
 
-  pythonRelaxDeps = [ "django-phonenumber-field" ];
-
-  propagatedBuildInputs = [
+  dependencies = [
     django
     django-formtools
     django-otp
@@ -43,7 +41,7 @@ buildPythonPackage rec {
     qrcode
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     call = [ twilio ];
     sms = [ twilio ];
     webauthn = [
@@ -64,11 +62,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "two_factor" ];
 
-  meta = with lib; {
+  meta = {
     description = "Complete Two-Factor Authentication for Django";
     homepage = "https://github.com/jazzband/django-two-factor-auth";
-    changelog = "https://github.com/jazzband/django-two-factor-auth/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ derdennisop ];
+    changelog = "https://github.com/jazzband/django-two-factor-auth/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ derdennisop ];
   };
 }

@@ -6,7 +6,6 @@
   qtpositioning,
   qtsvg,
   exiv2,
-  kirigami-addons,
 }:
 let
   # URLs snapshotted through
@@ -40,7 +39,6 @@ mkKdeDerivation {
     qtpositioning
     qtsvg
     exiv2
-    kirigami-addons
   ];
   meta.mainProgram = "koko";
 }

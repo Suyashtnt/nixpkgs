@@ -5,14 +5,14 @@
   installShellFiles,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "tt";
   version = "0.4.2";
 
   src = fetchFromGitHub {
     owner = "lemnos";
     repo = "tt";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-vKh19xYBeNqvVFilvA7NeQ34RM5VnwDs+Hu/pe3J0y4=";
   };
 
@@ -21,8 +21,8 @@ buildGoModule rec {
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = ''
-      mv $out/bin/src $out/bin/tt
-      installManPage tt.1.gz
+    mv $out/bin/src $out/bin/tt
+    installManPage tt.1.gz
   '';
 
   meta = {
@@ -32,4 +32,4 @@ buildGoModule rec {
     mainProgram = "tt";
     maintainers = with lib.maintainers; [ vinetos ];
   };
-}
+})

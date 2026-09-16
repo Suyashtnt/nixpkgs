@@ -7,7 +7,6 @@
   lxml,
   mixbox,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "4.1.0.17";
   pyproject = true;
 
-  disabled = pythonOlder "3.9";
-
   src = fetchFromGitHub {
     owner = "MAECProject";
     repo = "python-maec";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-I2Ov2AQiC9D8ivHqn7owcTsNS7Kw+CWVyijK3VO52Og=";
   };
 

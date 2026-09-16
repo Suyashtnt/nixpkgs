@@ -4,41 +4,40 @@
   botocore,
   buildPythonPackage,
   fetchFromGitHub,
+  freezegun,
   pytest-env,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
-  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "pynamodb";
-  version = "6.0.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "6.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pynamodb";
     repo = "PynamoDB";
-    rev = "refs/tags/${version}";
-    hash = "sha256-Ag/ivZ2SDYX0kwXbExt3kE/pMJgfoGc6gWoy+Rr6GTw=";
+    tag = version;
+    hash = "sha256-i4oxZO3gBVc2PMFSISeytaO8YrzYR9YuUMxrEqrg2c4=";
   };
 
   build-system = [ setuptools ];
 
-  dependencies = [ botocore ] ++ lib.optionals (pythonOlder "3.11") [ typing-extensions ];
+  dependencies = [ botocore ];
 
   optional-dependencies = {
     signal = [ blinker ];
   };
 
   nativeCheckInputs = [
+    freezegun
     pytest-env
     pytest-mock
     pytestCheckHook
-  ] ++ optional-dependencies.signal;
+  ]
+  ++ optional-dependencies.signal;
 
   pythonImportsCheck = [ "pynamodb" ];
 
@@ -55,17 +54,19 @@ buildPythonPackage rec {
     # require a local dynamodb instance
     "test_create_table"
     "test_create_table__incompatible_indexes"
+    # https://github.com/pynamodb/PynamoDB/issues/1265
+    "test_connection_make_api_call__binary_attributes"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Interface for Amazon’s DynamoDB";
     longDescription = ''
       DynamoDB is a great NoSQL service provided by Amazon, but the API is
       verbose. PynamoDB presents you with a simple, elegant API.
     '';
     homepage = "http://jlafon.io/pynamodb.html";
-    changelog = "https://github.com/pynamodb/PynamoDB/releases/tag/${version}";
-    license = licenses.mit;
+    changelog = "https://github.com/pynamodb/PynamoDB/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
 }

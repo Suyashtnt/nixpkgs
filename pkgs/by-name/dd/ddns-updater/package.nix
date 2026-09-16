@@ -2,48 +2,49 @@
   buildGoModule,
   fetchFromGitHub,
   lib,
+  makeWrapper,
   nixosTests,
   nix-update-script,
 }:
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "ddns-updater";
-  version = "2.7.0";
+  version = "2.10.0";
 
   src = fetchFromGitHub {
     owner = "qdm12";
     repo = "ddns-updater";
-    rev = "v${version}";
-    hash = "sha256-U8Vw7dsj/efqvpooT3QQjNp41AuGYJ/Gz/pA8Em3diE=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-E/ToeY5O6GaMl0ItLbNNF5Uur0Gx87FdT0T4kekae88=";
   };
 
-  vendorHash = "sha256-M9Al3zl2Ltv4yWdyRB3+9zpTr3foliu5WweImHltz3M=";
+  vendorHash = "sha256-osrRxiifxYgcxShso6HnxBCDQPMUiwfbt6fVipjkmdE=";
 
   ldflags = [
     "-s"
     "-w"
   ];
 
-  subPackages = [ "cmd/updater" ];
+  subPackages = [ "cmd/ddns-updater" ];
+
+  nativeBuildInputs = [ makeWrapper ];
+
+  postInstall = ''
+    wrapProgram $out/bin/ddns-updater \
+      --set GODEBUG "netdns=go"
+  '';
 
   passthru = {
     tests = {
       inherit (nixosTests) ddns-updater;
     };
-    # nixpkgs-update: no auto update
-    # Necessary only as rryantm keeps getting confused and thinks 2.6.1 is newer than 2.7.0
-    # TODO remove once version newer than 2.7.0 is released
     updateScript = nix-update-script { };
   };
 
-  postInstall = ''
-    mv $out/bin/updater $out/bin/ddns-updater
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "Container to update DNS records periodically with WebUI for many DNS providers";
     homepage = "https://github.com/qdm12/ddns-updater";
-    license = licenses.mit;
-    maintainers = with maintainers; [ delliott ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ delliott ];
     mainProgram = "ddns-updater";
   };
-}
+})

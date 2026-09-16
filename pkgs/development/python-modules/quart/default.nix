@@ -2,10 +2,9 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
-  poetry-core,
+  flit-core,
 
   # propagates
   aiofiles,
@@ -13,13 +12,11 @@
   click,
   flask,
   hypercorn,
-  importlib-metadata,
   itsdangerous,
   jinja2,
   markupsafe,
   pydata-sphinx-theme,
   python-dotenv,
-  typing-extensions,
   werkzeug,
 
   # tests
@@ -27,46 +24,37 @@
   mock,
   py,
   pytest-asyncio,
-  pytest7CheckHook,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "quart";
-  version = "0.19.6";
+  version = "0.22.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pallets";
     repo = "quart";
-    rev = "refs/tags/${version}";
-    hash = "sha256-oR03Qu93F+pcWywbdYgMKIAdohBNezlGz04ws3yGAxs=";
+    tag = version;
+    hash = "sha256-1rwkrxxk79EB8gkeXNvT2hR37it4H6RqewPxYny/VIs=";
   };
 
-  build-system = [ poetry-core ];
+  build-system = [ flit-core ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace "--no-cov-on-fail " ""
-  '';
-
-  dependencies =
-    [
-      aiofiles
-      blinker
-      click
-      flask
-      hypercorn
-      itsdangerous
-      jinja2
-      markupsafe
-      pydata-sphinx-theme
-      python-dotenv
-      werkzeug
-    ]
-    ++ lib.optionals (pythonOlder "3.10") [
-      importlib-metadata
-      typing-extensions
-    ];
+  dependencies = [
+    aiofiles
+    blinker
+    click
+    flask
+    hypercorn
+    itsdangerous
+    jinja2
+    markupsafe
+    pydata-sphinx-theme
+    python-dotenv
+    werkzeug
+  ];
 
   pythonImportsCheck = [ "quart" ];
 
@@ -75,15 +63,16 @@ buildPythonPackage rec {
     mock
     py
     pytest-asyncio
-    pytest7CheckHook
+    pytest-cov-stub
+    pytestCheckHook
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Async Python micro framework for building web applications";
     mainProgram = "quart";
     homepage = "https://github.com/pallets/quart/";
-    changelog = "https://github.com/pallets/quart/blob/${src.rev}/CHANGES.rst";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+    changelog = "https://github.com/pallets/quart/blob/${src.tag}/CHANGES.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
 }

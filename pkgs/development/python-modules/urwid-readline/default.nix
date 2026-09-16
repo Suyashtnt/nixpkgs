@@ -9,28 +9,33 @@
 
 buildPythonPackage rec {
   pname = "urwid-readline";
-  version = "0.14";
+  version = "0.15.1";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "rr-";
     repo = "urwid_readline";
-    rev = "refs/tags/${version}";
-    hash = "sha256-ZTg+GZnu7R6Jf2+SIwVo57yHnjwuY92DElTJs8oRErE=";
+    tag = version;
+    hash = "sha256-HiMMLzVE/Qw/PR7LXACyfzblxrGYrbMoi3/e/QzqF34=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail 'version="0.15"' 'version="${version}"'
+  '';
 
-  propagatedBuildInputs = [ urwid ];
+  build-system = [ setuptools ];
+
+  dependencies = [ urwid ];
 
   pythonImportsCheck = [ "urwid_readline" ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  meta = {
     description = "Textbox edit widget for urwid that supports readline shortcuts";
     homepage = "https://github.com/rr-/urwid_readline";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

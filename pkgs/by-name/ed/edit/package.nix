@@ -1,17 +1,18 @@
-{ lib
-, stdenv
-, fetchgit
-, cwebbin
-, libX11
-, libXft
-, ncurses
-, pkg-config
-, unzip
+{
+  lib,
+  stdenv,
+  fetchgit,
+  cwebbin,
+  libx11,
+  libxft,
+  ncurses,
+  pkg-config,
+  unzip,
 }:
 
 stdenv.mkDerivation {
   pname = "edit";
-  version = "unstable-2021-04-05";
+  version = "0-unstable-2021-04-05";
 
   src = fetchgit {
     url = "git://c9x.me/ed.git";
@@ -26,8 +27,8 @@ stdenv.mkDerivation {
   ];
 
   buildInputs = [
-    libX11
-    libXft
+    libx11
+    libxft
     ncurses
   ];
 
@@ -47,7 +48,7 @@ stdenv.mkDerivation {
     description = "Relaxing mix of Vi and ACME";
     homepage = "https://c9x.me/edit";
     license = lib.licenses.publicDomain;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     platforms = lib.platforms.unix;
     mainProgram = "edit";
   };

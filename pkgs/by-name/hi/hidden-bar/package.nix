@@ -1,16 +1,17 @@
-{ lib
-, stdenvNoCC
-, fetchurl
-, undmg
+{
+  lib,
+  stdenvNoCC,
+  fetchurl,
+  unzip,
 }:
 
 stdenvNoCC.mkDerivation rec {
   pname = "hidden-bar";
-  version = "1.9";
+  version = "1.10";
 
   src = fetchurl {
-    url = "https://github.com/dwarvesf/hidden/releases/download/v${version}/Hidden.Bar.${version}.dmg";
-    hash = "sha256-P1SwJPXBxAvBiuvjkBRxAom0fhR+cVYfriKmYcqybQI=";
+    url = "https://github.com/dwarvesf/hidden/releases/download/v${version}/Hidden-Bar-v${version}-macos.zip";
+    hash = "sha256-qKX1KZ/fq1K9/7L1cop21MumkHVOmzsS8nvTjy52wLw=";
   };
 
   sourceRoot = ".";
@@ -24,13 +25,13 @@ stdenvNoCC.mkDerivation rec {
     runHook postInstall
   '';
 
-  nativeBuildInputs = [ undmg ];
+  nativeBuildInputs = [ unzip ];
 
   meta = {
     description = "Ultra-light MacOS utility that helps hide menu bar icons";
     homepage = "https://github.com/dwarvesf/hidden";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ donteatoreo ];
+    maintainers = with lib.maintainers; [ _4evy ];
     platforms = lib.platforms.darwin;
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
   };

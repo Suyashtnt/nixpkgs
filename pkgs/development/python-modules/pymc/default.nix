@@ -1,16 +1,17 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
   setuptools,
+  versioneer,
 
   # dependencies
   arviz,
   cachetools,
   cloudpickle,
+  matplotlib,
   numpy,
   pandas,
   pytensor,
@@ -20,31 +21,34 @@
   typing-extensions,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pymc";
-  version = "5.16.2";
+  version = "6.3.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pymc-devs";
     repo = "pymc";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-vOU5P45AJPULGWj9lscZKP3JqfSpkPDnq1Fyq9lIawc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-0s0Yzp+f/Yij9LOzH2ZUoqoCiMFzm9cd8v0CfZc6uco=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace-fail ', "pytest-cov"' ""
-  '';
+  build-system = [
+    setuptools
+    versioneer
+  ];
 
-  build-system = [ setuptools ];
-
+  pythonRelaxDeps = [
+    "cachetools"
+  ];
   dependencies = [
     arviz
     cachetools
     cloudpickle
+    # `matplotlib` is an undeclared runtime dependency: the default (`progressbar = True`) sampling
+    # path imports it in `pymc/progress_bar/rich_progress.py`.
+    matplotlib
     numpy
     pandas
     pytensor
@@ -63,11 +67,10 @@ buildPythonPackage rec {
   meta = {
     description = "Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC)";
     homepage = "https://github.com/pymc-devs/pymc";
-    changelog = "https://github.com/pymc-devs/pymc/releases/tag/v${version}";
+    changelog = "https://github.com/pymc-devs/pymc/releases/tag/${finalAttrs.src.tag}";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [
       nidabdella
-      ferrine
     ];
   };
-}
+})

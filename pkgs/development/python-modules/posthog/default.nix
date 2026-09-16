@@ -1,61 +1,87 @@
 {
   lib,
-  buildPythonPackage,
-  fetchFromGitHub,
-  # build inputs
-  requests,
-  six,
-  monotonic,
+  anthropic,
   backoff,
-  python-dateutil,
-  # check inputs
-  pytestCheckHook,
-  mock,
+  buildPythonPackage,
+  distro,
+  django,
+  fetchFromGitHub,
   freezegun,
+  google-genai,
+  mcp,
+  mock,
+  monotonic,
+  openai,
+  opentelemetry-exporter-otlp,
+  opentelemetry-sdk,
+  parameterized,
+  pytest-asyncio,
+  pytest-bdd,
+  pytestCheckHook,
+  python-dateutil,
+  pythonAtLeast,
+  requests,
+  setuptools,
+  six,
+  typing-extensions,
+  zstandard,
 }:
-let
+
+buildPythonPackage (finalAttrs: {
   pname = "posthog";
-  version = "3.5.2";
-in
-buildPythonPackage {
-  inherit pname version;
-  format = "setuptools";
+  version = "7.52.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "PostHog";
     repo = "posthog-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-DhTX28j8RcEONEVIRoYHBk63Qw1Wff9qdQ/Ymbb9xHE=";
+    tag = "posthog-v${finalAttrs.version}";
+    hash = "sha256-EIH8CQgbnpbkMupyyxRR5+ZTiKiBBRtTyFQfbEABHV4=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    backoff
+    distro
+    monotonic
+    python-dateutil
     requests
     six
-    monotonic
-    backoff
-    python-dateutil
+    typing-extensions
   ];
 
   nativeCheckInputs = [
-    pytestCheckHook
-    mock
+    anthropic
+    django
     freezegun
+    google-genai
+    mcp
+    mock
+    openai
+    opentelemetry-exporter-otlp
+    opentelemetry-sdk
+    parameterized
+    pytest-asyncio
+    pytest-bdd
+    pytestCheckHook
+    zstandard
   ];
 
   pythonImportsCheck = [ "posthog" ];
 
   disabledTests = [
-    "test_load_feature_flags_wrong_key"
     # Tests require network access
+    "test_excepthook"
     "test_request"
     "test_upload"
   ];
 
-  meta = with lib; {
-    description = "Official PostHog python library";
+  meta = {
+    description = "Module for interacting with PostHog";
     homepage = "https://github.com/PostHog/posthog-python";
-    changelog = "https://github.com/PostHog/posthog-python/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ happysalada ];
+    changelog = "https://github.com/PostHog/posthog-python/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ happysalada ];
   };
-}
+})

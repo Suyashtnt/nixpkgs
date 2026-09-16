@@ -6,61 +6,82 @@
   pkg-config,
   sqlite,
   openssl,
-  darwin,
+  versionCheckHook,
+  nix-update-script,
+  nixosTests,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "arti";
-  version = "1.2.7";
+  version = "2.6.0";
 
   src = fetchFromGitLab {
     domain = "gitlab.torproject.org";
     group = "tpo";
     owner = "core";
     repo = "arti";
-    rev = "arti-v${version}";
-    hash = "sha256-lyko4xwTn03/Es8icOx8GIrjC4XDXvZPDYHYILw8Opo=";
+    tag = "arti-v${finalAttrs.version}";
+    hash = "sha256-ukGplnZz1O1Djh12COKk8FL/3rLmmWGyl0b816wRWBE=";
   };
 
-  cargoHash = "sha256-I45SaawWAK7iTZDFhJT4YVO439D/3NmWLp3FtFmhLC0=";
+  # Working around a bug in cargo that appears with cargo-auditable, see
+  # https://github.com/rust-secure-code/cargo-auditable/issues/124.
+  postPatch = ''
+    substituteInPlace crates/arti/Cargo.toml \
+      --replace-fail '"http"' '"dep:http"' \
+      --replace-fail '"tokio-util"' '"dep:tokio-util"'
+  '';
+
+  buildAndTestSubdir = "crates/arti";
+  cargoHash = "sha256-/7sWTLeVolqliggn1Qw+kxqAeWENHgbCR6hK5Th2z+g=";
 
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ pkg-config ];
 
-  buildInputs =
-    [ sqlite ]
-    ++ lib.optionals stdenv.isLinux [ openssl ]
-    ++ lib.optionals stdenv.isDarwin (
-      with darwin.apple_sdk.frameworks;
-      [
-        CoreServices
-      ]
-    );
+  buildInputs = [ sqlite ] ++ lib.optionals stdenv.hostPlatform.isLinux [ openssl ];
+  # `full` includes all stable and non-conflicting feature flags. the primary
+  # downsides are increased binary size and memory usage for building, but
+  # those are acceptable for nixpkgs
+  buildFeatures = [ "full" ];
 
-  cargoBuildFlags = [
-    "--package"
-    "arti"
-  ];
-
-  cargoTestFlags = [
-    "--package"
-    "arti"
+  # several tests under `full` require access to internal types, which are
+  # currently marked as experimental for public usage.
+  checkFeatures = [
+    "full"
+    "experimental-api"
   ];
 
   checkFlags = [
-    # problematic tests that were fixed after the release
+    # problematic test that hangs the build
     "--skip=reload_cfg::test::watch_single_file"
-    "--skip=reload_cfg::test::watch_multiple"
   ];
+
+  # some of the CLI tests attempt to validate that the filesystem and runtime
+  # environment are securely configured, which breaks inside the nix build
+  # sandbox. this does NOT affect downstream users of Arti.
+  env.ARTI_FS_DISABLE_PERMISSION_CHECKS = 1;
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  passthru = {
+    tests = { inherit (nixosTests) tor; };
+    updateScript = nix-update-script { extraArgs = [ "--version-regex=^arti-v(.*)$" ]; };
+  };
 
   meta = {
     description = "Implementation of Tor in Rust";
     mainProgram = "arti";
     homepage = "https://arti.torproject.org/";
-    changelog = "https://gitlab.torproject.org/tpo/core/arti/-/blob/${src.rev}/CHANGELOG.md";
-    license = with lib.licenses; [
-      asl20
-      mit
+    changelog = "https://gitlab.torproject.org/tpo/core/arti/-/blob/arti-v${finalAttrs.version}/CHANGELOG.md";
+    license =
+      with lib.licenses;
+      OR [
+        asl20
+        mit
+      ];
+    maintainers = with lib.maintainers; [
+      rapiteanu
+      whispersofthedawn
     ];
-    maintainers = with lib.maintainers; [ rapiteanu ];
   };
-}
+})

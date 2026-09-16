@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
   poetry-core,
@@ -10,27 +9,25 @@
   # optional-dependencies
   furo,
   myst-parser,
-  sphinx-autobuild,
+  sphinx,
   sphinxHook,
 
   # tests
-  pytest-asyncio,
+  pytest-asyncio_0,
   pytest-cov-stub,
   pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "aiohappyeyeballs";
-  version = "2.3.6";
+  version = "2.7.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
 
   src = fetchFromGitHub {
     owner = "bdraco";
     repo = "aiohappyeyeballs";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-3cin755WD3e75l+mm//KG+g2UEkHvdYYEFvkJ9j9D6s=";
+    tag = "v${version}";
+    hash = "sha256-smpdmmut4wYekVew13KZXluI71lSUdZriPejUumkLNU=";
   };
 
   outputs = [
@@ -38,31 +35,31 @@ buildPythonPackage rec {
     "doc"
   ];
 
-  nativeBuildInputs = [ poetry-core ] ++ optional-dependencies.docs;
+  build-system = [ poetry-core ] ++ optional-dependencies.docs;
 
   optional-dependencies = {
     docs = [
       furo
       myst-parser
-      sphinx-autobuild
+      sphinx
       sphinxHook
     ];
   };
 
   nativeCheckInputs = [
-    pytest-asyncio
+    pytest-asyncio_0
     pytest-cov-stub
     pytestCheckHook
   ];
 
   pythonImportsCheck = [ "aiohappyeyeballs" ];
 
-  meta = with lib; {
+  meta = {
     description = "Happy Eyeballs for pre-resolved hosts";
     homepage = "https://github.com/bdraco/aiohappyeyeballs";
     changelog = "https://github.com/bdraco/aiohappyeyeballs/blob/v${version}/CHANGELOG.md";
-    license = licenses.psfl;
-    maintainers = with maintainers; [
+    license = lib.licenses.psfl;
+    maintainers = with lib.maintainers; [
       fab
       hexa
     ];

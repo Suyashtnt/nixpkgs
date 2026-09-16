@@ -1,6 +1,4 @@
 pkgs: {
-  percona-xtrabackup_lts = pkgs.callPackage ./lts.nix {
-    boost = pkgs.boost177;
-  };
-  percona-xtrabackup_innovation = pkgs.callPackage ./innovation.nix { };
+  percona-xtrabackup_8_4 = pkgs.callPackage ./8_4.nix { };
+  percona-xtrabackup = pkgs.percona-xtrabackup_8_4;
 }

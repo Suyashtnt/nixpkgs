@@ -1,7 +1,7 @@
 {
   lib,
   aiohttp,
-  aresponses,
+  aioresponses,
   awesomeversion,
   backoff,
   buildPythonPackage,
@@ -10,8 +10,8 @@
   orjson,
   poetry-core,
   pytest-asyncio,
+  pytest-cov-stub,
   pytestCheckHook,
-  pythonOlder,
   syrupy,
   typer,
   yarl,
@@ -20,23 +20,20 @@
 
 buildPythonPackage rec {
   pname = "gotailwind";
-  version = "0.2.3";
+  version = "0.4.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.11";
 
   src = fetchFromGitHub {
     owner = "frenck";
     repo = "python-gotailwind";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-FRFcFn5aRg+H9M6ZwEfLO1Dwcybvs0ODQv2ruCG+4v0=";
+    tag = "v${version}";
+    hash = "sha256-sDQnweGVDyewvTPkRlmk9f7YMnUdPmvB9VrvegAC2B8=";
   };
 
   postPatch = ''
     # Upstream doesn't set a version for the pyproject.toml
     substituteInPlace pyproject.toml \
-      --replace-fail "0.0.0" "${version}" \
-      --replace-fail "--cov" ""
+      --replace-fail "0.0.0" "${version}"
   '';
 
   build-system = [ poetry-core ];
@@ -51,25 +48,27 @@ buildPythonPackage rec {
     zeroconf
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     cli = [ typer ];
   };
 
   nativeCheckInputs = [
-    aresponses
+    aioresponses
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
     syrupy
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "gotailwind" ];
 
-  meta = with lib; {
-    description = "Modul to communicate with Tailwind garage door openers";
+  meta = {
+    description = "Module to communicate with Tailwind garage door openers";
     homepage = "https://github.com/frenck/python-gotailwind";
-    changelog = "https://github.com/frenck/python-gotailwind/releases/tag/v$version";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/frenck/python-gotailwind/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
     mainProgram = "tailwind";
   };
 }

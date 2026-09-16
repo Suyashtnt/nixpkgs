@@ -1,35 +1,37 @@
-{ buildGoModule
-, doppler
-, fetchFromGitHub
-, installShellFiles
-, lib
-, testers
-, stdenv
+{
+  buildGoModule,
+  doppler,
+  fetchFromGitHub,
+  installShellFiles,
+  lib,
+  testers,
+  stdenv,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "doppler";
-  version = "3.69.1";
+  version = "3.76.5";
 
   src = fetchFromGitHub {
     owner = "dopplerhq";
     repo = "cli";
-    rev = version;
-    hash = "sha256-KiSRMF4S+gz8cnRxkO2SVwO3Rl6ImflK/4MEgkQh2UE=";
+    rev = finalAttrs.version;
+    hash = "sha256-98RBpWjBzsLSFTarI5fyc26oyAIuGl5Sm5PeqW3RU0A=";
   };
 
-  vendorHash = "sha256-NUHWKPszQH/pvnA+j65+bJ6t+C0FDRRbTviqkYztpE4=";
+  vendorHash = "sha256-rDpr4qWhMWXEhgZrmoW5tzPZif3KAv3gDtJNtXzbVq0=";
 
   ldflags = [
     "-s -w"
-    "-X github.com/DopplerHQ/cli/pkg/version.ProgramVersion=v${version}"
+    "-X github.com/DopplerHQ/cli/pkg/version.ProgramVersion=v${finalAttrs.version}"
   ];
 
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = ''
     mv $out/bin/cli $out/bin/doppler
-  '' + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+  ''
+  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     export HOME=$TMPDIR
     mkdir $HOME/.doppler # to avoid race conditions below
     installShellCompletion --cmd doppler \
@@ -40,14 +42,14 @@ buildGoModule rec {
 
   passthru.tests.version = testers.testVersion {
     package = doppler;
-    version = "v${version}";
+    version = "v${finalAttrs.version}";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Official CLI for interacting with your Doppler Enclave secrets and configuration";
     mainProgram = "doppler";
     homepage = "https://doppler.com";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ lucperkins ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ lucperkins ];
   };
-}
+})

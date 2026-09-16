@@ -1,33 +1,38 @@
-{ lib
-, stdenv
-, rustPlatform
-, fetchFromGitea
-, pkg-config
-, pcsclite
-, testers
-, openpgp-card-tools
-, darwin
+{
+  lib,
+  stdenv,
+  rustPlatform,
+  fetchFromCodeberg,
+  installShellFiles,
+  pkg-config,
+  pcsclite,
+  dbus,
+  testers,
+  openpgp-card-tools,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "openpgp-card-tools";
-  version = "0.11.3";
+  version = "0.11.13";
 
-  src = fetchFromGitea {
-    domain = "codeberg.org";
+  src = fetchFromCodeberg {
     owner = "openpgp-card";
     repo = "openpgp-card-tools";
-    rev = "v${version}";
-    hash = "sha256-htFhNzBuinj9qiTzcW0eia74jvCT/+9b1aLli594JJQ=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-1O0MI74aqVcbL1c+PL1a8f/t8pc2LIlQwL5IPFTihdk=";
   };
 
-  cargoHash = "sha256-I2ExtUUM0ZJyhtyzP+IsgiMPMUFVHqPiMHFlvuUMjRc=";
+  cargoHash = "sha256-uoZ3V9j1dJsGTq1t1aYqMlWB2D2ZW+enDgXQCb4NzFE=";
 
-  nativeBuildInputs = [ pkg-config rustPlatform.bindgenHook ];
+  nativeBuildInputs = [
+    installShellFiles
+    pkg-config
+    rustPlatform.bindgenHook
+  ];
 
-  buildInputs = [ pcsclite ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.PCSC
-    darwin.apple_sdk.frameworks.Security
+  buildInputs = [
+    pcsclite
+    dbus
   ];
 
   passthru = {
@@ -36,11 +41,21 @@ rustPlatform.buildRustPackage rec {
     };
   };
 
-  meta = with lib; {
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    OCT_COMPLETION_OUTPUT_DIR=$PWD/shell $out/bin/oct
+    installShellCompletion ./shell/oct.{bash,fish} ./shell/_oct
+    OCT_MANPAGE_OUTPUT_DIR=$PWD/man $out/bin/oct
+    installManPage ./man/*.1
+  '';
+
+  meta = {
     description = "Tool for inspecting and configuring OpenPGP cards";
     homepage = "https://codeberg.org/openpgp-card/openpgp-card-tools";
-    license = with licenses ;[ asl20 /* OR */ mit ];
-    maintainers = with maintainers; [ nickcao ];
+    license = with lib.licenses; [
+      asl20 # OR
+      mit
+    ];
+    maintainers = with lib.maintainers; [ nickcao ];
     mainProgram = "oct";
   };
-}
+})

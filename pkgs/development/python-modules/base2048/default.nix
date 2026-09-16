@@ -7,7 +7,6 @@
   frelatage,
   libiconv,
   pytestCheckHook,
-  pythonOlder,
   rustc,
   rustPlatform,
 }:
@@ -17,12 +16,10 @@ buildPythonPackage rec {
   version = "0.1.3";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "ionite34";
     repo = "base2048";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-OXlfycJB1IrW2Zq0xPDGjjwCdRTWtX/ixPGWcd+YjAg=";
   };
 
@@ -41,7 +38,7 @@ buildPythonPackage rec {
 
   buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     fuzz = [ frelatage ];
   };
 
@@ -49,11 +46,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "base2048" ];
 
-  meta = with lib; {
+  meta = {
     description = "Binary encoding with base-2048 in Python with Rust";
     homepage = "https://github.com/ionite34/base2048";
     changelog = "https://github.com/ionite34/base2048/releases/tag/v${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

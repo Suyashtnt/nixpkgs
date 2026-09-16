@@ -1,6 +1,6 @@
 # Qt {#sec-language-qt}
 
-Writing Nix expressions for Qt libraries and applications is largely similar as for other C++ software.
+Writing Nix expressions for Qt libraries and applications is largely similar to that for other C++ software.
 This section assumes some knowledge of the latter.
 
 The major caveat with Qt applications is that Qt uses a plugin system to load additional modules at runtime.
@@ -27,12 +27,6 @@ The same goes for Qt 5 where libraries and tools are under `libsForQt5`.
 
 Any Qt package should include `wrapQtAppsHook` in `nativeBuildInputs`, or explicitly set `dontWrapQtApps` to bypass generating the wrappers.
 
-::: {.note}
-Qt 6 graphical applications should also include `qtwayland` in `buildInputs` on Linux (but not on platforms e.g. Darwin, where `qtwayland` is not available), to ensure the Wayland platform plugin is available.
-
-This may become default in the future, see [NixOS/nixpkgs#269674](https://github.com/NixOS/nixpkgs/pull/269674).
-:::
-
 ## Packages supporting multiple Qt versions {#qt-versions}
 
 If your package is a library that can be built with multiple Qt versions, you may want to take Qt modules as separate arguments (`qtbase`, `qtdeclarative` etc.), and invoke the package from `pkgs/top-level/qt5-packages.nix` or `pkgs/top-level/qt6-packages.nix` using the respective `callPackage` functions.
@@ -41,7 +35,7 @@ Applications should generally be built with upstream's preferred Qt version.
 
 ## Locating additional runtime dependencies {#qt-runtime-dependencies}
 
-Add entries to `qtWrapperArgs` are to modify the wrappers created by
+Add entries to `qtWrapperArgs` to modify the wrappers created by
 `wrapQtAppsHook`:
 
 ```nix
@@ -50,7 +44,7 @@ Add entries to `qtWrapperArgs` are to modify the wrappers created by
 stdenv.mkDerivation {
   # ...
   nativeBuildInputs = [ qt6.wrapQtAppsHook ];
-  qtWrapperArgs = [ ''--prefix PATH : /path/to/bin'' ];
+  qtWrapperArgs = [ "--prefix PATH : /path/to/bin" ];
 }
 ```
 
@@ -62,14 +56,18 @@ and then create wrappers manually in `fixupPhase`, using `wrapQtApp`, which itse
 The `makeWrapper` arguments required for Qt are also exposed in the environment as `$qtWrapperArgs`.
 
 ```nix
-{ stdenv, lib, wrapQtAppsHook }:
+{
+  stdenv,
+  lib,
+  wrapQtAppsHook,
+}:
 
 stdenv.mkDerivation {
   # ...
   nativeBuildInputs = [ wrapQtAppsHook ];
   dontWrapQtApps = true;
   preFixup = ''
-      wrapQtApp "$out/bin/myapp" --prefix PATH : /path/to/bin
+    wrapQtApp "$out/bin/myapp" --prefix PATH : /path/to/bin
   '';
 }
 ```

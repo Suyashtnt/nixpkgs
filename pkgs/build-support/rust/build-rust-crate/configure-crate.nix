@@ -1,63 +1,74 @@
-{ lib, stdenv, echo_colored, noisily, mkRustcDepArgs, mkRustcFeatureArgs }:
 {
-  build
-, buildDependencies
-, codegenUnits
-, colors
-, completeBuildDeps
-, completeDeps
-, crateAuthors
-, crateDescription
-, crateFeatures
-, crateHomepage
-, crateLicense
-, crateLicenseFile
-, crateLinks
-, crateName
-, crateType
-, crateReadme
-, crateRenames
-, crateRepository
-, crateRustVersion
-, crateVersion
-, extraLinkFlags
-, extraRustcOptsForBuildRs
-, libName
-, libPath
-, release
-, verbose
-, workspace_member }:
-let version_ = lib.splitString "-" crateVersion;
-    versionPre = lib.optionalString (lib.tail version_ != []) (lib.elemAt version_ 1);
-    version = lib.splitVersion (lib.head version_);
-    rustcOpts = lib.foldl' (opts: opt: opts + " " + opt)
-        (if release then "-C opt-level=3" else "-C debuginfo=2")
-        (["-C codegen-units=${toString codegenUnits}"] ++ extraRustcOptsForBuildRs);
-    buildDeps = mkRustcDepArgs buildDependencies crateRenames;
-    authors = lib.concatStringsSep ":" crateAuthors;
-    optLevel = if release then 3 else 0;
-    completeDepsDir = lib.concatStringsSep " " completeDeps;
-    completeBuildDepsDir = lib.concatStringsSep " " completeBuildDeps;
-    envFeatures = lib.concatStringsSep " " (
-      map (f: lib.replaceStrings ["-"] ["_"] (lib.toUpper f)) crateFeatures
-    );
-in ''
+  lib,
+  stdenv,
+  echo_colored,
+  noisily,
+  mkRustcDepArgs,
+  mkRustcFeatureArgs,
+}:
+{
+  build,
+  buildDependencies,
+  codegenUnits,
+  colors,
+  completeBuildDeps,
+  completeDeps,
+  crateAuthors,
+  crateDescription,
+  crateFeatures,
+  crateHomepage,
+  crateLicense,
+  crateLicenseFile,
+  crateLinks,
+  crateName,
+  crateType,
+  crateReadme,
+  crateRenames,
+  crateRepository,
+  crateRustVersion,
+  crateVersion,
+  extraLinkFlags,
+  extraRustcOptsForBuildRs,
+  capLints,
+  libName,
+  libPath,
+  release,
+  verbose,
+  workspace_member,
+}:
+let
+  version_ = lib.splitString "-" crateVersion;
+  versionPre = lib.optionalString (lib.tail version_ != [ ]) (lib.elemAt version_ 1);
+  version = lib.splitVersion (lib.head version_);
+  rustcOpts = lib.foldl' (opts: opt: opts + " " + opt) (
+    if release then "-C opt-level=3" else "-C debuginfo=2"
+  ) ([ "-C codegen-units=${toString codegenUnits}" ] ++ extraRustcOptsForBuildRs);
+  buildDeps = mkRustcDepArgs buildDependencies crateRenames;
+  authors = lib.concatStringsSep ":" crateAuthors;
+  optLevel = if release then 3 else 0;
+  completeDepsDir = lib.concatStringsSep " " completeDeps;
+  completeBuildDepsDir = lib.concatStringsSep " " completeBuildDeps;
+  envFeatures = lib.concatStringsSep " " (
+    map (f: "CARGO_FEATURE_${lib.replaceStrings [ "-" ] [ "_" ] (lib.toUpper f)}=1") crateFeatures
+  );
+in
+''
   ${echo_colored colors}
   ${noisily colors verbose}
   source ${./lib.sh}
 
   ${lib.optionalString (workspace_member != null) ''
-  noisily cd "${workspace_member}"
-''}
+    noisily cd "${workspace_member}"
+  ''}
   ${lib.optionalString (workspace_member == null) ''
-  echo_colored "Searching for matching Cargo.toml (${crateName})"
-  local cargo_toml_dir=$(matching_cargo_toml_dir "${crateName}")
-  if [ -z "$cargo_toml_dir" ]; then
-    echo_error "ERROR configuring ${crateName}: No matching Cargo.toml in $(pwd) found." >&2
-    exit 23
-  fi
-  noisily cd "$cargo_toml_dir"
-''}
+    echo_colored "Searching for matching Cargo.toml (${crateName})"
+    local cargo_toml_dir=$(matching_cargo_toml_dir "${crateName}")
+    if [ -z "$cargo_toml_dir" ]; then
+      echo_error "ERROR configuring ${crateName}: No matching Cargo.toml in $(pwd) found." >&2
+      exit 23
+    fi
+    noisily cd "$cargo_toml_dir"
+  ''}
 
   runHook preConfigure
 
@@ -137,9 +148,13 @@ in ''
   export CARGO_CFG_TARGET_OS=${stdenv.hostPlatform.rust.platform.os}
   export CARGO_CFG_TARGET_FAMILY="unix"
   export CARGO_CFG_UNIX=1
-  export CARGO_CFG_TARGET_ENV="gnu"
-  export CARGO_CFG_TARGET_ENDIAN=${if stdenv.hostPlatform.parsed.cpu.significantByte.name == "littleEndian" then "little" else "big"}
-  export CARGO_CFG_TARGET_POINTER_WIDTH=${with stdenv.hostPlatform; toString (if isILP32 then 32 else parsed.cpu.bits)}
+  export CARGO_CFG_TARGET_ENV=${stdenv.hostPlatform.rust.platform.env}
+  export CARGO_CFG_TARGET_ENDIAN=${
+    if stdenv.hostPlatform.parsed.cpu.significantByte.name == "littleEndian" then "little" else "big"
+  }
+  export CARGO_CFG_TARGET_POINTER_WIDTH=${
+    with stdenv.hostPlatform; toString (if isILP32 then 32 else parsed.cpu.bits)
+  }
   export CARGO_CFG_TARGET_VENDOR=${stdenv.hostPlatform.parsed.vendor.name}
 
   export CARGO_MANIFEST_DIR=$(pwd)
@@ -181,7 +196,7 @@ in ''
      fi
      noisily rustc --crate-name build_script_build $BUILD --crate-type bin ${rustcOpts} \
        ${mkRustcFeatureArgs crateFeatures} --out-dir target/build/${crateName} --emit=dep-info,link \
-       -L dependency=target/buildDeps ${buildDeps} --cap-lints allow $EXTRA_BUILD_FLAGS --color ${colors}
+       -L dependency=target/buildDeps ${buildDeps} --cap-lints ${capLints} $EXTRA_BUILD_FLAGS --color ${colors}
 
      mkdir -p target/build/${crateName}.out
      export RUST_BACKTRACE=1
@@ -191,11 +206,10 @@ in ''
      (
        # Features should be set as environment variable for build scripts:
        # https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts
-       for feature in ${envFeatures}; do
-         export CARGO_FEATURE_$feature=1
-       done
-
-       target/build/${crateName}/build_script_build | tee target/build/${crateName}.opt
+       #
+       # We use `env` instead of `export` because it's possible for a Cargo feature name to contain a character that Bash does
+       # not support for variables.
+       env ${envFeatures} target/build/${crateName}/build_script_build | tee target/build/${crateName}.opt
      )
 
      set +e
@@ -211,9 +225,9 @@ in ''
      EXTRA_LINK_SEARCH=$(sed -n "s/^cargo::\{0,1\}rustc-link-search=\(.*\)/\1/p" target/build/${crateName}.opt | tr '\n' ' ' | sort -u)
 
      ${lib.optionalString (lib.elem "cdylib" crateType) ''
-     CRATE_TYPE_IS_CDYLIB="true"
-     EXTRA_CDYLIB_LINK_ARGS=$(sed -n "s/^cargo::\{0,1\}rustc-cdylib-link-arg=\(.*\)/-C link-arg=\1/p" target/build/${crateName}.opt | tr '\n' ' ')
-''}
+       CRATE_TYPE_IS_CDYLIB="true"
+       EXTRA_CDYLIB_LINK_ARGS=$(sed -n "s/^cargo::\{0,1\}rustc-cdylib-link-arg=\(.*\)/-C link-arg=\1/p" target/build/${crateName}.opt | tr '\n' ' ')
+     ''}
 
      # We want to read part of every line that has cargo:rustc-env= prefix and
      # export it as environment variables. This turns out tricky if the lines
@@ -232,9 +246,13 @@ in ''
      IFS="$_OLDIFS"
 
      CRATENAME=$(echo ${crateName} | sed -e "s/\(.*\)-sys$/\U\1/" -e "s/-/_/g")
+     # SemVer allows version numbers to contain alphanumeric characters and `.+-`
+     # which aren't legal bash identifiers.
+     # https://semver.org/#backusnaur-form-grammar-for-valid-semver-versions
+     CRATEVERSION=$(echo ${crateVersion} | sed -e "s/[\.\+-]/_/g")
      grep -P "^cargo:(?!:?(rustc-|warning=|rerun-if-changed=|rerun-if-env-changed))" target/build/${crateName}.opt \
        | awk -F= "/^cargo::metadata=/ {  gsub(/-/, \"_\", \$2); print \"export \" toupper(\"DEP_$(echo $CRATENAME)_\" \$2) \"=\" \"\\\"\"\$3\"\\\"\"; next }
-                  /^cargo:/ { sub(/^cargo::?/, \"\", \$1); gsub(/-/, \"_\", \$1); print \"export \" toupper(\"DEP_$(echo $CRATENAME)_\" \$1) \"=\" \"\\\"\"\$2\"\\\"\"; next }" > target/env
+                  /^cargo:/ { sub(/^cargo::?/, \"\", \$1); gsub(/-/, \"_\", \$1); print \"export \" toupper(\"DEP_$(echo $CRATENAME)_\" \$1) \"=\" \"\\\"\"\$2\"\\\"\"; print \"export \" toupper(\"DEP_$(echo $CRATENAME)_$(echo $CRATEVERSION)_\" \$1) \"=\" \"\\\"\"\$2\"\\\"\"; next }" > target/env
      set -e
   fi
   runHook postConfigure

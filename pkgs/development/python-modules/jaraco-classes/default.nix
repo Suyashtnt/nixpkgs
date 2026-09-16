@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  isPy27,
   setuptools-scm,
   more-itertools,
   pytestCheckHook,
@@ -11,14 +10,12 @@
 buildPythonPackage rec {
   pname = "jaraco-classes";
   version = "3.4.0";
-  format = "pyproject";
-
-  disabled = isPy27;
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jaraco";
     repo = "jaraco.classes";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     sha256 = "sha256-pXDsLKiEru+UXcEBT4/cP1u8s9vSn1Zhf7Qnwy9Zr0I=";
   };
 
@@ -30,9 +27,9 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  meta = {
     description = "Utility functions for Python class constructs";
     homepage = "https://github.com/jaraco/jaraco.classes";
-    license = licenses.mit;
+    license = lib.licenses.mit;
   };
 }

@@ -2,41 +2,43 @@
   lib,
   buildPythonPackage,
   certifi,
-  fetchPypi,
-  pythonOlder,
+  fetchFromGitHub,
+  setuptools,
   requests,
   urllib3,
   websocket-client,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "jellyfin-apiclient-python";
-  version = "1.9.2";
-  format = "setuptools";
+  version = "1.18.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-vMzZeoiWli3HjM8Dqr5RhNfR7gcjPqoXG3b/aNNlx2Q=";
+  src = fetchFromGitHub {
+    owner = "jellyfin";
+    repo = "jellyfin-apiclient-python";
+    tag = "v${version}";
+    hash = "sha256-5xiKtV/nRvrRXHjLizY7vOV9bamk1elQmPt55QtA8xc=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     certifi
     requests
     urllib3
     websocket-client
   ];
 
-  # Module has no test
-  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "jellyfin_apiclient_python" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python API client for Jellyfin";
     homepage = "https://github.com/jellyfin/jellyfin-apiclient-python";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ jojosch ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ jojosch ];
   };
 }

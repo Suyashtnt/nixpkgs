@@ -1,17 +1,30 @@
-{ lib, buildDunePackage, fetchurl
-, domain-local-await, mtime, multicore-magic, yojson
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  backoff,
+  domain-local-await,
+  mtime,
+  multicore-magic,
+  yojson,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "multicore-bench";
-  version = "0.1.4";
+  version = "0.1.7";
 
   src = fetchurl {
-    url = "https://github.com/ocaml-multicore/multicore-bench/releases/download/${version}/multicore-bench-${version}.tbz";
-    hash = "sha256-iCx5QvhYo/e53cW23Sza2as4aez4HeESVvLPF1DW85A=";
+    url = "https://github.com/ocaml-multicore/multicore-bench/releases/download/${finalAttrs.version}/multicore-bench-${finalAttrs.version}.tbz";
+    hash = "sha256-vrp9yiuTwhijhYjeDKPFRGyh/5LeydKWJSyMLZRRXIM=";
   };
 
-  propagatedBuildInputs = [ domain-local-await mtime multicore-magic yojson ];
+  propagatedBuildInputs = [
+    backoff
+    domain-local-await
+    mtime
+    multicore-magic
+    yojson
+  ];
 
   meta = {
     description = "Framework for writing multicore benchmark executables to run on current-bench";
@@ -19,4 +32,4 @@ buildDunePackage rec {
     license = lib.licenses.isc;
     maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

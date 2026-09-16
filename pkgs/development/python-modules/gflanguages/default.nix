@@ -1,28 +1,28 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
+  fetchFromGitHub,
   protobuf,
   pytestCheckHook,
-  pythonOlder,
+  regex,
   setuptools,
   setuptools-scm,
   uharfbuzz,
   youseedee,
+  gfmetadata,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "gflanguages";
-  version = "0.6.2";
-
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-v93mXDwHT/8Tau78ApLUR+dQCpL9jmRQp0BT5y/sfq4=";
-  };
-
+  version = "0.7.11";
   pyproject = true;
+
+  src = fetchFromGitHub {
+    owner = "googlefonts";
+    repo = "lang";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-skybvMeSP+F3Bz3PJEB7ZIEVhLdwBc8+VemDcC+1FZc=";
+  };
 
   # Relax the dependency on protobuf 3. Other packages in the Google Fonts
   # ecosystem have begun upgrading from protobuf 3 to protobuf 4,
@@ -30,24 +30,36 @@ buildPythonPackage rec {
   # in the closure of fontbakery. It seems to be compatible enough.
   pythonRelaxDeps = [ "protobuf" ];
 
+  env.PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python";
+
   build-system = [
     setuptools
     setuptools-scm
   ];
 
-  dependencies = [ protobuf ];
+  dependencies = [
+    protobuf
+    regex
+    gfmetadata
+  ];
 
   nativeCheckInputs = [
     pytestCheckHook
+    regex
     uharfbuzz
     youseedee
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "gflanguages" ];
+
+  meta = {
     description = "Python library for Google Fonts language metadata";
     homepage = "https://github.com/googlefonts/lang";
-    changelog = "https://github.com/googlefonts/lang/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ danc86 ];
+    changelog = "https://github.com/googlefonts/lang/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      danc86
+      jopejoe1
+    ];
   };
-}
+})

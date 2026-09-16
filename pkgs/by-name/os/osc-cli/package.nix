@@ -1,10 +1,10 @@
 {
-  lib
-  , python3
-  , fetchFromGitHub
+  lib,
+  python3,
+  fetchFromGitHub,
 }:
 
-python3.pkgs.buildPythonApplication rec {
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "osc-cli";
   version = "1.11.0";
   pyproject = true;
@@ -12,15 +12,19 @@ python3.pkgs.buildPythonApplication rec {
   src = fetchFromGitHub {
     owner = "outscale";
     repo = "osc-cli";
-    rev = "v${version}";
+    rev = "v${finalAttrs.version}";
     hash = "sha256-7WXy+1NHwFvYmyi5xGfWpq/mbVGJ3WkgP5WQd5pvcC0=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
     python3.pkgs.setuptools
   ];
 
-  propagatedBuildInputs = with python3.pkgs; [
+  pythonRelaxDeps = [
+    "defusedxml"
+  ];
+
+  dependencies = with python3.pkgs; [
     defusedxml
     fire
     requests
@@ -31,11 +35,11 @@ python3.pkgs.buildPythonApplication rec {
   # Skipping tests as they require working access and secret keys
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Official Outscale CLI providing connectors to Outscale API";
     homepage = "https://github.com/outscale/osc-cli";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ nicolas-goudry ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nicolas-goudry ];
     mainProgram = "osc-cli";
   };
-}
+})

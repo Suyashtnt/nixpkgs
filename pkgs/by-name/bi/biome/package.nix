@@ -6,53 +6,63 @@
   libgit2,
   rust-jemalloc-sys,
   zlib,
-  stdenv,
-  darwin,
-  git,
+  gitMinimal,
+  nix-update-script,
 }:
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "biome";
-  version = "1.9.2";
+  version = "2.5.13";
 
   src = fetchFromGitHub {
     owner = "biomejs";
     repo = "biome";
-    rev = "cli/v${version}";
-    hash = "sha256-erwGLcE5w/UnjZ1aVF3ZYD2OQGI8xt7lVBvpWkJ56tc=";
+    rev = "@biomejs/biome@${finalAttrs.version}";
+    hash = "sha256-qER9QDFHGhf5U5BVk7QticJFQ+wFR9+LKweuP26VDOo=";
   };
 
-  cargoHash = "sha256-m9r0fcnkDPT2J1DjjbLCzdAxqh8DCFAWA3jikuaVVGQ=";
+  cargoHash = "sha256-658jnk9AaozW15EMuGVDXCOLxLevxYgfiDRJCKUBJkU=";
 
-  nativeBuildInputs = [
-    pkg-config
+  nativeBuildInputs = [ pkg-config ];
+
+  buildInputs = [
+    libgit2
+    rust-jemalloc-sys
+    zlib
   ];
 
-  buildInputs =
-    [
-      libgit2
-      rust-jemalloc-sys
-      zlib
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk.frameworks.Security
-    ];
-
-  nativeCheckInputs = [
-    git
-  ];
+  nativeCheckInputs = [ gitMinimal ];
 
   cargoBuildFlags = [ "-p=biome_cli" ];
-  cargoTestFlags =
-    cargoBuildFlags
-    ++
-    # skip a broken test from v1.7.3 release
-    # this will be removed on the next version
-    [ "-- --skip=diagnostics::test::termination_diagnostic_size" ];
+  cargoTestFlags = finalAttrs.cargoBuildFlags ++ [
+    "--"
+    # fails due to cargo insta
+    "--skip=commands::check::print_json"
+    "--skip=commands::check::print_json_pretty"
+    "--skip=commands::explain::explain_logs"
+    "--skip=commands::format::print_json"
+    "--skip=commands::format::print_json_pretty"
+    "--skip=commands::format::should_format_files_in_folders_ignored_by_linter"
+    "--skip=cases::migrate_v2::should_successfully_migrate_sentry"
+    "--skip=cases::help::check_help"
+    "--skip=cases::help::ci_help"
+    "--skip=cases::help::format_help"
+    "--skip=cases::help::lint_help"
+    "--skip=cases::help::lsp_proxy_help"
+    "--skip=cases::help::migrate_help"
+    "--skip=cases::help::rage_help"
+    "--skip=cases::help::start_help"
+  ];
 
   env = {
-    BIOME_VERSION = version;
+    BIOME_VERSION = finalAttrs.version;
     LIBGIT2_NO_VENDOR = 1;
+    INSTA_UPDATE = "no";
   };
+
+  postInstall = ''
+    # Installs biome schema aside with the package
+    install -Dm644 packages/@biomejs/biome/configuration_schema.json $out/share/schema.json
+  '';
 
   preCheck = ''
     # tests assume git repository
@@ -62,15 +72,22 @@ rustPlatform.buildRustPackage rec {
     unset BIOME_VERSION
   '';
 
+  passthru = {
+    updateScript = nix-update-script { };
+    jsonschema = "${finalAttrs.finalPackage}/share/schema.json";
+  };
+
   meta = {
     description = "Toolchain of the web";
     homepage = "https://biomejs.dev/";
-    changelog = "https://github.com/biomejs/biome/blob/${src.rev}/CHANGELOG.md";
+    changelog = "https://github.com/biomejs/biome/blob/${finalAttrs.src.rev}/CHANGELOG.md";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [
-      figsoda
       isabelroses
+      wrbbz
+      eveeifyeve # Schema
+      SchahinRohani
     ];
     mainProgram = "biome";
   };
-}
+})

@@ -1,9 +1,10 @@
-{ lib
-, python3
-, fetchFromGitHub
+{
+  lib,
+  python3,
+  fetchFromGitHub,
 }:
 
-python3.pkgs.buildPythonApplication rec {
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "hekatomb";
   version = "1.5.14-unstable-2024-02-14";
   pyproject = true;
@@ -16,14 +17,13 @@ python3.pkgs.buildPythonApplication rec {
   };
 
   pythonRelaxDeps = [
+    "chardet"
     "impacket"
   ];
 
-  nativeBuildInputs = with python3.pkgs; [
-    poetry-core
-  ];
+  build-system = with python3.pkgs; [ poetry-core ];
 
-  propagatedBuildInputs = with python3.pkgs; [
+  dependencies = with python3.pkgs; [
     chardet
     dnspython
     impacket
@@ -38,11 +38,11 @@ python3.pkgs.buildPythonApplication rec {
     "hekatomb"
   ];
 
-  meta = with lib; {
-    description = "Tool to connect to LDAP directory to retrieve informations";
+  meta = {
+    description = "Tool to connect to LDAP directory to retrieve information";
     homepage = "https://github.com/ProcessusT/HEKATOMB";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
     mainProgram = "hekatomb";
   };
-}
+})

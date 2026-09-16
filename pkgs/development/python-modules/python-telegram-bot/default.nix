@@ -16,7 +16,6 @@
   pytest-xdist,
   pytestCheckHook,
   pythonAtLeast,
-  pythonOlder,
   pytz,
   setuptools,
   tornado,
@@ -24,16 +23,14 @@
 
 buildPythonPackage rec {
   pname = "python-telegram-bot";
-  version = "21.6";
+  version = "22.7";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "python-telegram-bot";
     repo = "python-telegram-bot";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-FwAlceRqQfTjCCi+Mqrf0LCxSZD4mV/CVN6YPs947c4=";
+    tag = "v${version}";
+    hash = "sha256-+mbVN1XFChUMYReHMjQd1tx5gYpP1CWGNtuZCoY9TMo=";
   };
 
   build-system = [
@@ -65,7 +62,8 @@ buildPythonPackage rec {
     pytest-timeout
     pytest-xdist
     pytestCheckHook
-  ] ++ optional-dependencies.all;
+  ]
+  ++ optional-dependencies.all;
 
   pythonImportsCheck = [ "telegram" ];
 
@@ -92,6 +90,7 @@ buildPythonPackage rec {
     "TestForum"
     "TestGame"
     "TestGet"
+    "TestGiftsWithRequest"
     "TestHTTP"
     "TestInline"
     "TestInput"
@@ -130,12 +129,12 @@ buildPythonPackage rec {
     "TestWeb"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to interface with the Telegram Bot API";
     homepage = "https://python-telegram-bot.org";
-    changelog = "https://github.com/python-telegram-bot/python-telegram-bot/blob/v${version}/CHANGES.rst";
-    license = licenses.lgpl3Only;
-    maintainers = with maintainers; [
+    changelog = "https://github.com/python-telegram-bot/python-telegram-bot/blob/${src.tag}/CHANGES.rst";
+    license = lib.licenses.lgpl3Only;
+    maintainers = with lib.maintainers; [
       veprbl
       pingiun
     ];

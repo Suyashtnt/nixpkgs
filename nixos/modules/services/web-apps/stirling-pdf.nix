@@ -19,16 +19,17 @@ in
         lib.types.oneOf [
           lib.types.str
           lib.types.int
+          lib.types.bool
         ]
       );
       default = { };
       example = {
         SERVER_PORT = 8080;
-        INSTALL_BOOK_AND_ADVANCED_HTML_OPS = "true";
+        INSTALL_BOOK_AND_ADVANCED_HTML_OPS = true;
       };
       description = ''
         Environment variables for the stirling-pdf app.
-        See https://github.com/Stirling-Tools/Stirling-PDF#customisation for available options.
+        See <https://github.com/Stirling-Tools/Stirling-PDF#customisation> for available options.
       '';
     };
 
@@ -44,21 +45,31 @@ in
 
   config = lib.mkIf cfg.enable {
     systemd.services.stirling-pdf = {
-      environment = lib.mapAttrs (_: toString) cfg.environment;
+      environment = lib.mapAttrs (
+        _: v: if (builtins.isBool v) then (lib.boolToString v) else (toString v)
+      ) cfg.environment;
 
-      # following https://github.com/Stirling-Tools/Stirling-PDF#locally
+      # following https://docs.stirlingpdf.com/Installation/Unix%20Installation
       path =
         with pkgs;
         [
+          # `which` is used to test command availability
+          # See https://github.com/Stirling-Tools/Stirling-PDF/blob/main/app/core/src/main/java/stirling/software/SPDF/config/ExternalAppDepConfig.java#L262
+          which
           unpaper
           libreoffice
+          qpdf
           ocrmypdf
-          poppler_utils
+          poppler-utils
           unoconv
-          opencv
           pngquant
           tesseract
-          python3Packages.weasyprint
+          (python3.withPackages (
+            p: with p; [
+              weasyprint
+              opencv-python-headless
+            ]
+          ))
           ghostscript_headless
         ]
         ++ lib.optional (cfg.environment.INSTALL_BOOK_AND_ADVANCED_HTML_OPS or "false" == "true") calibre;
@@ -102,12 +113,15 @@ in
         RestrictRealtime = true;
         SystemCallArchitectures = "native";
         SystemCallFilter = [
-          "~@cpu-emulation @debug @keyring @mount @obsolete @privileged @resources @clock @setuid @chown"
+          "~@cpu-emulation @debug @keyring @mount @obsolete @privileged @clock @setuid @chown"
         ];
         UMask = "0077";
       };
     };
   };
 
-  meta.maintainers = with lib.maintainers; [ DCsunset ];
+  meta.maintainers = with lib.maintainers; [
+    DCsunset
+    timhae
+  ];
 }

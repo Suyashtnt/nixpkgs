@@ -1,45 +1,44 @@
-{ lib
-, stdenv
-, nix-update-script
-, fetchFromGitHub
-, rustPlatform
-, pkg-config
-, installShellFiles
-, zstd
-, libsoup_3
-, makeWrapper
-, mono
-, wrapWithMono ? true
-, openssl
-, darwin
+{
+  lib,
+  stdenv,
+  nix-update-script,
+  fetchFromGitHub,
+  rustPlatform,
+  pkg-config,
+  installShellFiles,
+  zstd,
+  libsoup_3,
+  makeWrapper,
+  mono,
+  wrapWithMono ? true,
+  openssl,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "owmods-cli";
-  version = "0.14.3";
+  version = "0.15.7";
 
   src = fetchFromGitHub {
     owner = "ow-mods";
     repo = "ow-mod-man";
-    rev = "cli_v${version}";
-    hash = "sha256-ONvmTBF9y3NMQx1KgNhJt+0nV57xc9cLalpfDqrTSq0=";
+    rev = "cli_v${finalAttrs.version}";
+    hash = "sha256-ohCP0VKf2jEtjZsDN5ISZ5c/EGYANvjuCPyKQcNCwyc=";
   };
 
-  cargoHash = "sha256-I4OX27LHpT5YYW6yEhX+sCuA8m0KZd/qud4xdEUzkyA=";
+  cargoHash = "sha256-oYTz7Dzdv9prHzDSSjX9PozzKToMXRW6qs8Y2dfYQ8A=";
 
   nativeBuildInputs = [
     pkg-config
     installShellFiles
-  ] ++ lib.optional wrapWithMono makeWrapper;
+  ]
+  ++ lib.optional wrapWithMono makeWrapper;
 
   buildInputs = [
     zstd
     libsoup_3
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     openssl
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-    darwin.apple_sdk.frameworks.Security
-    darwin.apple_sdk.frameworks.SystemConfiguration
   ];
 
   env = {
@@ -53,19 +52,24 @@ rustPlatform.buildRustPackage rec {
     installManPage dist/cli/man/*
     installShellCompletion --cmd owmods \
     dist/cli/completions/owmods.{bash,fish,zsh}
-    '' + lib.optionalString wrapWithMono ''
-    wrapProgram $out/bin/${meta.mainProgram} --prefix PATH : '${mono}/bin'
+  ''
+  + lib.optionalString wrapWithMono ''
+    wrapProgram $out/bin/${finalAttrs.meta.mainProgram} --prefix PATH : '${mono}/bin'
   '';
 
-  passthru.updateScript = nix-update-script {};
+  passthru.updateScript = nix-update-script { };
 
-  meta = with lib; {
+  meta = {
     description = "CLI version of the mod manager for Outer Wilds Mod Loader";
     homepage = "https://github.com/ow-mods/ow-mod-man/tree/main/owmods_cli";
-    downloadPage = "https://github.com/ow-mods/ow-mod-man/releases/tag/cli_v${version}";
-    changelog = "https://github.com/ow-mods/ow-mod-man/releases/tag/cli_v${version}";
+    downloadPage = "https://github.com/ow-mods/ow-mod-man/releases/tag/cli_v${finalAttrs.version}";
+    changelog = "https://github.com/ow-mods/ow-mod-man/releases/tag/cli_v${finalAttrs.version}";
     mainProgram = "owmods";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ bwc9876 spoonbaker locochoco ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [
+      bwc9876
+      spoonbaker
+      locochoco
+    ];
   };
-}
+})

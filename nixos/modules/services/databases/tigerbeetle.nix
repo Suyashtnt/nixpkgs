@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.tigerbeetle;
 in
@@ -76,13 +81,17 @@ in
         }
         {
           assertion = cfg.replicaCount == numAddresses;
-          message = if cfg.replicaCount < numAddresses then "TigerBeetle must not have more addresses than the configured number of replicas" else "TigerBeetle must be configured with the addresses of all replicas";
+          message =
+            if cfg.replicaCount < numAddresses then
+              "TigerBeetle must not have more addresses than the configured number of replicas"
+            else
+              "TigerBeetle must be configured with the addresses of all replicas";
         }
       ];
 
     systemd.services.tigerbeetle =
       let
-        replicaDataPath = "/var/lib/tigerbeetle/${builtins.toString cfg.clusterId}_${builtins.toString cfg.replicaIndex}.tigerbeetle";
+        replicaDataPath = "/var/lib/tigerbeetle/${toString cfg.clusterId}_${toString cfg.replicaIndex}.tigerbeetle";
       in
       {
         description = "TigerBeetle server";
@@ -92,7 +101,7 @@ in
 
         preStart = ''
           if ! test -e "${replicaDataPath}"; then
-            ${lib.getExe cfg.package} format --cluster="${builtins.toString cfg.clusterId}" --replica="${builtins.toString cfg.replicaIndex}" --replica-count="${builtins.toString cfg.replicaCount}" "${replicaDataPath}"
+            ${lib.getExe cfg.package} format --cluster="${toString cfg.clusterId}" --replica="${toString cfg.replicaIndex}" --replica-count="${toString cfg.replicaCount}" "${replicaDataPath}"
           fi
         '';
 
@@ -110,7 +119,10 @@ in
           ProtectKernelTunables = true;
           ProtectProc = "noaccess";
           ProtectSystem = "strict";
-          RestrictAddressFamilies = [ "AF_INET" "AF_INET6" ];
+          RestrictAddressFamilies = [
+            "AF_INET"
+            "AF_INET6"
+          ];
           RestrictNamespaces = true;
           RestrictRealtime = true;
           RestrictSUIDSGID = true;

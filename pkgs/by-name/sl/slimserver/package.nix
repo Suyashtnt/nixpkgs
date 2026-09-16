@@ -5,7 +5,8 @@
   lame,
   lib,
   makeWrapper,
-  monkeysAudio,
+  monkeys-audio,
+  nix-update-script,
   nixosTests,
   perlPackages,
   sox,
@@ -24,118 +25,82 @@ let
       sox
       wavpack
     ]
-    ++ (lib.optional stdenv.hostPlatform.isLinux monkeysAudio)
+    ++ (lib.optional stdenv.hostPlatform.isLinux monkeys-audio)
   );
+
   libPath = lib.makeLibraryPath [
     zlib
-    stdenv.cc.cc.lib
+    stdenv.cc.cc
   ];
 in
 perlPackages.buildPerlPackage rec {
   pname = "slimserver";
-  version = "8.5.2";
+  version = "9.1.1";
 
   src = fetchFromGitHub {
     owner = "LMS-Community";
     repo = "slimserver";
-    rev = version;
-    hash = "sha256-262SHaxt5ow3nJtNVk10sbiPUfDb/U+Ab97DRjkJZFI=";
+    tag = version;
+    hash = "sha256-+GvP4+DdJs7NLB/V2uLq28Pa3K3M9u1Ni86k+PYECOo=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
 
+  # slimserver vendors quite a few CPAN packages
+  # this list is intended to only replace compiled modules
+  # which can be found in CPAN/arch in the slimserver repo
+  # replacements are added here AND removed in prePatch to
+  # avoid module mismatches
   buildInputs =
     with perlPackages;
     [
-      AnyEvent
-      ArchiveZip
-      AsyncUtil
       AudioScan
-      CarpClan
-      CGI
-      ClassAccessor
-      ClassAccessorChained
-      ClassC3
-      # ClassC3Componentised # Error: DBIx::Class::Row::throw_exception(): DBIx::Class::Relationship::BelongsTo::belongs_to(): Can't infer join condition for track
-      ClassDataInheritable
-      ClassInspector
-      ClassISA
-      ClassMember
-      ClassSingleton
-      ClassVirtual
       ClassXSAccessor
-      CompressRawZlib
-      CryptOpenSSLRSA
-      DataDump
-      DataPage
-      DataURIEncode
       DBDSQLite
       DBI
-      # DBIxClass # https://github.com/LMS-Community/slimserver/issues/138
       DigestSHA1
       EncodeDetect
       EV
-      ExporterLite
-      FileBOM
-      FileCopyRecursive
-      # FileNext # https://github.com/LMS-Community/slimserver/pull/1140
-      FileReadBackwards
-      FileSlurp
-      FileWhich
       HTMLParser
-      HTTPCookies
-      HTTPDaemon
-      HTTPMessage
       ImageScale
       IOAIO
       IOInterface
       IOSocketSSL
-      IOString
       JSONXS
       JSONXSVersionOneAndTwo
-      # LogLog4perl # Internal error: Root Logger not initialized.
-      LWP
-      LWPProtocolHttps
       MP3CutGapless
-      NetHTTP
-      NetHTTPSNB
-      PathClass
-      ProcBackground
-      # SQLAbstract # DBI Exception: DBD::SQLite::db prepare_cached failed: no such function: ARRAY
-      SQLAbstractLimit
       SubName
       TemplateToolkit
-      TextUnidecode
-      TieCacheLRU
-      TieCacheLRUExpires
-      TieRegexpHash
-      TimeDate
-      URI
-      URIFind
-      UUIDTiny
       XMLParser
-      XMLSimple
       YAMLLibYAML
     ]
-    # ++ (lib.optional stdenv.hostPlatform.isDarwin perlPackages.MacFSEvents)
-    ++ (lib.optional stdenv.hostPlatform.isLinux perlPackages.LinuxInotify2);
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      LinuxInotify2
+    ];
 
   prePatch = ''
     # remove vendored binaries
     rm -rf Bin
 
-    # remove most vendored modules, keeping necessary ones
-    mkdir -p CPAN_used/Class/C3/ CPAN_used/SQL/ CPAN_used/File/
-    rm -r CPAN/SQL/Abstract/Limit.pm
-    cp -rv CPAN/Class/C3/Componentised.pm CPAN_used/Class/C3/
-    cp -rv CPAN/DBIx CPAN_used/
-    cp -rv CPAN/File/Next.pm CPAN_used/File/
-    cp -rv CPAN/Log CPAN_used/
-    cp -rv CPAN/SQL/* CPAN_used/SQL/
-    rm -r CPAN
-    mv CPAN_used CPAN
+    # remove precompiled cpan modules
+    rm -rf CPAN/arch
+    # remove the precompiled modules, they come from buildInputs
+    rm -rf CPAN/Class/XSAccessor{,.pm}
+    rm -rf CPAN/DBD{,.pm}
+    rm -rf CPAN/DBI{,.pm}
+    rm -rf CPAN/Digest/SHA1{,.pm}
+    rm -rf CPAN/Encode/Detect{,.pm}
+    rm -rf CPAN/HTML/Parser{,.pm}
+    rm -rf CPAN/Image{,.pm}
+    rm -rf CPAN/IO/AIO{,.pm}
+    rm -rf CPAN/IO/Interface{,.pm}
+    rm -rf CPAN/JSON/XS{,.pm}
+    rm -rf CPAN/MP3/Cut/Gapless{,.pm}
+    rm -rf CPAN/Sub/Name{,.pm}
+    rm -rf CPAN/XML/Parser{,.pm}
+    rm -rf CPAN/YAML/XS{,.pm}
 
-    # another set of vendored/modified modules exist in lib, more selectively cleaned for now
+    # there's also a copy of AudioScan in lib...
     rm -rf lib/Audio
 
     ${lib.optionalString (!enableUnfreeFirmware) ''
@@ -151,6 +116,7 @@ perlPackages.buildPerlPackage rec {
   installPhase = ''
     cp -r . $out
     wrapProgram $out/slimserver.pl --prefix LD_LIBRARY_PATH : "${libPath}" --prefix PATH : "${binPath}"
+    chmod +x $out/scanner.pl
     wrapProgram $out/scanner.pl --prefix LD_LIBRARY_PATH : "${libPath}" --prefix PATH : "${binPath}"
     mkdir $out/bin
     ln -s $out/slimserver.pl $out/bin/slimserver
@@ -163,22 +129,26 @@ perlPackages.buildPerlPackage rec {
       inherit (nixosTests) slimserver;
     };
 
-    updateScript = ./update.nu;
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--version-regex"
+        "(9\\.[0-9.]+)"
+      ];
+    };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://lyrion.org/";
-    changelog = "https://github.com/LMS-Community/slimserver/blob/${version}/Changelog${lib.versions.major version}.html";
+    changelog = "https://lyrion.org/getting-started/changelog-lms${lib.versions.major version}";
     description = "Lyrion Music Server (formerly Logitech Media Server) is open-source server software which controls a wide range of Squeezebox audio players";
     # the firmware is not under a free license, so we do not include firmware in the default package
     # https://github.com/LMS-Community/slimserver/blob/public/8.3/License.txt
-    license = if enableUnfreeFirmware then licenses.unfree else licenses.gpl2Only;
+    license = if enableUnfreeFirmware then lib.licenses.unfree else lib.licenses.gpl2Only;
     mainProgram = "slimserver";
-    maintainers = with maintainers; [
+    maintainers = with lib.maintainers; [
       adamcstephens
       jecaro
     ];
-    platforms = platforms.unix;
-    broken = stdenv.hostPlatform.isDarwin;
+    platforms = lib.platforms.linux;
   };
 }

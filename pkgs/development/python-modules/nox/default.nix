@@ -1,59 +1,78 @@
 {
   lib,
-  argcomplete,
   buildPythonPackage,
-  colorlog,
   fetchFromGitHub,
+
+  # build-system
   hatchling,
-  importlib-metadata,
+
+  # dependencies
+  attrs,
+  argcomplete,
+  colorlog,
+  dependency-groups,
+  humanize,
   jinja2,
   packaging,
+  tomli,
+
+  # tests
   pytestCheckHook,
-  pythonOlder,
+  writableTmpDirAsHomeHook,
+
+  # passthru
   tox,
-  typing-extensions,
+  uv,
   virtualenv,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "nox";
-  version = "2024.04.15";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "2026.08.17";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "wntrblm";
-    repo = pname;
-    rev = "refs/tags/${version}";
-    hash = "sha256-PagZR2IdS1gS/ukl4b0Al9sdEsFnFwP8oy0eOGKJHMs=";
+    repo = "nox";
+    tag = finalAttrs.version;
+    hash = "sha256-zHgxU2Gq04dOb8Xd6+VtTf6KRYNrwX7tYjO0eDBidxU=";
   };
 
-  nativeBuildInputs = [ hatchling ];
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs =
-    [
-      argcomplete
-      colorlog
-      packaging
-      virtualenv
-    ]
-    ++ lib.optionals (pythonOlder "3.8") [
-      typing-extensions
-      importlib-metadata
+  dependencies = [
+    argcomplete
+    attrs
+    colorlog
+    dependency-groups
+    humanize
+    packaging
+    virtualenv
+  ];
+
+  optional-dependencies = {
+    tox-to-nox = [
+      jinja2
+      tox
     ];
+    uv = [ uv ];
+  };
 
   nativeCheckInputs = [
-    jinja2
-    tox
     pytestCheckHook
-  ];
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "nox" ];
 
   disabledTests = [
-    # our conda is not available on 3.11
-    "test__create_venv_options"
+    # Assertion errors
+    "test_uv"
+    # Test requires network access
+    "test_noxfile_script_mode_url_req"
+    # Don't test CLi mode
+    "test_noxfile_script_mode"
   ];
 
   disabledTestPaths = [
@@ -61,14 +80,14 @@ buildPythonPackage rec {
     "tests/test_tox_to_nox.py"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Flexible test automation for Python";
     homepage = "https://nox.thea.codes/";
-    changelog = "https://github.com/wntrblm/nox/blob/${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [
+    changelog = "https://github.com/wntrblm/nox/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
       doronbehar
       fab
     ];
   };
-}
+})

@@ -1,25 +1,33 @@
-{ lib
-, buildNpmPackage
-, fetchFromGitHub
+{
+  lib,
+  buildNpmPackage,
+  fetchFromGitHub,
 
-# for patching bundled 7z binary from the 7zip-bin node module
-# at lib/node_modules/igir/node_modules/7zip-bin/linux/x64/7za
-, autoPatchelfHook
-, stdenv
+  # for patching bundled 7z binary from the 7zip-bin node module
+  # at lib/node_modules/igir/node_modules/7zip-bin/linux/x64/7za
+  autoPatchelfHook,
+  stdenv,
+
+  libusb1,
+  libuv,
+  libz,
+  lz4,
+  sdl2-compat,
+  systemd,
 }:
 
 buildNpmPackage rec {
   pname = "igir";
-  version = "2.11.0";
+  version = "5.4.1";
 
   src = fetchFromGitHub {
     owner = "emmercm";
     repo = "igir";
     rev = "v${version}";
-    hash = "sha256-NG0ZP8LOm7fZVecErTuLOfbp1yvXwHnwPkWTBzUJXWE=";
+    hash = "sha256-8yx5FYF9WGBt00ylmhP4Z7v74ghWMk4aFLv4kbmyvu4=";
   };
 
-  npmDepsHash = "sha256-ADIEzr6PkGaJz27GKSVyTsrbz5zbud7BUb+OXPtP1Vo=";
+  npmDepsHash = "sha256-KyrIOnwJomWULVqFfWbik53amHBqS1XU9HMtQnCKRxk=";
 
   # I have no clue why I have to do this
   postPatch = ''
@@ -28,18 +36,27 @@ buildNpmPackage rec {
 
   nativeBuildInputs = [ autoPatchelfHook ];
 
-  buildInputs = [ stdenv.cc.cc.lib ];
+  buildInputs = [
+    (lib.getLib stdenv.cc.cc)
+    libusb1
+    libuv
+    libz
+    lz4
+    sdl2-compat
+    systemd
+  ];
 
   # from lib/node_modules/igir/node_modules/@node-rs/crc32-linux-x64-musl/crc32.linux-x64-musl.node
   # Irrelevant to our use
   autoPatchelfIgnoreMissingDeps = [ "libc.musl-x86_64.so.1" ];
 
-  meta = with lib; {
+  meta = {
     description = "Video game ROM collection manager to help filter, sort, patch, archive, and report on collections on any OS";
     mainProgram = "igir";
     homepage = "https://igir.io";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ ];
-    platforms = platforms.linux;
+    changelog = "https://github.com/emmercm/igir/releases/tag/${src.rev}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ mjm ];
+    platforms = lib.platforms.linux;
   };
 }

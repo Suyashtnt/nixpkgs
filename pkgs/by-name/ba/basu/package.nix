@@ -1,14 +1,15 @@
-{ lib
-, stdenv
-, fetchFromSourcehut
-, audit
-, pkg-config
-, libcap
-, gperf
-, meson
-, ninja
-, python3
-, getent
+{
+  lib,
+  stdenv,
+  fetchFromSourcehut,
+  audit,
+  pkg-config,
+  libcap,
+  gperf,
+  meson,
+  ninja,
+  python3,
+  getent,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -22,11 +23,14 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-zIaEIIo8lJeas2gVjMezO2hr8RnMIT7iiCBilZx5lRQ=";
   };
 
-  outputs = [ "out" "dev" "lib" ];
+  outputs = [
+    "out"
+    "dev"
+    "lib"
+  ];
 
-  buildInputs = [
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
     audit
-    gperf
     libcap
   ];
 
@@ -36,7 +40,17 @@ stdenv.mkDerivation (finalAttrs: {
     ninja
     python3
     getent
+    gperf
   ];
+
+  mesonFlags = lib.optionals (!stdenv.hostPlatform.isLinux) [
+    "-Daudit=disabled"
+    "-Dlibcap=disabled"
+  ];
+
+  env = lib.optionalAttrs stdenv.hostPlatform.useLLVM {
+    NIX_LDFLAGS = "--undefined-version";
+  };
 
   preConfigure = ''
     pushd src/basic
@@ -50,7 +64,7 @@ stdenv.mkDerivation (finalAttrs: {
     description = "Sd-bus library, extracted from systemd";
     mainProgram = "basuctl";
     license = lib.licenses.lgpl21Only;
-    maintainers = with lib.maintainers; [ AndersonTorres ];
-    platforms = lib.platforms.linux;
+    maintainers = [ ];
+    platforms = lib.platforms.linux ++ lib.platforms.freebsd;
   };
 })

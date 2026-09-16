@@ -4,31 +4,31 @@
   fetchFromGitHub,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "gogup";
-  version = "0.27.5";
+  version = "1.9.1";
 
   src = fetchFromGitHub {
     owner = "nao1215";
     repo = "gup";
-    rev = "v${version}";
-    hash = "sha256-I4l/sDqafc/ZO8kKc4iOSMFLS0YZrAqRFOXn0N7Myo4=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-3wOhKJdIrTBIbiNJGm2LjgV2ocxIznZXXoh5mHthlvU=";
   };
 
-  vendorHash = "sha256-rtdbPwVZHwofpGccYU8NBiaikzNMIwSDggbRdnGTBu8=";
+  vendorHash = "sha256-L5dVJrso+A5yjeSW8VQkxkgZ2lhrjAR1Wl/Z6cLUP8Y=";
   doCheck = false;
 
   ldflags = [
     "-s"
-    "-X github.com/nao1215/gup/internal/cmdinfo.Version=v${version}"
+    "-X github.com/nao1215/gup/internal/cmdinfo.Version=v${finalAttrs.version}"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Update binaries installed by 'go install' with goroutines";
-    changelog = "https://github.com/nao1215/gup/blob/v${version}/CHANGELOG.md";
+    changelog = "https://github.com/nao1215/gup/blob/v${finalAttrs.version}/CHANGELOG.md";
     homepage = "https://github.com/nao1215/gup";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ phanirithvij ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ phanirithvij ];
     mainProgram = "gup";
   };
-}
+})

@@ -1,4 +1,4 @@
-import ./make-test-python.nix ({ lib, ... }:
+{ lib, ... }:
 
 let
   port = toString 4321;
@@ -16,11 +16,16 @@ in
           scripts = [ pkgs.mpvScripts.simple-mpv-webui ];
         })
       ];
+
+      environment.etc."mpv/mpv.conf".text = ''
+        [nixos-test-profile]
+      '';
     };
 
   testScript = ''
+    machine.succeed("mpv --profile=help | grep -F nixos-test-profile")
     machine.execute("set -m; mpv --script-opts=webui-port=${port} --idle=yes >&2 &")
     machine.wait_for_open_port(${port})
     assert "<title>simple-mpv-webui" in machine.succeed("curl -s localhost:${port}")
   '';
-})
+}

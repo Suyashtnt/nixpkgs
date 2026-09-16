@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   setuptools,
   # build inputs
   torch,
@@ -11,7 +10,7 @@
   # check inputs
   pytestCheckHook,
   parameterized,
-  pytest-cov,
+  pytest-cov-stub,
   pytest-timeout,
   remote-pdb,
 }:
@@ -21,14 +20,12 @@ let
 in
 buildPythonPackage {
   inherit pname version;
-  format = "pyproject";
-
-  disabled = pythonOlder "3.10";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "facebookresearch";
     repo = "fairscale";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-L2Rl/qL6l0OLAofygzJBGQdp/2ZrgDFarwZRjyAR3dw=";
   };
 
@@ -51,7 +48,7 @@ buildPythonPackage {
   nativeCheckInputs = [
     pytestCheckHook
     parameterized
-    pytest-cov
+    pytest-cov-stub
     pytest-timeout
     remote-pdb
   ];
@@ -61,16 +58,16 @@ buildPythonPackage {
 
   pythonImportsCheck = [ "fairscale" ];
 
-  meta = with lib; {
+  meta = {
     description = "PyTorch extensions for high performance and large scale training";
     mainProgram = "wgit";
     homepage = "https://github.com/facebookresearch/fairscale";
     changelog = "https://github.com/facebookresearch/fairscale/releases/tag/v${version}";
-    license = with licenses; [
+    license = with lib.licenses; [
       mit
       asl20
       bsd3
     ];
-    maintainers = with maintainers; [ happysalada ];
+    maintainers = with lib.maintainers; [ happysalada ];
   };
 }

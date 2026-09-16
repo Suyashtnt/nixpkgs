@@ -8,6 +8,7 @@
   libinput,
   libpng,
   librsvg,
+  libsfdo,
   libxcb,
   libxkbcommon,
   libxml2,
@@ -17,24 +18,33 @@
   pkg-config,
   scdoc,
   stdenv,
+  versionCheckHook,
   wayland,
   wayland-protocols,
   wayland-scanner,
-  wlroots_0_18,
-  xcbutilwm,
+  wlroots_0_20,
+  libxcb-wm,
   xwayland,
+
+  enableSystemd ? true,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "labwc";
-  version = "0.8.0";
+  version = "0.20.2";
 
   src = fetchFromGitHub {
     owner = "labwc";
     repo = "labwc";
-    rev = "refs/tags/${finalAttrs.version}";
-    hash = "sha256-1PyPk6r/hXkC0EfOIeDqNGrrpvo616derD9u7i3XjkA=";
+    tag = finalAttrs.version;
+    hash = "sha256-gKix9UW4np6fMoMZgHN9G4opwbPkT6ax5G5ZWQCzYio=";
   };
+
+  postPatch = ''
+    substituteInPlace meson.build \
+      --replace-fail "install_dir: systemd.get_variable('systemduserunitdir')" \
+                     "install_dir: '$out/lib/systemd/user'"
+  '';
 
   outputs = [
     "out"
@@ -58,20 +68,28 @@ stdenv.mkDerivation (finalAttrs: {
     libinput
     libpng
     librsvg
+    libsfdo
     libxcb
     libxkbcommon
     libxml2
     pango
     wayland
     wayland-protocols
-    wlroots_0_18
-    xcbutilwm
+    wlroots_0_20
+    libxcb-wm
     xwayland
   ];
 
-  mesonFlags = [ (lib.mesonEnable "xwayland" true) ];
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  mesonFlags = [
+    (lib.mesonEnable "xwayland" true)
+    (lib.mesonEnable "systemd-session" enableSystemd)
+  ];
 
   strictDeps = true;
+
+  doInstallCheck = true;
 
   passthru = {
     providedSessions = [ "labwc" ];
@@ -80,9 +98,10 @@ stdenv.mkDerivation (finalAttrs: {
   meta = {
     homepage = "https://github.com/labwc/labwc";
     description = "Wayland stacking compositor, inspired by Openbox";
-    license = with lib.licenses; [ gpl2Plus ];
+    changelog = "https://github.com/labwc/labwc/blob/master/NEWS.md";
+    license = lib.licenses.gpl2Plus;
     mainProgram = "labwc";
-    maintainers = with lib.maintainers; [ AndersonTorres ];
+    maintainers = [ ];
     inherit (wayland.meta) platforms;
   };
 })

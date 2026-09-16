@@ -5,7 +5,7 @@
   flit-core,
   fsspec,
   oci,
-  pythonOlder,
+  requests,
 }:
 
 buildPythonPackage rec {
@@ -13,20 +13,19 @@ buildPythonPackage rec {
   version = "1.3.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
   src = fetchFromGitHub {
     owner = "oracle";
     repo = "ocifs";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-IGl9G4NyzhcqrfYfgeZin+wt1OwHmh6780MPfZBwsXA=";
   };
 
-  nativeBuildInputs = [ flit-core ];
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     fsspec
     oci
+    requests
   ];
 
   # Module has no tests
@@ -34,11 +33,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "ocifs" ];
 
-  meta = with lib; {
+  meta = {
     description = "Oracle Cloud Infrastructure Object Storage fsspec implementation";
     homepage = "https://ocifs.readthedocs.io";
     changelog = "https://github.com/oracle/ocifs/releases/tag/v${version}";
-    license = with licenses; [ upl ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.upl;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

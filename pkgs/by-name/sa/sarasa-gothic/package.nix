@@ -3,31 +3,26 @@
   stdenvNoCC,
   fetchurl,
   unzip,
+  installFonts,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "sarasa-gothic";
-  version = "1.0.21";
+  version = "1.0.41";
 
   src = fetchurl {
     # Use the 'ttc' files here for a smaller closure size.
     # (Using 'ttf' files gives a closure size about 15x larger, as of November 2021.)
     url = "https://github.com/be5invis/Sarasa-Gothic/releases/download/v${finalAttrs.version}/Sarasa-TTC-${finalAttrs.version}.zip";
-    hash = "sha256-zoTZ0JwkV6zaKHw1PegzE6NiGGVptBZgCgD8O9ZHHGc=";
+    hash = "sha256-XEi+/xE0ogGGmUknVlYgo8Zs4szj6+NP74yPh3T8kos=";
   };
 
   sourceRoot = ".";
 
-  nativeBuildInputs = [ unzip ];
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/share/fonts/truetype
-    cp *.ttc $out/share/fonts/truetype
-
-    runHook postInstall
-  '';
+  nativeBuildInputs = [
+    unzip
+    installFonts
+  ];
 
   meta = {
     description = "CJK programming font based on Iosevka and Source Han Sans";

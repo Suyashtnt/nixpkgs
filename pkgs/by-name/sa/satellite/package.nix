@@ -1,40 +1,40 @@
-{ lib
-, python3
-, fetchFromGitea
-, gobject-introspection
-, gtk3
-, libhandy
-, modemmanager
-, wrapGAppsHook3
+{
+  lib,
+  python3,
+  fetchFromCodeberg,
+  gobject-introspection,
+  libadwaita,
+  modemmanager,
+  wrapGAppsHook4,
+  nix-update-script,
 }:
 
-python3.pkgs.buildPythonApplication rec {
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "satellite";
-  version = "0.4.3";
+  version = "0.9.2";
 
   pyproject = true;
 
-  src = fetchFromGitea {
-    domain ="codeberg.org";
+  src = fetchFromCodeberg {
     owner = "tpikonen";
     repo = "satellite";
-    rev = version;
-    hash = "sha256-4L6zbHjWAIJJv2N3XKcfHSZUAUC2FPjK5hT9XGBtQ3w=";
+    tag = finalAttrs.version;
+    hash = "sha256-DubLxsqJsvCbfFD9jNkKHGd2Ur/bT7Ea5bHLijciwtI=";
   };
 
   nativeBuildInputs = [
     gobject-introspection
-    python3.pkgs.setuptools
-    wrapGAppsHook3
+    wrapGAppsHook4
   ];
 
+  build-system = with python3.pkgs; [ setuptools ];
+
   buildInputs = [
-    gtk3
-    libhandy
+    libadwaita
     modemmanager
   ];
 
-  propagatedBuildInputs = with python3.pkgs; [
+  dependencies = with python3.pkgs; [
     gpxpy
     pygobject3
     pynmea2
@@ -42,16 +42,20 @@ python3.pkgs.buildPythonApplication rec {
 
   strictDeps = true;
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Program for showing navigation satellite data";
     longDescription = ''
       Satellite is an adaptive GTK3 / libhandy application which displays global navigation satellite system (GNSS: GPS et al.) data obtained from ModemManager or gnss-share.
       It can also save your position to a GPX-file.
     '';
     homepage = "https://codeberg.org/tpikonen/satellite";
-    license = licenses.gpl3Only;
+    license = lib.licenses.gpl3Only;
     mainProgram = "satellite";
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ Luflosi ];
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [ Luflosi ];
   };
-}
+})

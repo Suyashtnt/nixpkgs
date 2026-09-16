@@ -1,4 +1,10 @@
-{ config, lib, pkgs, options, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  options,
+  ...
+}:
 
 let
   cfg = config.services.prometheus.exporters.bind;
@@ -11,7 +17,7 @@ in
       type = types.str;
       default = "http://localhost:8053/";
       description = ''
-        HTTP XML API address of an Bind server.
+        HTTP API address of a BIND server.
       '';
     };
     bindTimeout = mkOption {
@@ -22,15 +28,29 @@ in
       '';
     };
     bindVersion = mkOption {
-      type = types.enum [ "xml.v2" "xml.v3" "auto" ];
-      default = "auto";
+      type = types.enum [
+        "json"
+        "xml"
+        "xml.v3"
+        "auto"
+      ];
+      default = "json";
       description = ''
-        BIND statistics version. Can be detected automatically.
+        BIND statistics version. Defaults to JSON.
       '';
     };
     bindGroups = mkOption {
-      type = types.listOf (types.enum [ "server" "view" "tasks" ]);
-      default = [ "server" "view" ];
+      type = types.listOf (
+        types.enum [
+          "server"
+          "view"
+          "tasks"
+        ]
+      );
+      default = [
+        "server"
+        "view"
+      ];
       description = ''
         List of statistics to collect. Available: [server, view, tasks]
       '';

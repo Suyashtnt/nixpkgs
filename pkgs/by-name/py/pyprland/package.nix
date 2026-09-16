@@ -5,23 +5,31 @@
   nix-update-script,
 }:
 
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "pyprland";
-  version = "2.4.0";
-  format = "pyproject";
-
-  disabled = python3Packages.pythonOlder "3.10";
+  version = "3.4.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "hyprland-community";
     repo = "pyprland";
-    rev = "refs/tags/${version}";
-    hash = "sha256-jK6ap/beiqAtZXVNqPB3zV8R2Kfc3LhqJBvFlWYIfb4=";
+    tag = finalAttrs.version;
+    hash = "sha256-55AmOFz6g0zJLHuD6zdSkT6FZZA4biVPedRz6qqlIo4=";
   };
+
+  build-system = [ python3Packages.hatchling ];
 
   nativeBuildInputs = with python3Packages; [ poetry-core ];
 
-  propagatedBuildInputs = with python3Packages; [ aiofiles ];
+  propagatedBuildInputs = with python3Packages; [
+    aiofiles
+    aiohttp
+    pillow
+    questionary
+  ];
+  pythonRelaxDeps = [
+    "aiofiles"
+  ];
 
   postInstall = ''
     # file has shebang but cant be run due to a relative import, has proper entrypoint in /bin
@@ -29,7 +37,7 @@ python3Packages.buildPythonApplication rec {
   '';
 
   # NOTE: this is required for the imports check below to work properly
-  HYPRLAND_INSTANCE_SIGNATURE = "dummy";
+  env.HYPRLAND_INSTANCE_SIGNATURE = "dummy";
 
   pythonImportsCheck = [
     "pyprland"
@@ -47,7 +55,6 @@ python3Packages.buildPythonApplication rec {
     "pyprland.plugins.lost_windows"
     "pyprland.plugins.magnify"
     "pyprland.plugins.monitors"
-    "pyprland.plugins.monitors_v0"
     "pyprland.plugins.pyprland"
     "pyprland.plugins.scratchpads"
     "pyprland.plugins.shift_monitors"
@@ -58,7 +65,7 @@ python3Packages.buildPythonApplication rec {
     "pyprland.plugins.workspaces_follow_focus"
   ];
 
-  passthru.updateScript = nix-update-script {};
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     mainProgram = "pypr";
@@ -71,4 +78,4 @@ python3Packages.buildPythonApplication rec {
     ];
     platforms = lib.platforms.linux;
   };
-}
+})

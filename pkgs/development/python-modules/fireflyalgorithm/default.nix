@@ -5,37 +5,39 @@
   numpy,
   poetry-core,
   pytestCheckHook,
-  pythonOlder,
 }:
 
 buildPythonPackage rec {
   pname = "fireflyalgorithm";
-  version = "0.4.5";
+  version = "0.4.6";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "firefly-cpp";
     repo = "FireflyAlgorithm";
-    rev = "refs/tags/${version}";
-    hash = "sha256-dJnjeJN9NI8G/haYeOiMtAl56cExqMk0iTWpaybl4nE=";
+    tag = version;
+    hash = "sha256-NMmwjKtIk8KR0YXXSXkJhiQsbjMusaLnstUWx0izCNA=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'numpy = "^1.26.1"' ""
+  '';
 
-  propagatedBuildInputs = [ numpy ];
+  build-system = [ poetry-core ];
+
+  dependencies = [ numpy ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "fireflyalgorithm" ];
 
-  meta = with lib; {
+  meta = {
     description = "Implementation of the stochastic nature-inspired algorithm for optimization";
     mainProgram = "firefly-algorithm";
     homepage = "https://github.com/firefly-cpp/FireflyAlgorithm";
     changelog = "https://github.com/firefly-cpp/FireflyAlgorithm/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ firefly-cpp ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ firefly-cpp ];
   };
 }

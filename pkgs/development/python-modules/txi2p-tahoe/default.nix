@@ -2,25 +2,29 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
+  pythonAtLeast,
   setuptools,
   setuptools-scm,
   parsley,
-  twisted,
   python,
+  twisted,
 }:
 
 buildPythonPackage rec {
   pname = "txi2p-tahoe";
   version = "0.3.7";
-
-  format = "pyproject";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "tahoe-lafs";
     repo = "txi2p";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-u/IOhxK9jWC/tTKKLsc4PexbCuki+yEtMNw7LuQKmuk=";
   };
+
+  # 194/263 tests fail on python 3.14
+  # https://github.com/tahoe-lafs/txi2p/issues/10
+  disabled = pythonAtLeast "3.14";
 
   nativeBuildInputs = [
     setuptools

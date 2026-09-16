@@ -24,7 +24,7 @@ in
     nixpkgs = {
       pkgs = mkOption {
         type = lib.types.pkgs;
-        description = ''The pkgs module argument.'';
+        description = "The pkgs module argument.";
       };
       config = mkOption {
         internal = true;
@@ -61,11 +61,9 @@ in
   config = {
     _module.args.pkgs =
       # find mistaken definitions
-      builtins.seq cfg.config
-      builtins.seq cfg.overlays
-      builtins.seq cfg.hostPlatform
-      builtins.seq cfg.buildPlatform
-      cfg.pkgs;
+      builtins.seq cfg.config builtins.seq cfg.overlays builtins.seq cfg.hostPlatform builtins.seq
+        cfg.buildPlatform
+        cfg.pkgs;
     nixpkgs.config = cfg.pkgs.config;
     nixpkgs.overlays = cfg.pkgs.overlays;
     nixpkgs.hostPlatform = cfg.pkgs.stdenv.hostPlatform;

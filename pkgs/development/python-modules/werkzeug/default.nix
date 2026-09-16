@@ -2,7 +2,6 @@
   lib,
   stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchPypi,
 
   # build-system
@@ -15,11 +14,10 @@
   watchdog,
 
   # tests
+  cffi,
   cryptography,
   ephemeral-port-reserve,
-  greenlet,
   pytest-timeout,
-  pytest-xprocess,
   pytestCheckHook,
 
   # reverse dependencies
@@ -29,51 +27,51 @@
 
 buildPythonPackage rec {
   pname = "werkzeug";
-  version = "3.0.3";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "3.1.8";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-CX5b/anwq6jaa4VFFG3vSB0Gqn0yZudEjizM9n3YvRg=";
+    hash = "sha256-m61hpCaNrBEvHFzUYwpW7eYBtu1CAwBneoaQg9cKTEQ=";
   };
 
-  nativeBuildInputs = [ flit-core ];
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [ markupsafe ];
+  dependencies = [ markupsafe ];
 
-  passthru.optional-dependencies = {
-    watchdog = lib.optionals (!stdenv.hostPlatform.isDarwin) [
-      # watchdog requires macos-sdk 10.13
-      watchdog
-    ];
+  optional-dependencies = {
+    watchdog = [ watchdog ];
   };
 
-  nativeCheckInputs =
-    [
-      cryptography
-      ephemeral-port-reserve
-      pytest-timeout
-      pytest-xprocess
-      pytestCheckHook
-    ]
-    ++ lib.optionals (pythonOlder "3.11") [ greenlet ]
-    ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+  nativeCheckInputs = [
+    cffi
+    cryptography
+    ephemeral-port-reserve
+    pytest-timeout
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "werkzeug" ];
 
-  disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [ "test_get_machine_id" ];
+  disabledTests = [
+    # ConnectionRefusedError: [Errno 111] Connection refused
+    "test_http_proxy"
+    # ResourceWarning: subprocess 309 is still running
+    "test_basic"
+    "test_long_build"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ "test_get_machine_id" ];
 
   disabledTestPaths = [
     # ConnectionRefusedError: [Errno 111] Connection refused
     "tests/test_serving.py"
   ];
 
-  pytestFlagsArray = [
+  disabledTestMarks = [
     # don't run tests that are marked with filterwarnings, they fail with
     # warnings._OptionError: unknown warning category: 'pytest.PytestUnraisableExceptionWarning'
-    "-m 'not filterwarnings'"
+    "filterwarnings"
   ];
 
   passthru.tests = {
@@ -81,7 +79,7 @@ buildPythonPackage rec {
   };
 
   meta = {
-    changelog = "https://werkzeug.palletsprojects.com/en/${lib.versions.majorMinor version}.x/changes/#version-${
+    changelog = "https://werkzeug.palletsprojects.com/en/stable/changes/#version-${
       lib.replaceStrings [ "." ] [ "-" ] version
     }";
     homepage = "https://palletsprojects.com/p/werkzeug/";

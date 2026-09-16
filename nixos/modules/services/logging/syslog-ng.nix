@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
 
   cfg = config.services.syslog-ng;
@@ -14,14 +19,17 @@ let
 
   syslogngOptions = [
     "--foreground"
-    "--module-path=${lib.concatStringsSep ":" (["${cfg.package}/lib/syslog-ng"] ++ cfg.extraModulePaths)}"
+    "--module-path=${
+      lib.concatStringsSep ":" ([ "${cfg.package}/lib/syslog-ng" ] ++ cfg.extraModulePaths)
+    }"
     "--cfgfile=${syslogngConfig}"
     "--control=${ctrlSocket}"
     "--persist-file=${persistFile}"
     "--pidfile=${pidFile}"
   ];
 
-in {
+in
+{
   imports = [
     (lib.mkRemovedOptionModule [ "services" "syslog-ng" "serviceName" ] "")
     (lib.mkRemovedOptionModule [ "services" "syslog-ng" "listenToJournal" ] "")
@@ -40,7 +48,7 @@ in {
       package = lib.mkPackageOption pkgs "syslogng" { };
       extraModulePaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
-        default = [];
+        default = [ ];
         description = ''
           A list of paths that should be included in syslog-ng's
           `--module-path` option. They should usually
@@ -69,9 +77,10 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    services.journald.settings.Journal.ForwardToSyslog = lib.mkOptionDefault true;
+
     systemd.services.syslog-ng = {
       description = "syslog-ng daemon";
-      preStart = "mkdir -p /{var,run}/syslog-ng";
       wantedBy = [ "multi-user.target" ];
       after = [ "multi-user.target" ]; # makes sure hostname etc is set
       serviceConfig = {
@@ -79,6 +88,7 @@ in {
         PIDFile = pidFile;
         StandardOutput = "null";
         Restart = "on-failure";
+        ExecStartPre = "${lib.getExe' pkgs.coreutils "mkdir"} -p /var/syslog-ng /run/syslog-ng";
         ExecStart = "${cfg.package}/sbin/syslog-ng ${lib.concatStringsSep " " syslogngOptions}";
         ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
       };

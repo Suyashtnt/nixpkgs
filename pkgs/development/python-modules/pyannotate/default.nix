@@ -4,23 +4,24 @@
   fetchPypi,
   mypy-extensions,
   pytestCheckHook,
-  pythonOlder,
+  pythonAtLeast,
+  setuptools,
   six,
 }:
 
 buildPythonPackage rec {
   pname = "pyannotate";
   version = "1.2.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
     hash = "sha256-BO1YBLqzgVPVmB/JLYPc9qIog0U3aFYfBX53flwFdZk=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     six
     mypy-extensions
   ];
@@ -32,11 +33,20 @@ buildPythonPackage rec {
     "pyannotate_tools"
   ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    "pyannotate_runtime/tests/test_collect_types.py"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.11") [
+    # Tests are using lib2to3
+    "pyannotate_tools/fixes/tests/test_annotate*.py"
+    "pyannotate_tools/annotations/tests/dundermain_test.py"
+  ];
+
+  meta = {
     description = "Auto-generate PEP-484 annotations";
-    mainProgram = "pyannotate";
     homepage = "https://github.com/dropbox/pyannotate";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     maintainers = [ ];
+    mainProgram = "pyannotate";
   };
 }

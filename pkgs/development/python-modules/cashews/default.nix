@@ -19,19 +19,19 @@
 
 buildPythonPackage rec {
   pname = "cashews";
-  version = "7.2.0";
+  version = "7.5.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Krukov";
     repo = "cashews";
-    rev = "refs/tags/${version}";
-    hash = "sha256-7T9M8ioeTjW7OmcHyxZ6awNfp9kVU8Hi+Lgy17jXxK4=";
+    tag = version;
+    hash = "sha256-GQObsWTCAKuYCyHZVd1wDzhvyYK5Xw1z1QazLuAP3Jg=";
   };
 
   build-system = [ setuptools ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     dill = [ dill ];
     diskcache = [ diskcache ];
     redis = [ redis ];
@@ -63,7 +63,7 @@ buildPythonPackage rec {
   meta = {
     description = "Cache tools with async power";
     homepage = "https://github.com/Krukov/cashews/";
-    changelog = "https://github.com/Krukov/cashews/releases/tag/${version}";
+    changelog = "https://github.com/Krukov/cashews/releases/tag/${src.tag}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ moraxyc ];
   };

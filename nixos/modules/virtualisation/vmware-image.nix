@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   boolToStr = value: if value then "on" else "off";
   cfg = config.vmware;
@@ -11,29 +16,41 @@ let
     "streamOptimized"
   ];
 
-in {
+in
+{
+  imports = [
+    ../image/file-options.nix
+    (lib.mkRenamedOptionModuleWith {
+      sinceRelease = 2505;
+      from = [
+        "vmware"
+        "vmFileName"
+      ];
+      to = [
+        "image"
+        "fileName"
+      ];
+    })
+    (lib.modules.mkRenamedOptionModuleWith {
+      sinceRelease = 2605;
+      from = [
+        "vmware"
+        "baseImageSize"
+      ];
+      to = [
+        "virtualisation"
+        "diskSize"
+      ];
+    })
+  ];
+
   options = {
     vmware = {
-      baseImageSize = lib.mkOption {
-        type = with lib.types; either (enum [ "auto" ]) int;
-        default = "auto";
-        example = 2048;
-        description = ''
-          The size of the VMWare base image in MiB.
-        '';
-      };
       vmDerivationName = lib.mkOption {
         type = lib.types.str;
         default = "nixos-vmware-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}";
         description = ''
           The name of the derivation for the VMWare appliance.
-        '';
-      };
-      vmFileName = lib.mkOption {
-        type = lib.types.str;
-        default = "nixos-${config.system.nixos.label}-${pkgs.stdenv.hostPlatform.system}.vmdk";
-        description = ''
-          The file name of the VMWare appliance.
         '';
       };
       vmSubformat = lib.mkOption {
@@ -51,14 +68,18 @@ in {
   };
 
   config = {
+    system.nixos.tags = [ "vmware" ];
+    image.extension = "vmdk";
+    system.build.image = config.system.build.vmwareImage;
     system.build.vmwareImage = import ../../lib/make-disk-image.nix {
       name = cfg.vmDerivationName;
+      baseName = config.image.baseName;
       postVM = ''
-        ${pkgs.vmTools.qemu}/bin/qemu-img convert -f raw -o compat6=${boolToStr cfg.vmCompat6},subformat=${cfg.vmSubformat} -O vmdk $diskImage $out/${cfg.vmFileName}
+        ${pkgs.vmTools.qemu}/bin/qemu-img convert -f raw -o compat6=${boolToStr cfg.vmCompat6},subformat=${cfg.vmSubformat} -O vmdk $diskImage $out/${config.image.fileName}
         rm $diskImage
       '';
       format = "raw";
-      diskSize = cfg.baseImageSize;
+      diskSize = config.virtualisation.diskSize;
       partitionTableType = "efi";
       inherit config lib pkgs;
     };

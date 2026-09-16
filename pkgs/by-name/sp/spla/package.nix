@@ -1,37 +1,49 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, cmake
-, mpi
-, blas
-, gfortran
-, llvmPackages
-, cudaPackages
-, rocmPackages
-, config
-, gpuBackend ? (
-  if config.cudaSupport
-  then "cuda"
-  else if config.rocmSupport
-  then "rocm"
-  else "none"
-)
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  cmake,
+  mpi,
+  blas,
+  gfortran,
+  llvmPackages,
+  cudaPackages,
+  rocmPackages,
+  config,
+  gpuBackend ? (
+    if config.cudaSupport then
+      "cuda"
+    else if config.rocmSupport then
+      "rocm"
+    else
+      "none"
+  ),
 }:
 
-assert builtins.elem gpuBackend [ "none" "cuda" "rocm" ];
+assert builtins.elem gpuBackend [
+  "none"
+  "cuda"
+  "rocm"
+];
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "spla";
   version = "1.6.1";
 
+  strictDeps = true;
+  __structuredAttrs = true;
+
   src = fetchFromGitHub {
     owner = "eth-cscs";
-    repo = pname;
-    rev = "v${version}";
+    repo = "spla";
+    tag = "v${finalAttrs.version}";
     hash = "sha256-fNH1IOKV1Re8G7GH9Xfn3itR80eonTbEGKQRRD16/2k=";
   };
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   postPatch = ''
     substituteInPlace src/gpu_util/gpu_blas_api.hpp \
@@ -41,18 +53,22 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [
     cmake
     gfortran
-  ];
+    mpi
+  ]
+  ++ lib.optionals (gpuBackend == "cuda") [ cudaPackages.cuda_nvcc ];
 
   buildInputs = [
     blas
-    mpi
   ]
-  ++ lib.optional (gpuBackend == "cuda") cudaPackages.cudatoolkit
+  ++ lib.optionals (gpuBackend == "cuda") [
+    cudaPackages.cuda_cudart
+    cudaPackages.libcublas
+  ]
   ++ lib.optionals (gpuBackend == "rocm") [
     rocmPackages.clr
     rocmPackages.rocblas
-  ] ++ lib.optional stdenv.hostPlatform.isDarwin llvmPackages.openmp
-  ;
+  ]
+  ++ lib.optional stdenv.hostPlatform.isDarwin llvmPackages.openmp;
 
   cmakeFlags = [
     "-DSPLA_OMP=ON"
@@ -63,18 +79,17 @@ stdenv.mkDerivation rec {
     "-DCMAKE_INSTALL_INCLUDEDIR=include"
   ]
   ++ lib.optional (gpuBackend == "cuda") "-DSPLA_GPU_BACKEND=CUDA"
-  ++ lib.optional (gpuBackend == "rocm") [ "-DSPLA_GPU_BACKEND=ROCM" ]
-  ;
+  ++ lib.optionals (gpuBackend == "rocm") [ "-DSPLA_GPU_BACKEND=ROCM" ];
 
   preFixup = ''
     substituteInPlace $out/lib/cmake/SPLA/SPLASharedTargets-release.cmake \
       --replace-fail "\''${_IMPORT_PREFIX}" "$out"
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Specialized Parallel Linear Algebra, providing distributed GEMM functionality for specific matrix distributions with optional GPU acceleration";
     homepage = "https://github.com/eth-cscs/spla";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.sheepforce ];
+    license = lib.licenses.bsd3;
+    maintainers = [ lib.maintainers.sheepforce ];
   };
-}
+})

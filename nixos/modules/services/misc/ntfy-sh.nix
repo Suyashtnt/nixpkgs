@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.ntfy-sh;
 
@@ -6,22 +11,23 @@ let
 in
 
 {
+  imports = [
+    (lib.mkRemovedOptionModule [
+      "services"
+      "ntfy-sh"
+      "user"
+    ] "ntfy-sh is now a DynamicUser service, so a static user is no longer needed.")
+    (lib.mkRemovedOptionModule [
+      "services"
+      "ntfy-sh"
+      "group"
+    ] "ntfy-sh is now a DynamicUser service, so a static group is no longer needed.")
+  ];
+
   options.services.ntfy-sh = {
     enable = lib.mkEnableOption "[ntfy-sh](https://ntfy.sh), a push notification service";
 
     package = lib.mkPackageOption pkgs "ntfy-sh" { };
-
-    user = lib.mkOption {
-      default = "ntfy-sh";
-      type = lib.types.str;
-      description = "User the ntfy-sh server runs under.";
-    };
-
-    group = lib.mkOption {
-      default = "ntfy-sh";
-      type = lib.types.str;
-      description = "Primary group of ntfy-sh user.";
-    };
 
     settings = lib.mkOption {
       type = lib.types.submodule {
@@ -56,6 +62,18 @@ in
         Configuration for ntfy.sh, supported values are [here](https://ntfy.sh/docs/config/#config-options).
       '';
     };
+
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      example = "/run/secrets/ntfy";
+      description = ''
+        Path to a file containing extra ntfy environment variables in the systemd `EnvironmentFile`
+        format. Refer to the [documentation](https://docs.ntfy.sh/config/) for config options.
+
+        This can be used to pass secrets such as creating declarative users or token without putting them in the Nix store.
+      '';
+    };
   };
 
   config =
@@ -84,8 +102,8 @@ in
 
         serviceConfig = {
           ExecStart = "${cfg.package}/bin/ntfy serve -c ${configuration}";
-          User = cfg.user;
           StateDirectory = "ntfy-sh";
+          RuntimeDirectory = "ntfy-sh";
 
           DynamicUser = true;
           AmbientCapabilities = "CAP_NET_BIND_SERVICE";
@@ -102,19 +120,9 @@ in
           RestrictNamespaces = true;
           RestrictRealtime = true;
           MemoryDenyWriteExecute = true;
-          # Upstream Recommandation
+          # Upstream Recommendation
           LimitNOFILE = 20500;
-        };
-      };
-
-      users.groups = lib.optionalAttrs (cfg.group == "ntfy-sh") {
-        ntfy-sh = { };
-      };
-
-      users.users = lib.optionalAttrs (cfg.user == "ntfy-sh") {
-        ntfy-sh = {
-          isSystemUser = true;
-          group = cfg.group;
+          EnvironmentFile = lib.mkIf (cfg.environmentFile != null) cfg.environmentFile;
         };
       };
     };

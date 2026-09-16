@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
   pdm-backend,
@@ -14,7 +13,6 @@
   typogrify,
 
   # dependencies
-  backports-zoneinfo,
   blinker,
   docutils,
   feedgenerator,
@@ -29,6 +27,8 @@
   watchfiles,
 
   # tests
+  beautifulsoup4,
+  lxml,
   mock,
   pytestCheckHook,
   pytest-xdist,
@@ -36,16 +36,14 @@
 
 buildPythonPackage rec {
   pname = "pelican";
-  version = "4.9.1";
+  version = "4.12.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "getpelican";
     repo = "pelican";
-    rev = "refs/tags/${version}";
-    hash = "sha256-nz2OnxJ4mGgnafz4Xp8K/BTyVgXNpNYqteNL1owP8Hk=";
+    tag = version;
+    hash = "sha256-g/wm4ZA4KBMnvpe58ZQ7lTUBF6PywC4IivmBBco4F00=";
     # Remove unicode file names which leads to different checksums on HFS+
     # vs. other filesystems because of unicode normalisation.
     postFetch = ''
@@ -55,14 +53,12 @@ buildPythonPackage rec {
 
   postPatch = ''
     substituteInPlace pelican/tests/test_pelican.py \
-      --replace "'git'" "'${git}/bin/git'"
+      --replace-fail "\"git\"" "'${git}/bin/git'"
   '';
 
-  nativeBuildInputs = [
-    pdm-backend
-  ];
+  build-system = [ pdm-backend ];
 
-  pythonRelaxDeps = [ "unidecode" ];
+  pythonRelaxDeps = [ "pygments" ];
 
   buildInputs = [
     glibcLocales
@@ -72,7 +68,7 @@ buildPythonPackage rec {
     typogrify
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     blinker
     docutils
     feedgenerator
@@ -84,18 +80,20 @@ buildPythonPackage rec {
     tzdata
     unidecode
     watchfiles
-  ] ++ lib.optionals (pythonOlder "3.9") [ backports-zoneinfo ];
-
-  nativeCheckInputs = [
-    mock
-    pytest-xdist
-    pytestCheckHook
-    pandoc
   ];
 
-  pytestFlagsArray = [
-    # DeprecationWarning: 'jinja2.Markup' is deprecated and...
-    "-W ignore::DeprecationWarning"
+  optional-dependencies = {
+    markdown = [ markdown ];
+  };
+
+  nativeCheckInputs = [
+    beautifulsoup4
+    git
+    lxml
+    mock
+    pandoc
+    pytest-xdist
+    pytestCheckHook
   ];
 
   disabledTests = [
@@ -103,7 +101,6 @@ buildPythonPackage rec {
     "test_basic_generation_works"
     "test_custom_generation_works"
     "test_custom_locale_generation_works"
-    "test_deprecated_attribute"
   ];
 
   env.LC_ALL = "en_US.UTF-8";
@@ -119,12 +116,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pelican" ];
 
-  meta = with lib; {
+  meta = {
     description = "Static site generator that requires no database or server-side logic";
     homepage = "https://getpelican.com/";
-    license = licenses.agpl3Only;
-    maintainers = with maintainers; [
-      offline
+    changelog = "https://github.com/getpelican/pelican/blob/${src.tag}/docs/changelog.rst";
+    license = lib.licenses.agpl3Only;
+    maintainers = with lib.maintainers; [
       prikhi
     ];
   };

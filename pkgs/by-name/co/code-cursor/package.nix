@@ -1,76 +1,109 @@
 {
   lib,
-  stdenvNoCC,
+  stdenv,
+  buildVscode,
   fetchurl,
   appimageTools,
-  makeWrapper,
-  writeShellApplication,
-  curl,
-  yq,
-  common-updater-scripts,
+  undmg,
+  commandLineArgs ? "",
+  useVSCodeRipgrep ? stdenv.hostPlatform.isDarwin,
 }:
+
 let
-  pname = "cursor";
-  version = "0.41.1";
-  appKey = "230313mzl4w4u92";
-  src = fetchurl {
-    url = "https://download.todesktop.com/${appKey}/cursor-0.41.1-build-2409189xe3envg5-x86_64.AppImage";
-    hash = "sha256-9zqktOR5UOMLkKLD1uJ8eNSujWnnyKAN9H8ejrgcfVU=";
-  };
-  appimageContents = appimageTools.extractType2 { inherit version pname src; };
+  inherit (stdenv) hostPlatform;
+
+  sourcesJson = lib.importJSON ./sources.json;
+  sources = lib.mapAttrs (
+    _: info:
+    fetchurl {
+      inherit (info) url hash;
+    }
+  ) sourcesJson.sources;
+
+  source = sources.${hostPlatform.system};
 in
-stdenvNoCC.mkDerivation {
-  inherit pname version;
+(buildVscode rec {
+  inherit commandLineArgs useVSCodeRipgrep;
+  inherit (sourcesJson) version;
+  # Cursor reports vscode >= 1.122 but still ships @vscode/ripgrep.
+  # Capping the build-time vscodeVersion avoids modifying the notarized app bundle on Darwin.
+  vscodeVersion =
+    if lib.versionAtLeast sourcesJson.vscodeVersion "1.122.0" then
+      "1.121.0"
+    else
+      sourcesJson.vscodeVersion;
 
-  src = appimageTools.wrapType2 { inherit version pname src; };
+  pname = "cursor";
 
-  nativeBuildInputs = [ makeWrapper ];
+  executableName = "cursor";
+  longName = "Cursor";
+  shortName = "cursor";
+  libraryName = "cursor";
+  iconName = "cursor";
 
-  installPhase = ''
-    runHook preInstall
+  src =
+    if hostPlatform.isLinux then
+      appimageTools.extract {
+        inherit pname version;
+        src = source;
+      }
+    else
+      source;
 
-    mkdir -p $out/
-    cp -r bin $out/bin
+  # for unpacking the DMG
+  extraNativeBuildInputs = lib.optionals hostPlatform.isDarwin [ undmg ];
 
-    mkdir -p $out/share/cursor
-    cp -a ${appimageContents}/locales $out/share/cursor
-    cp -a ${appimageContents}/resources $out/share/cursor
-    cp -a ${appimageContents}/usr/share/icons $out/share/
-    install -Dm 644 ${appimageContents}/cursor.desktop -t $out/share/applications/
+  sourceRoot =
+    if hostPlatform.isLinux then "${pname}-${version}-extracted/usr/share/cursor" else "Cursor.app";
 
-    substituteInPlace $out/share/applications/cursor.desktop --replace-fail "AppRun" "cursor"
+  tests = { };
 
-    wrapProgram $out/bin/cursor \
-      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations}} --no-update"
+  updateScript = ./update.sh;
 
-    runHook postInstall
-  '';
+  # Editing the `cursor` binary within the app bundle causes the bundle's signature
+  # to be invalidated, which prevents launching starting with macOS Ventura, because Cursor is notarized.
+  # See https://eclecticlight.co/2022/06/17/app-security-changes-coming-in-ventura/ for more information.
+  dontFixup = stdenv.hostPlatform.isDarwin;
 
-  passthru = {
-    updateScript = lib.getExe (writeShellApplication {
-      name = "update-cursor";
-      runtimeInputs = [
-        curl
-        yq
-        common-updater-scripts
-      ];
-      text = ''
-        set -o errexit
-        latestLinux="$(curl -s https://download.todesktop.com/${appKey}/latest-linux.yml)"
-        version="$(echo "$latestLinux" | yq -r .version)"
-        filename="$(echo "$latestLinux" | yq -r '.files[] | .url | select(. | endswith(".AppImage"))')"
-        update-source-version code-cursor "$version" "" "https://download.todesktop.com/${appKey}/$filename" --source-key=src.src
-      '';
-    });
-  };
+  # Cursor ships a launcher script that resolves its own VSCODE_PATH.
+  patchVSCodePath = false;
 
   meta = {
     description = "AI-powered code editor built on vscode";
     homepage = "https://cursor.com";
+    changelog = "https://cursor.com/changelog";
     license = lib.licenses.unfree;
-    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
-    maintainers = with lib.maintainers; [ sarahec ];
-    platforms = [ "x86_64-linux" ];
+    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
+    maintainers = with lib.maintainers; [
+      aspauldingcode
+      prince213
+      qweered
+    ];
+    platforms = [
+      "aarch64-linux"
+      "x86_64-linux"
+    ]
+    ++ lib.platforms.darwin;
     mainProgram = "cursor";
   };
-}
+}).overrideAttrs
+  (oldAttrs: {
+    autoPatchelfIgnoreMissingDeps =
+      (oldAttrs.autoPatchelfIgnoreMissingDeps or [ ])
+      ++ lib.optionals (stdenv.hostPlatform.isLinux && !stdenv.hostPlatform.isMusl) [
+        "libc.musl-*.so.*" # musl-based node modules are not used on glibc systems
+      ];
+
+    preFixup =
+      (oldAttrs.preFixup or "")
+      + lib.optionalString hostPlatform.isLinux ''
+        sed -i '/^Keywords=/a MimeType=application/x-cursor-workspace;' \
+          $out/share/applications/cursor.desktop
+      '';
+    postInstall =
+      (oldAttrs.postInstall or "")
+      + lib.optionalString hostPlatform.isLinux ''
+        install -Dm644 ../mime/packages/cursor-workspace.xml -t $out/share/mime/packages
+        rm -f $out/lib/cursor/resources/appimageupdatetool.AppImage
+      '';
+  })

@@ -2,35 +2,43 @@
   lib,
   buildPythonPackage,
   fetchPypi,
-  pythonOlder,
-  importlib-metadata,
+  id,
   keyring,
+  packaging,
   pkginfo,
   readme-renderer,
   requests,
   requests-toolbelt,
   rich,
   rfc3986,
+  setuptools,
   setuptools-scm,
   urllib3,
+  build,
+  pretend,
+  pytest-socket,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "twine";
-  version = "5.1.0";
-  format = "pyproject";
-  disabled = pythonOlder "3.7";
+  version = "6.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-TXR3DIjE/K+BNNKmqdhj5A8IJV/32OKss8u9V9Jfbp0=";
+    hash = "sha256-5e0NL9cMmVl3Dc5RyPOciUXFdOGBc6e4GALatRtLdc8=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [
-    importlib-metadata
+  dependencies = [
+    id
     keyring
+    packaging
     pkginfo
     readme-renderer
     requests
@@ -40,8 +48,17 @@ buildPythonPackage rec {
     urllib3
   ];
 
-  # Requires network
-  doCheck = false;
+  nativeCheckInputs = [
+    build
+    pretend
+    pytest-socket
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # docutils 0.23 string changes
+    "test_fails_rst_syntax_error"
+  ];
 
   pythonImportsCheck = [ "twine" ];
 

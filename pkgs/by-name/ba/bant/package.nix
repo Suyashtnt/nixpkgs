@@ -3,8 +3,10 @@
   stdenv,
   buildBazelPackage,
   fetchFromGitHub,
-  bazel_6,
+  bazel_7,
   jdk,
+  nix-update-script,
+  cctools,
 }:
 
 let
@@ -12,37 +14,52 @@ let
   registry = fetchFromGitHub {
     owner = "bazelbuild";
     repo = "bazel-central-registry";
-    rev = "40bc9ad53e5a59d596935839e7c072679e706266";
-    hash = "sha256-CL0YMQd1ck6/dlvJCLxt9jYyqDuk+iAWfdBOMj864u8=";
+    rev = "dc643526b97838ffe421b833dd8b9c95e71702e8";
+    hash = "sha256-SLtrNU5uEt8rRJDUdV/IaI37CujsTHLlE31l2zYoRss=";
   };
-in buildBazelPackage rec {
+in
+buildBazelPackage rec {
   pname = "bant";
-  version = "0.1.7";
+  version = "0.3.6";
 
   src = fetchFromGitHub {
     owner = "hzeller";
     repo = "bant";
     rev = "v${version}";
-    hash = "sha256-QbxPosjlrpxbz6gQKUKccF2Gu/i5xvqh2gwfABYE8kE=";
+    hash = "sha256-A7PwA9gxT+Jd/Z8nxycA//4db5qoSfuSGfcd2RjYpbs=";
   };
 
-  bazelFlags = ["--registry" "file://${registry}"];
+  bazelFlags = [
+    "--registry"
+    "file://${registry}"
+  ];
+
+  env = lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+    LIBTOOL = "${cctools}/bin/libtool";
+  };
 
   postPatch = ''
     patchShebangs scripts/create-workspace-status.sh
   '';
 
+  removeRulesCC = false;
+
   fetchAttrs = {
-    sha256 = {
-      aarch64-linux = "sha256-09RL0tj6xsGEmuv11V81eAtqLc9nAaE8Il3d6ueS0UQ=";
-      x86_64-linux = "sha256-6mlaJ/kT14vKvlJjxqBK/lESjjxbcYxApi7+eiiI37M=";
-    }.${system} or (throw "No hash for system: ${system}");
+    preInstall = ''
+      rm -rf $bazelOut/external/rules_shell~~sh_configure~local_config_shell
+    '';
+    hash =
+      {
+        aarch64-linux = "sha256-E70F3D7HGsyV0bPd0zbRTytx1UCHyEuNKObaG2eRy8A=";
+        x86_64-linux = "sha256-E9XAKrt16DOAne3/wY9PwWIM61YX0fWs8x1hqF3YJSU=";
+      }
+      .${system} or (throw "No hash for system: ${system}");
   };
 
   nativeBuildInputs = [
     jdk
   ];
-  bazel = bazel_6;
+  bazel = bazel_7;
 
   bazelBuildFlags = [ "-c opt" ];
   bazelTestTargets = [ "//..." ];
@@ -54,11 +71,18 @@ in buildBazelPackage rec {
     '';
   };
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  strictDeps = true;
+  __structuredAttrs = true;
+
+  meta = {
     description = "Bazel/Build Analysis and Navigation Tool";
     homepage = "http://bant.build/";
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ hzeller lromor ];
-    platforms = platforms.linux;
+    license = lib.licenses.gpl3;
+    maintainers = with lib.maintainers; [
+      hzeller
+      lromor
+    ];
   };
 }

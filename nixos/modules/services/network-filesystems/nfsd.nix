@@ -1,5 +1,18 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
+
+  attrsToExports = lib.concatMapAttrsStringSep "\n" (
+    exportPoint: clientsAndOptions:
+    exportPoint
+    + lib.concatMapAttrsStringSep "" (
+      client: options: " ${client}(${lib.concatStringsSep "," options})"
+    ) clientsAndOptions
+  );
 
   cfg = config.services.nfs.server;
 
@@ -9,8 +22,14 @@ in
 
 {
   imports = [
-    (lib.mkRenamedOptionModule [ "services" "nfs" "lockdPort" ] [ "services" "nfs" "server" "lockdPort" ])
-    (lib.mkRenamedOptionModule [ "services" "nfs" "statdPort" ] [ "services" "nfs" "server" "statdPort" ])
+    (lib.mkRenamedOptionModule
+      [ "services" "nfs" "lockdPort" ]
+      [ "services" "nfs" "server" "lockdPort" ]
+    )
+    (lib.mkRenamedOptionModule
+      [ "services" "nfs" "statdPort" ]
+      [ "services" "nfs" "server" "statdPort" ]
+    )
   ];
 
   ###### interface
@@ -37,12 +56,26 @@ in
         };
 
         exports = lib.mkOption {
-          type = lib.types.lines;
+          type = with lib.types; coercedTo (attrsOf (attrsOf (listOf str))) attrsToExports lines;
           default = "";
           description = ''
             Contents of the /etc/exports file.  See
             {manpage}`exports(5)` for the format.
           '';
+          example = {
+            "/usr" = {
+              "*.local.domain" = [ "ro" ];
+              "@trusted" = [ "rw" ];
+            };
+            "/home/joe" = {
+              "pc001" = [
+                "rw"
+                "all_squash"
+                "anonuid=150"
+                "anongid=100"
+              ];
+            };
+          };
         };
 
         hostName = lib.mkOption {
@@ -70,7 +103,7 @@ in
         };
 
         mountdPort = lib.mkOption {
-          type = lib.types.nullOr lib.types.int;
+          type = lib.types.nullOr lib.types.port;
           default = null;
           example = 4002;
           description = ''
@@ -79,7 +112,7 @@ in
         };
 
         lockdPort = lib.mkOption {
-          type = lib.types.nullOr lib.types.int;
+          type = lib.types.nullOr lib.types.port;
           default = null;
           example = 4001;
           description = ''
@@ -90,7 +123,7 @@ in
         };
 
         statdPort = lib.mkOption {
-          type = lib.types.nullOr lib.types.int;
+          type = lib.types.nullOr lib.types.port;
           default = null;
           example = 4000;
           description = ''
@@ -105,7 +138,6 @@ in
 
   };
 
-
   ###### implementation
 
   config = lib.mkIf cfg.enable {
@@ -116,35 +148,25 @@ in
 
     environment.etc.exports.source = exports;
 
-    systemd.services.nfs-server =
-      { enable = true;
-        wantedBy = [ "multi-user.target" ];
+    systemd.services.nfs-server = {
+      enable = true;
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig.StateDirectory = [ "nfs/v4recovery" ];
+    };
 
-        preStart =
-          ''
-            mkdir -p /var/lib/nfs/v4recovery
-          '';
-      };
+    systemd.services.nfs-mountd = {
+      enable = true;
+      restartTriggers = [ exports ];
+      serviceConfig.StateDirectory = [ "nfs" ];
 
-    systemd.services.nfs-mountd =
-      { enable = true;
-        restartTriggers = [ exports ];
-
-        preStart =
-          ''
-            mkdir -p /var/lib/nfs
-
-            ${lib.optionalString cfg.createMountPoints
-              ''
-                # create export directories:
-                # skip comments, take first col which may either be a quoted
-                # "foo bar" or just foo (-> man export)
-                sed '/^#.*/d;s/^"\([^"]*\)".*/\1/;t;s/[ ].*//' ${exports} \
-                | xargs -d '\n' mkdir -p
-              ''
-            }
-          '';
-      };
+      preStart = lib.optionalString cfg.createMountPoints ''
+        # create export directories:
+        # skip comments, take first col which may either be a quoted
+        # "foo bar" or just foo (-> man export)
+        sed '/^#.*/d;s/^"\([^"]*\)".*/\1/;t;s/[ ].*//' ${exports} \
+        | xargs -d '\n' mkdir -p
+      '';
+    };
 
   };
 

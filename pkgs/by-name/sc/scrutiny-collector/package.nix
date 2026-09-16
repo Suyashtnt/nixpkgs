@@ -1,32 +1,31 @@
-{ buildGoModule
-, fetchFromGitHub
-, makeWrapper
-, smartmontools
-, nixosTests
-, lib
-, nix-update-script
+{
+  buildGoModule,
+  fetchFromGitHub,
+  makeWrapper,
+  smartmontools,
+  nixosTests,
+  lib,
+  nix-update-script,
 }:
-let
-  version = "0.8.1";
-in
-buildGoModule rec {
-  inherit version;
+
+buildGoModule (finalAttrs: {
+  version = "0.9.3";
   pname = "scrutiny-collector";
 
   src = fetchFromGitHub {
     owner = "AnalogJ";
     repo = "scrutiny";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-WoU5rdsIEhZQ+kPoXcestrGXC76rFPvhxa0msXjFsNg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-UEHyrXm2hjw0YJ2tf1BmKhbdvYHvzI/9oungmDR7NwQ=";
   };
 
   subPackages = "collector/cmd/collector-metrics";
 
-  vendorHash = "sha256-SiQw6pq0Fyy8Ia39S/Vgp9Mlfog2drtVn43g+GXiQuI=";
+  vendorHash = "sha256-4wLTDHo1sHLiYKYsGrJSuLt4tVQKlqBE7xQhukXiMLs=";
 
   nativeBuildInputs = [ makeWrapper ];
 
-  CGO_ENABLED = 0;
+  env.CGO_ENABLED = 0;
 
   ldflags = [ "-extldflags=-static" ];
 
@@ -47,9 +46,12 @@ buildGoModule rec {
   meta = {
     description = "Hard disk metrics collector for Scrutiny";
     homepage = "https://github.com/AnalogJ/scrutiny";
+    changelog = "https://github.com/AnalogJ/scrutiny/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ jnsgruk ];
+    maintainers = with lib.maintainers; [
+      samasaur
+      svistoi
+    ];
     mainProgram = "scrutiny-collector-metrics";
-    platforms = lib.platforms.linux;
   };
-}
+})

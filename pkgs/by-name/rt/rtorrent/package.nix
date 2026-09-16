@@ -1,70 +1,69 @@
-{ lib
-, stdenv
-, autoconf-archive
-, autoreconfHook
-, cppunit
-, curl
-, fetchFromGitHub
-, installShellFiles
-, libsigcxx
-, libtool
-, libtorrent
-, ncurses
-, openssl
-, pkg-config
-, xmlrpc_c
-, zlib
-, nixosTests
-, unstableGitUpdater
+{
+  _experimental-update-script-combinators,
+  autoreconfHook,
+  cppunit,
+  curl,
+  fetchFromGitHub,
+  installShellFiles,
+  lib,
+  libtool,
+  libtorrent-rakshasa,
+  lua5_4_compat,
+  ncurses,
+  nix-update-script,
+  nixosTests,
+  openssl,
+  pkg-config,
+  stdenv,
+  versionCheckHook,
+  writableTmpDirAsHomeHook,
+  withLua ? false,
+  zlib,
 }:
 
-stdenv.mkDerivation {
-  pname = "rakshasa-rtorrent";
-  version = "0.9.8-unstable-2024-09-07";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "rtorrent";
+  version = "0.16.22";
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "rakshasa";
     repo = "rtorrent";
-    rev = "9a93281ded3f6c6bb40593f9bbd3597683cff263";
-    hash = "sha256-dbZ0Q6v6vu8rlr7p1rPc3Cx/9R53OelkoTNsdAVQAxE=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-6N3yERua4mGUKzix8xcnn1yu35EY/bIUfLIyF8B+zHQ=";
   };
 
-  outputs = [ "out" "man" ];
+  outputs = [
+    "out"
+    "man"
+  ];
 
-  passthru = {
-    inherit libtorrent;
-  };
+  strictDeps = true;
 
   nativeBuildInputs = [
-    autoconf-archive
     autoreconfHook
     installShellFiles
     pkg-config
+    writableTmpDirAsHomeHook
   ];
 
   buildInputs = [
     cppunit
     curl
-    libsigcxx
     libtool
-    libtorrent
+    libtorrent-rakshasa
     ncurses
     openssl
-    xmlrpc_c
     zlib
-  ];
+  ]
+  ++ lib.optionals withLua [ lua5_4_compat ];
 
   configureFlags = [
-    "--with-xmlrpc-c"
+    "--with-xmlrpc-tinyxml2"
     "--with-posix-fallocate"
-  ];
-
-  passthru = {
-    updateScript = unstableGitUpdater { tagPrefix = "v"; };
-    tests = {
-      inherit (nixosTests) rtorrent;
-    };
-  };
+  ]
+  ++ lib.optionals withLua [ "--with-lua" ];
 
   enableParallelBuilding = true;
 
@@ -73,12 +72,28 @@ stdenv.mkDerivation {
     install -Dm644 doc/rtorrent.rc-example -t $out/share/doc/rtorrent/rtorrent.rc
   '';
 
-  meta = {
-    homepage = "https://rakshasa.github.io/rtorrent/";
-    description = "Ncurses client for libtorrent, ideal for use with screen, tmux, or dtach";
-    license = lib.licenses.gpl2Plus;
-    maintainers = with lib.maintainers; [ ebzzry codyopel thiagokokada ];
-    platforms = lib.platforms.unix;
-    mainProgram = "rtorrent";
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "-h";
+  versionCheckKeepEnvironment = [ "HOME" ];
+
+  passthru = {
+    inherit libtorrent-rakshasa;
+    tests = { inherit (nixosTests) rtorrent; };
+    updateScript = _experimental-update-script-combinators.sequence [
+      (nix-update-script { attrPath = "libtorrent-rakshasa"; })
+      (nix-update-script { })
+    ];
   };
-}
+
+  meta = {
+    description = "Ncurses client for libtorrent, ideal for use with screen, tmux, or dtach";
+    homepage = "https://rakshasa.github.io/rtorrent/";
+    license = lib.licenses.gpl2Plus;
+    mainProgram = "rtorrent";
+    maintainers = with lib.maintainers; [
+      thiagokokada
+    ];
+    platforms = lib.platforms.unix;
+  };
+})

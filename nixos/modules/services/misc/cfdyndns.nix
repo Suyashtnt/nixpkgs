@@ -1,12 +1,19 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.services.cfdyndns;
 in
 {
   imports = [
-    (lib.mkRemovedOptionModule
-      [ "services" "cfdyndns" "apikey" ]
-      "Use services.cfdyndns.apikeyFile instead.")
+    (lib.mkRemovedOptionModule [
+      "services"
+      "cfdyndns"
+      "apikey"
+    ] "Use services.cfdyndns.apikeyFile instead.")
   ];
 
   options = {
@@ -39,7 +46,7 @@ in
       };
 
       records = lib.mkOption {
-        default = [];
+        default = [ ];
         example = [ "host.tld" ];
         type = lib.types.listOf lib.types.str;
         description = ''
@@ -57,11 +64,13 @@ in
       startAt = "*:0/5";
       serviceConfig = {
         Type = "simple";
-        LoadCredential = lib.optional (cfg.apiTokenFile != null) "CLOUDFLARE_APITOKEN_FILE:${cfg.apiTokenFile}";
+        LoadCredential = lib.optional (
+          cfg.apiTokenFile != null
+        ) "CLOUDFLARE_APITOKEN_FILE:${cfg.apiTokenFile}";
         DynamicUser = true;
       };
       environment = {
-        CLOUDFLARE_RECORDS="${lib.concatStringsSep "," cfg.records}";
+        CLOUDFLARE_RECORDS = "${lib.concatStringsSep "," cfg.records}";
       };
       script = ''
         ${lib.optionalString (cfg.apikeyFile != null) ''
@@ -69,7 +78,7 @@ in
           export CLOUDFLARE_EMAIL="${cfg.email}"
         ''}
         ${lib.optionalString (cfg.apiTokenFile != null) ''
-          export CLOUDFLARE_APITOKEN=$(${pkgs.systemd}/bin/systemd-creds cat CLOUDFLARE_APITOKEN_FILE)
+          export CLOUDFLARE_APITOKEN=$(${config.systemd.package}/bin/systemd-creds cat CLOUDFLARE_APITOKEN_FILE)
         ''}
         ${pkgs.cfdyndns}/bin/cfdyndns
       '';

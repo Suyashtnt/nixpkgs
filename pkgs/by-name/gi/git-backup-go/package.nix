@@ -6,20 +6,20 @@
   git-backup-go,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "git-backup-go";
-  version = "1.6.0";
+  version = "1.7.0";
 
   src = fetchFromGitHub {
     owner = "ChappIO";
     repo = "git-backup";
-    rev = "v${version}";
-    hash = "sha256-C/ha/GuRvqxmgrbOgkhup1tNoDT3pDIbE+nO5eMZGlY=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-xpHrBGgPH2dnbDz49OBntdHbowMhoz3P7k8UlNN7ku8=";
   };
 
-  vendorHash = "sha256-wzivnTe9Rx3YLz6lvrzsLiJIbxX7QE059Kzb4rUfD+s=";
+  vendorHash = "sha256-xP2bV3vD4CbMGVT+MK4wJgMbIBZLvyqiMOfgj8Rc38Y=";
 
-  ldflags = [ "-X main.Version=${version}" ];
+  ldflags = [ "-X main.Version=${finalAttrs.version}" ];
 
   passthru.tests.version = testers.testVersion {
     package = git-backup-go;
@@ -33,4 +33,4 @@ buildGoModule rec {
     mainProgram = "git-backup";
     maintainers = with lib.maintainers; [ aleksana ];
   };
-}
+})

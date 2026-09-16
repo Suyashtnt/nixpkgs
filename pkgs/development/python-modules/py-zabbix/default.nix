@@ -5,7 +5,6 @@
   fetchpatch,
   pytestCheckHook,
   pythonAtLeast,
-  pythonOlder,
   setuptools,
 }:
 
@@ -14,12 +13,10 @@ buildPythonPackage rec {
   version = "1.1.7";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "adubkov";
     repo = "py-zabbix";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-aPQc188pszfDQvNtsGYlRLHS5CG5VyqptSoe4/GJVvE=";
   };
 
@@ -43,11 +40,11 @@ buildPythonPackage rec {
     "config"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to interact with Zabbix";
     homepage = "https://github.com/adubkov/py-zabbix";
     changelog = "https://github.com/adubkov/py-zabbix/releases/tag/${version}";
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

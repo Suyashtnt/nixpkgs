@@ -2,72 +2,85 @@
   lib,
   buildPythonPackage,
   fetchPypi,
-  pythonOlder,
-  setuptools,
+
+  # build-system
+  uv-build,
+
+  # dependencies
   click,
   docutils,
   itsdangerous,
   jedi,
+  loro,
   markdown,
+  msgspec,
+  narwhals,
   packaging,
   psutil,
   pygments,
   pymdown-extensions,
-  ruff,
+  python-multipart,
+  pyyaml,
+  pyzmq,
   starlette,
   tomlkit,
   uvicorn,
   websockets,
-  pyyaml,
-  pytestCheckHook,
-}:
 
+  # tests
+  versionCheckHook,
+}:
 buildPythonPackage rec {
   pname = "marimo";
-  version = "0.8.20";
+  version = "0.24.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
+  # The github archive does not include the static assets
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-sLGGNNhrtzxmJXe7E83gKU+e16yAutV6TqXZ9mriRdk=";
+    hash = "sha256-MKrq5aWTbfUkgU/d2Y9LJg0waPl98mEdJS/kslPz+4A=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [ uv-build ];
 
-  # ruff is not packaged as a python module in nixpkgs
-  pythonRemoveDeps = [ "ruff" ];
+  pythonRelaxDeps = [ "jedi" ];
 
   dependencies = [
     click
     docutils
     itsdangerous
     jedi
+    loro
     markdown
+    msgspec
+    narwhals
     packaging
     psutil
     pygments
     pymdown-extensions
-    ruff
+    python-multipart
+    pyyaml
+    pyzmq
     starlette
     tomlkit
     uvicorn
     websockets
-    pyyaml
   ];
-
-  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "marimo" ];
 
-  meta = with lib; {
+  # The pypi archive does not contain tests so we do not use `pytestCheckHook`
+  nativeCheckInputs = [
+    versionCheckHook
+  ];
+
+  meta = {
     description = "Reactive Python notebook that's reproducible, git-friendly, and deployable as scripts or apps";
     homepage = "https://github.com/marimo-team/marimo";
     changelog = "https://github.com/marimo-team/marimo/releases/tag/${version}";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
     mainProgram = "marimo";
-    maintainers = with maintainers; [
+    maintainers = with lib.maintainers; [
       akshayka
       dmadisetti
     ];

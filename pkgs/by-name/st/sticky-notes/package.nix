@@ -1,33 +1,34 @@
-{ lib
-, desktop-file-utils
-, fetchFromGitHub
-, fetchYarnDeps
-, fixup_yarn_lock
-, gjs
-, glib-networking
-, gobject-introspection
-, gst_all_1
-, gtk4
-, libadwaita
-, libsoup_3
-, meson
-, ninja
-, pkg-config
-, stdenv
-, wrapGAppsHook4
-, yarn
-, nodejs
+{
+  lib,
+  desktop-file-utils,
+  fetchFromGitHub,
+  fetchYarnDeps,
+  fixup-yarn-lock,
+  gjs,
+  glib-networking,
+  gobject-introspection,
+  gst_all_1,
+  gtk4,
+  libadwaita,
+  libsoup_3,
+  meson,
+  ninja,
+  pkg-config,
+  stdenv,
+  wrapGAppsHook4,
+  yarn,
+  nodejs,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "sticky-notes";
-  version = "0.2.5";
+  version = "0.2.7";
 
   src = fetchFromGitHub {
     owner = "vixalien";
     repo = "sticky";
-    rev = "v${version}";
-    hash = "sha256-+++xUiMjO+19hmLLBamOL6tMUqB0a8ixTXca/6A8ZK8=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-82Yxw8NSw82rxhuAgsdN2lCiQ/hli4tQiU6jCgGyp4U=";
     fetchSubmodules = true;
   };
 
@@ -40,7 +41,7 @@ stdenv.mkDerivation rec {
     pkg-config
     wrapGAppsHook4
     yarn
-    fixup_yarn_lock
+    fixup-yarn-lock
   ];
 
   buildInputs = [
@@ -55,14 +56,14 @@ stdenv.mkDerivation rec {
   ];
 
   yarnOfflineCache = fetchYarnDeps {
-    yarnLock = src + "/yarn.lock";
-    hash = "sha256-GThcufSAr/VYL9AWFOBY2FDXQZGY5L7TbBdadPh7CAc=";
+    yarnLock = finalAttrs.src + "/yarn.lock";
+    hash = "sha256-NDGuG2rXJH0bHsD7yQMY6HAZDkMq0j63SYVz8+X3fPQ=";
   };
 
   preConfigure = ''
     export HOME="$PWD"
     yarn config --offline set yarn-offline-mirror $yarnOfflineCache
-    fixup_yarn_lock yarn.lock
+    fixup-yarn-lock yarn.lock
   '';
 
   mesonFlags = [
@@ -70,7 +71,7 @@ stdenv.mkDerivation rec {
   ];
 
   postPatch = ''
-    meson rewrite kwargs set project / version '${version}'
+    meson rewrite kwargs set project / version '${finalAttrs.version}'
   '';
 
   postFixup = ''
@@ -80,10 +81,10 @@ stdenv.mkDerivation rec {
   meta = {
     description = "Simple sticky notes app for GNOME";
     homepage = "https://github.com/vixalien/sticky";
-    changelog = "https://github.com/vixalien/sticky/releases/tag/v${version}";
+    changelog = "https://github.com/vixalien/sticky/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ pokon548 ];
     mainProgram = "com.vixalien.sticky";
     platforms = lib.platforms.linux;
   };
-}
+})

@@ -1,7 +1,8 @@
-{ config
-, pkgs
-, lib
-, ...
+{
+  config,
+  pkgs,
+  lib,
+  ...
 }:
 let
   cfg = config.services.silverbullet;
@@ -23,7 +24,7 @@ in
       };
 
       listenPort = lib.mkOption {
-        type = lib.types.int;
+        type = lib.types.port;
         default = 3000;
         description = "Port to listen on.";
       };
@@ -82,7 +83,7 @@ in
       extraArgs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        example = [ "--db /path/to/silverbullet.db" ];
+        example = [ "--single" ];
         description = "Extra arguments passed to silverbullet.";
       };
     };
@@ -94,14 +95,20 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
 
-      preStart = lib.mkIf (!lib.hasPrefix "/var/lib/" cfg.spaceDir) "mkdir -p '${cfg.spaceDir}'";
       serviceConfig = {
         Type = "simple";
         User = "${cfg.user}";
         Group = "${cfg.group}";
         EnvironmentFile = lib.mkIf (cfg.envFile != null) "${cfg.envFile}";
-        StateDirectory = lib.mkIf (lib.hasPrefix "/var/lib/" cfg.spaceDir) (lib.last (lib.splitString "/" cfg.spaceDir));
-        ExecStart = "${lib.getExe cfg.package} --port ${toString cfg.listenPort} --hostname '${cfg.listenAddress}' '${cfg.spaceDir}' " + lib.concatStringsSep " " cfg.extraArgs;
+        StateDirectory = lib.mkIf (lib.hasPrefix "/var/lib/" cfg.spaceDir) (
+          lib.last (lib.splitString "/" cfg.spaceDir)
+        );
+        ExecStartPre = lib.mkIf (
+          !lib.hasPrefix "/var/lib/" cfg.spaceDir
+        ) "${lib.getExe' pkgs.coreutils "mkdir"} -p '${cfg.spaceDir}'";
+        ExecStart =
+          "${lib.getExe cfg.package} --port ${toString cfg.listenPort} --hostname '${cfg.listenAddress}' '${cfg.spaceDir}' "
+          + lib.concatStringsSep " " cfg.extraArgs;
         Restart = "on-failure";
       };
     };

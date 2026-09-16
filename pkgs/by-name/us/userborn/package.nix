@@ -2,36 +2,29 @@
   lib,
   rustPlatform,
   fetchFromGitHub,
-  makeBinaryWrapper,
-  mkpasswd,
+  libxcrypt,
   nixosTests,
   nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "userborn";
-  version = "0.2.0";
+  version = "1.0.1";
 
   src = fetchFromGitHub {
     owner = "nikstur";
     repo = "userborn";
-    rev = version;
-    hash = "sha256-LEKdgmw1inBOi0sriG8laCrtx0ycqR5ftdnmszadx3U=";
+    tag = finalAttrs.version;
+    hash = "sha256-YUJY5Ss29joSkBztf6r7DwSci/hTBYgmN1qkJRfhHAo=";
   };
 
-  sourceRoot = "${src.name}/rust/userborn";
+  sourceRoot = "${finalAttrs.src.name}/rust/userborn";
 
-  cargoHash = "sha256-Pjzu6db2WomNsC+jNK1fr1u7koZwUvWPIY5JHMo1gkA=";
+  cargoHash = "sha256-U9RZQ9MabWJEWzMrsmEoIoEUUkFVT7igUBPalXnFeRU=";
 
-  nativeBuildInputs = [ makeBinaryWrapper ];
+  nativeBuildInputs = [ rustPlatform.bindgenHook ];
 
-  buildInputs = [ mkpasswd ];
-
-  nativeCheckInputs = [ mkpasswd ];
-
-  postInstall = ''
-    wrapProgram $out/bin/userborn --prefix PATH : ${lib.makeBinPath [ mkpasswd ]}
-  '';
+  buildInputs = [ libxcrypt ];
 
   stripAllList = [ "bin" ];
 
@@ -40,20 +33,26 @@ rustPlatform.buildRustPackage rec {
     tests = {
       inherit (nixosTests)
         userborn
+        userborn-migration
         userborn-mutable-users
         userborn-mutable-etc
         userborn-immutable-users
         userborn-immutable-etc
+        userborn-static
+        userborn-subids
+        userborn-subids-immutable-etc
+        userborn-subids-mutable-etc
         ;
     };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/nikstur/userborn";
     description = "Declaratively bear (manage) Linux users and groups";
-    license = licenses.mit;
-    platforms = platforms.linux;
+    changelog = "https://github.com/nikstur/userborn/blob/${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    platforms = lib.platforms.unix;
     maintainers = with lib.maintainers; [ nikstur ];
     mainProgram = "userborn";
   };
-}
+})

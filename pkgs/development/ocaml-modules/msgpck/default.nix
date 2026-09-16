@@ -1,18 +1,19 @@
-{ lib
-, fetchFromGitHub
-, buildDunePackage
-, ocplib-endian
-, alcotest
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  ocplib-endian,
+  alcotest,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "msgpck";
   version = "1.7";
 
   src = fetchFromGitHub {
     owner = "vbmithr";
     repo = "ocaml-msgpck";
-    rev = "${version}";
+    rev = "${finalAttrs.version}";
     hash = "sha256-gBHIiicmk/5KBkKzRKyV0ymEH8dGCZG8vfE0mtpcDCM=";
   };
 
@@ -28,4 +29,4 @@ buildDunePackage rec {
     homepage = "https://github.com/vbmithr/ocaml-msgpck";
     maintainers = [ lib.maintainers.ulrikstrid ];
   };
-}
+})

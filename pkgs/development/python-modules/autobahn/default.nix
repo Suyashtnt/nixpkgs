@@ -2,67 +2,65 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  attrs,
-  argon2-cffi,
-  base58,
-  cbor2,
+
+  # build-system
   cffi,
-  click,
+  hatchling,
+  setuptools,
+
+  # dependencies
   cryptography,
-  ecdsa,
-  eth-abi,
-  eth-account,
-  flatbuffers,
-  jinja2,
-  hkdf,
   hyperlink,
-  mnemonic,
-  mock,
-  msgpack,
-  passlib,
-  py-ecc,
-  # , py-eth-sig-utils
-  py-multihash,
-  py-ubjson,
   pynacl,
-  pygobject3,
+  txaio,
+
+  # optional-dependencies
+  # compress
+  python-snappy,
+  # encryption
+  base58,
   pyopenssl,
   qrcode,
-  pytest-asyncio,
-  python-snappy,
-  pytestCheckHook,
-  pythonOlder,
-  # , pytrie
-  rlp,
   service-identity,
-  setuptools,
-  spake2,
-  twisted,
-  txaio,
+  # scram
+  argon2-cffi,
+  passlib,
+  # serialization
+  cbor2,
+  flatbuffers,
+  msgpack,
   ujson,
-  # , web3
-  # , wsaccel
-  # , xbr
-  yapf,
-  # , zlmdb
+  py-ubjson,
+  # twisted
+  attrs,
+  twisted,
   zope-interface,
-}@args:
+  # ui
+  pygobject3,
 
-buildPythonPackage rec {
+  # tests
+  mock,
+  pytest-asyncio_0,
+  pytestCheckHook,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "autobahn";
-  version = "24.4.2";
+  version = "25.12.2";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "crossbario";
     repo = "autobahn-python";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-aeTE4a37zr83KZ+v947XikzFrHAhkZ4mj4tXdkQnB84=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-vSS7DpfGfNwQT8OsgEXJaP5J40QFIopdAD94/y7/jFY=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [
+    cffi
+    hatchling
+    setuptools
+  ];
 
   dependencies = [
     cryptography
@@ -71,33 +69,23 @@ buildPythonPackage rec {
     txaio
   ];
 
-  nativeCheckInputs =
-    [
-      mock
-      pytest-asyncio
-      pytestCheckHook
-    ]
-    ++ optional-dependencies.scram ++ optional-dependencies.serialization ++ optional-dependencies.xbr;
-
-  preCheck = ''
-    # Run asyncio tests (requires twisted)
-    export USE_ASYNCIO=1
-  '';
-
-  pytestFlagsArray = [
-    "--ignore=./autobahn/twisted"
-    "./autobahn"
-  ];
-
-  pythonImportsCheck = [ "autobahn" ];
-
-  optional-dependencies = rec {
-    all = accelerate ++ compress ++ encryption ++ nvx ++ serialization ++ scram ++ twisted ++ ui ++ xbr;
+  optional-dependencies = lib.fix (self: {
+    all =
+      self.accelerate
+      ++ self.compress
+      ++ self.encryption
+      ++ self.nvx
+      ++ self.serialization
+      ++ self.scram
+      ++ self.twisted
+      ++ self.ui;
     accelerate = [
       # wsaccel
     ];
     compress = [ python-snappy ];
     encryption = [
+      base58
+      # ecdsa (marked as insecure)
       pynacl
       pyopenssl
       qrcode # pytrie
@@ -118,33 +106,46 @@ buildPythonPackage rec {
     ];
     twisted = [
       attrs
-      args.twisted
+      twisted
       zope-interface
     ];
     ui = [ pygobject3 ];
-    xbr = [
-      base58
-      cbor2
-      click
-      ecdsa
-      eth-abi
-      jinja2
-      hkdf
-      mnemonic
-      py-ecc # py-eth-sig-utils
-      py-multihash
-      rlp
-      spake2
-      twisted # web3 xbr
-      yapf # zlmdb
-    ];
-  };
+  });
 
-  meta = with lib; {
-    changelog = "https://github.com/crossbario/autobahn-python/blob/${src.rev}/docs/changelog.rst";
+  pythonImportsCheck = [ "autobahn" ];
+
+  nativeCheckInputs = [
+    mock
+    pytest-asyncio_0
+    pytestCheckHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.encryption
+  ++ finalAttrs.passthru.optional-dependencies.scram
+  ++ finalAttrs.passthru.optional-dependencies.serialization;
+
+  preCheck = ''
+    # Run asyncio tests (requires twisted)
+    export USE_ASYNCIO=1
+    rm src/autobahn/__init__.py
+  '';
+
+  enabledTestPaths = [
+    "src/autobahn"
+  ];
+
+  disabledTestPaths = [
+    "src/autobahn/twisted"
+
+    # Requires insecure ecdsa library
+    "src/autobahn/wamp/test/test_wamp_cryptosign.py"
+  ];
+
+  meta = {
     description = "WebSocket and WAMP in Python for Twisted and asyncio";
     homepage = "https://crossbar.io/autobahn";
-    license = licenses.mit;
+    downloadPage = "https://github.com/crossbario/autobahn-python";
+    changelog = "https://github.com/crossbario/autobahn-python/blob/${finalAttrs.src.tag}/docs/changelog.rst";
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
-}
+})

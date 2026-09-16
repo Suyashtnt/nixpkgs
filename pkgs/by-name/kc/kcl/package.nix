@@ -1,69 +1,77 @@
-{ lib
-, stdenv
-, buildGoModule
-, fetchFromGitHub
-, kclvm_cli
-, kclvm
-, makeWrapper
-, installShellFiles
-, darwin
-,
+{
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  kclvm_cli,
+  kclvm,
+  lib,
+  nix-update-script,
+  stdenv,
 }:
-buildGoModule rec {
+
+buildGoModule (finalAttrs: {
   pname = "kcl";
-  version = "0.9.8";
+  version = "0.12.10";
 
   src = fetchFromGitHub {
     owner = "kcl-lang";
     repo = "cli";
-    rev = "v${version}";
-    hash = "sha256-s8pFnItmw3+l9GKqdqX0Rxsy47h6vO+yUtVNCuyn/m8=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-OLoKEfY2vHeMqTSfHnUcnaktFABcEDLcUtZpTlNtZ6M=";
   };
 
-  vendorHash = "sha256-DGYYH5sKhpcWHYoUim4NyflzqsXFc4MCOqIw5jIfIiM=";
+  vendorHash = "sha256-vXOXkGkD1U0DlCLpg7UBzA2eQDJpI3r8wlIhQ0S/Qgo=";
+
+  subPackages = [ "cmd/kcl" ];
+
+  ldflags = [
+    "-w -s"
+    "-X=kcl-lang.io/cli/pkg/version.version=v${finalAttrs.version}"
+  ];
+
+  nativeBuildInputs = [
+    installShellFiles
+  ];
+
+  buildInputs = [
+    kclvm
+    kclvm_cli
+  ];
+
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    export HOME=$(mktemp -d)
+    for shell in bash fish zsh; do
+      installShellCompletion --cmd kcl \
+        --$shell <($out/bin/kcl completion $shell)
+    done
+  '';
+
+  doInstallCheck = true;
+  installCheckPhase = ''
+    runHook preInstallCheck
+    set -o pipefail
+    $out/bin/kcl --version | grep $version
+    $out/bin/kcl run <(echo 'hello = "KCL"') | grep "hello: KCL"
+    runHook postInstallCheck
+  '';
 
   # By default, libs and bins are stripped. KCL will crash on darwin if they are.
   dontStrip = stdenv.hostPlatform.isDarwin;
 
-  ldflags = [
-    "-w -s"
-    "-X=kcl-lang.io/cli/pkg/version.version=v${version}"
-  ];
+  doCheck = true;
 
-  nativeBuildInputs = [ makeWrapper installShellFiles ];
+  passthru.updateScript = nix-update-script { };
 
-  buildInputs = [ kclvm kclvm_cli ] ++ (
-    lib.optional stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk.frameworks.Security
-      darwin.apple_sdk.frameworks.CoreServices
-      darwin.apple_sdk.frameworks.SystemConfiguration
-    ]
-  );
-
-  subPackages = [ "cmd/kcl" ];
-
-  # env vars https://github.com/kcl-lang/kcl-go/blob/main/pkg/env/env.go#L29
-  postFixup = ''
-     wrapProgram $out/bin/kcl \
-    --prefix PATH : "${lib.makeBinPath [kclvm kclvm_cli]}" \
-    --prefix KCL_LIB_HOME : "${lib.makeLibraryPath [kclvm]}" \
-    --prefix KCL_GO_DISABLE_INSTALL_ARTIFACT : false
-  '';
-
-  postInstall = ''
-    export HOME=$(mktemp -d)
-    installShellCompletion --cmd kcl \
-      --bash <($out/bin/kcl completion bash) \
-      --fish <($out/bin/kcl completion fish) \
-      --zsh <($out/bin/kcl completion zsh)
-  '';
-
-  meta = with lib; {
-    description = "A command line interface for KCL programming language";
+  meta = {
+    description = "Command line interface for KCL programming language";
+    changelog = "https://github.com/kcl-lang/cli/releases/tag/v${finalAttrs.version}";
     homepage = "https://github.com/kcl-lang/cli";
-    license = licenses.asl20;
-    platforms = platforms.linux ++ platforms.darwin;
-    maintainers = with maintainers; [ selfuryon peefy ];
+    license = lib.licenses.asl20;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
+    maintainers = with lib.maintainers; [
+      selfuryon
+    ];
     mainProgram = "kcl";
+    broken = stdenv.buildPlatform != stdenv.hostPlatform;
   };
-}
+})

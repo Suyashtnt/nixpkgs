@@ -3,10 +3,8 @@
   buildPythonPackage,
   fetchFromGitHub,
   fetchurl,
-  importlib-resources,
   pytestCheckHook,
   python,
-  pythonOlder,
   setuptools,
 }:
 let
@@ -18,21 +16,23 @@ let
 in
 buildPythonPackage rec {
   pname = "iso4217";
-  version = "1.12";
+  version = "1.16";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "dahlia";
     repo = "iso4217";
-    rev = "refs/tags/${version}";
-    hash = "sha256-xOKfdk8Bn9f5oszS0IHUD6HgzL9VSa5GBZ28n4fvAck=";
+    tag = version;
+    hash = "sha256-C7TwGlbTwpcJ0rE7notWzZHthWzXKMPbHq00zMhfHeA=";
   };
 
-  build-system = [ setuptools ];
+  postPatch = ''
+    # get_version() appends a date to the version prefix
+    substituteInPlace setup.py \
+      --replace-fail 'version=get_version()' 'version="${version}"'
+  '';
 
-  dependencies = lib.optionals (pythonOlder "3.9") [ importlib-resources ];
+  build-system = [ setuptools ];
 
   nativeCheckInputs = [ pytestCheckHook ];
 
@@ -40,22 +40,22 @@ buildPythonPackage rec {
     # The table is already downloaded
     export ISO4217_DOWNLOAD=0
     # Copy the table file to satifiy the build process
-    cp -r ${table} $pname/table.xml
+    cp -r ${table} iso4217/table.xml
   '';
 
   postInstall = ''
     # Copy the table file
-    cp -r ${table} $out/${python.sitePackages}/$pname/table.xml
+    cp -r ${table} $out/${python.sitePackages}/iso4217/table.xml
   '';
 
-  pytestFlagsArray = [ "$pname/test.py" ];
+  enabledTestPaths = [ "iso4217/test.py" ];
 
   pythonImportsCheck = [ "iso4217" ];
 
-  meta = with lib; {
+  meta = {
     description = "ISO 4217 currency data package for Python";
     homepage = "https://github.com/dahlia/iso4217";
-    license = with licenses; [ publicDomain ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.publicDomain;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

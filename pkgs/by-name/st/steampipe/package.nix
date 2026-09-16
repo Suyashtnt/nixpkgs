@@ -9,25 +9,27 @@
   testers,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "steampipe";
-  version = "0.24.2";
+  version = "2.4.6";
+
+  env.CGO_ENABLED = 0;
 
   src = fetchFromGitHub {
     owner = "turbot";
     repo = "steampipe";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-FBWKXj1BfB9jbFMAmeBOHmv0QXmiZ3y7u1n1L8anUEg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-gZHfSuI5vqojl/OMKIwn8MYVKaUs5qzzRsle50D3wrA=";
   };
 
-  vendorHash = "sha256-m4cgYDCugI7mCLCpRbVlNe0SeWZf1aVpeggufxw64oI=";
+  vendorHash = "sha256-peqcrkRX6QlXnFl2V+e//ROmpT8HOtRbvzJM9zZUaT8=";
   proxyVendor = true;
 
   postPatch = ''
     # Patch test that relies on looking up homedir in user struct to prefer ~
     substituteInPlace pkg/steampipeconfig/shared_test.go \
       --replace-fail 'filehelpers "github.com/turbot/go-kit/files"' "" \
-      --replace-fail 'filepaths.SteampipeDir, _ = filehelpers.Tildefy("~/.steampipe")' 'filepaths.SteampipeDir = "~/.steampipe"';
+      --replace-fail 'app_specific.InstallDir, _ = filehelpers.Tildefy("~/.steampipe")' 'app_specific.InstallDir = "~/.steampipe"';
   '';
 
   nativeBuildInputs = [
@@ -38,6 +40,10 @@ buildGoModule rec {
   ldflags = [
     "-s"
     "-w"
+    "-X main.version=${finalAttrs.version}"
+    "-X main.commit=${finalAttrs.src.rev}"
+    "-X main.date=unknown"
+    "-X main.builtBy=nixpkgs"
   ];
 
   doCheck = true;
@@ -47,8 +53,10 @@ buildGoModule rec {
       skippedTests = [
         # panic: could not create backups directory: mkdir /var/empty/.steampipe: operation not permitted
         "TestTrimBackups"
-        # Skip tests that require network access
-        "TestIsPortBindable"
+        # Requires network access
+        "TestVersionCheckerBodyReadFailure"
+        "TestVersionCheckerNetworkFailures"
+        "TestVersionCheckerTimeout"
       ];
     in
     [ "-skip=^${builtins.concatStringsSep "$|^" skippedTests}$" ];
@@ -69,17 +77,20 @@ buildGoModule rec {
     tests.version = testers.testVersion {
       command = "${lib.getExe steampipe} --version";
       package = steampipe;
-      version = "v${version}";
+      version = "v${finalAttrs.version}";
     };
     updateScript = nix-update-script { };
   };
 
   meta = {
-    changelog = "https://github.com/turbot/steampipe/blob/v${version}/CHANGELOG.md";
+    changelog = "https://github.com/turbot/steampipe/blob/v${finalAttrs.version}/CHANGELOG.md";
     description = "Dynamically query your cloud, code, logs & more with SQL";
     homepage = "https://steampipe.io/";
     license = lib.licenses.agpl3Only;
     mainProgram = "steampipe";
-    maintainers = with lib.maintainers; [ hardselius anthonyroussel ];
+    maintainers = with lib.maintainers; [
+      hardselius
+      anthonyroussel
+    ];
   };
-}
+})

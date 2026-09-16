@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchPypi,
   aiohttp,
   pytest-aiohttp,
@@ -14,8 +13,6 @@ buildPythonPackage rec {
   version = "0.3.6";
   format = "setuptools";
 
-  disabled = pythonOlder "3.9";
-
   src = fetchPypi {
     inherit pname version;
     hash = "sha256-ZCA+GYuZuRgc4Pi9Bcg4zthOnkmQ+/IddFMkR0WYfKk=";
@@ -27,6 +24,11 @@ buildPythonPackage rec {
     pytest-aiohttp
     pytest-asyncio
     pytestCheckHook
+  ];
+
+  disabledTests = [
+    # aiohttp 3.10.6 compat
+    "test_errors"
   ];
 
   pythonImportsCheck = [ "pytomorrowio" ];

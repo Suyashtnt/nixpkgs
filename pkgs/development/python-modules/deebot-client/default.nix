@@ -4,62 +4,78 @@
   aiomqtt,
   buildPythonPackage,
   cachetools,
+  cryptography,
   defusedxml,
   docker,
   fetchFromGitHub,
-  hatch-vcs,
-  hatchling,
-  numpy,
-  pillow,
+  orjson,
+  pkg-config,
   pycountry,
+  pyprojectVersionPatchHook,
   pytest-asyncio,
+  pytest-codspeed,
   pytestCheckHook,
   pythonOlder,
-  svg-py,
+  rustPlatform,
+  syrupy,
   testfixtures,
+  xz,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "deebot-client";
-  version = "8.4.0";
+  version = "18.6.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.12";
+  disabled = pythonOlder "3.14";
 
   src = fetchFromGitHub {
     owner = "DeebotUniverse";
     repo = "client.py";
-    rev = "refs/tags/${version}";
-    hash = "sha256-VWXJykG9XSrpTjnv5radUAp/OMCH2YVlmkT6L8S+wyI=";
+    tag = finalAttrs.version;
+    hash = "sha256-keO5pDzaIc/55xqCig10JWWJPkaLXmu03K969WDt8gQ=";
   };
 
-  pythonRelaxDeps = [
-    "aiohttp"
-    "defusedxml"
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-0nTAuAcA5G1zBuDZkMALbfJS+WBIjvc5GyTQWBTxZUw=";
+  };
+
+  nativeBuildInputs = [
+    pkg-config
+    pyprojectVersionPatchHook
+    rustPlatform.cargoSetupHook
+    rustPlatform.maturinBuildHook
   ];
 
-  build-system = [
-    hatch-vcs
-    hatchling
+  buildInputs = [ xz ];
+
+  pythonRelaxDeps = [
+    "cryptography"
   ];
 
   dependencies = [
     aiohttp
     aiomqtt
     cachetools
+    cryptography
     defusedxml
-    numpy
-    pillow
-    svg-py
+    orjson
   ];
 
   nativeCheckInputs = [
     docker
     pycountry
     pytest-asyncio
+    pytest-codspeed
     pytestCheckHook
+    syrupy
     testfixtures
   ];
+
+  preCheck = ''
+    rm -rf deebot_client
+  '';
 
   pythonImportsCheck = [ "deebot_client" ];
 
@@ -78,11 +94,11 @@ buildPythonPackage rec {
     "test_client_reconnect_on_broker_error"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Deebot client library";
     homepage = "https://github.com/DeebotUniverse/client.py";
-    changelog = "https://github.com/DeebotUniverse/client.py/releases/tag/${version}";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/DeebotUniverse/client.py/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

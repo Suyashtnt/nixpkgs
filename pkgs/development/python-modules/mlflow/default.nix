@@ -1,118 +1,100 @@
 {
   lib,
-  alembic,
   buildPythonPackage,
-  cachetools,
-  click,
-  cloudpickle,
-  databricks-cli,
-  docker,
-  entrypoints,
   fetchPypi,
+
+  # dependencies
+  aiohttp,
+  alembic,
+  anyio,
+  cryptography,
+  docker,
   flask,
-  gitpython,
-  gorilla,
+  flask-cors,
   graphene,
   gunicorn,
-  importlib-metadata,
-  markdown,
+  huey,
   matplotlib,
+  mlflow-skinny,
+  mlflow-tracing,
   numpy,
-  opentelemetry-api,
-  opentelemetry-sdk,
-  packaging,
   pandas,
-  prometheus-flask-exporter,
-  protobuf,
-  python-dateutil,
-  pythonOlder,
   pyarrow,
-  pytz,
-  pyyaml,
-  querystring-parser,
-  requests,
-  setuptools,
   scikit-learn,
   scipy,
-  simplejson,
+  skops,
   sqlalchemy,
-  sqlparse,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mlflow";
-  version = "2.14.3";
-  pyproject = true;
+  version = "3.16.0";
+  format = "wheel";
+  __structuredAttrs = true;
 
-  disabled = pythonOlder "3.8";
-
+  # We build from the PyPI wheel rather than fetchFromGitHub, because the mlflow-server
+  # JS UI is absent from GitHub but provided in the wheel.
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-KSyuS4NXSgyyIxF+IkyqZ5iTMHivAjNxnCthK+pkVhc=";
+    pname = "mlflow";
+    inherit (finalAttrs) version;
+    format = "wheel";
+    dist = "py3";
+    python = "py3";
+    hash = "sha256-xKxehjSqytGj19WhoxvpJ5WT69SLhCcoQ2gtsRlwz3E=";
   };
 
-  # Remove currently broken dependency `shap`, a model explainability package.
-  # This seems quite unprincipled especially with tests not being enabled,
-  # but not mlflow has a 'skinny' install option which does not require `shap`.
-  pythonRemoveDeps = [ "shap" ];
-  pythonRelaxDeps = [
-    "gunicorn"
-    "packaging"
-    "pytz"
-    "pyarrow"
-  ];
+  # Nix-wrapped python populates sys.path via NIX_PYTHONPATH/site hooks,
+  # but PYTHONPATH stays unset in os.environ. mlflow spawns the server
+  # in a subprocess with a curated env, so without this patch the child
+  # interpreter cannot import uvicorn / mlflow itself.
+  postInstall = ''
+    patch -p1 -d "$out/lib/python"*/site-packages < ${./subprocess-pythonpath.patch}
+  '';
 
-  propagatedBuildInputs = [
+  dependencies = [
+    aiohttp
     alembic
-    cachetools
-    click
-    cloudpickle
-    databricks-cli
+    anyio
+    cryptography
     docker
-    entrypoints
     flask
-    gitpython
-    gorilla
+    flask-cors
     graphene
     gunicorn
-    importlib-metadata
-    markdown
+    huey
     matplotlib
+    mlflow-skinny
+    mlflow-tracing
     numpy
-    opentelemetry-api
-    opentelemetry-sdk
-    packaging
     pandas
-    prometheus-flask-exporter
-    protobuf
     pyarrow
-    python-dateutil
-    pytz
-    pyyaml
-    querystring-parser
-    requests
     scikit-learn
     scipy
-    setuptools
-    #shap
-    simplejson
+    skops
     sqlalchemy
-    sqlparse
   ];
 
   pythonImportsCheck = [ "mlflow" ];
 
-  # no tests in PyPI dist
-  # run into https://stackoverflow.com/questions/51203641/attributeerror-module-alembic-context-has-no-attribute-config
-  # also, tests use conda so can't run on NixOS without buildFHSEnv
+  # I (@GaetanLepage) gave up at enabling tests:
+  # - They require a lot of dependencies (some unpackaged);
+  # - Many errors occur at collection time;
+  # - Most (all ?) tests require internet access anyway.
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Open source platform for the machine learning lifecycle";
     mainProgram = "mlflow";
     homepage = "https://github.com/mlflow/mlflow";
-    changelog = "https://github.com/mlflow/mlflow/blob/v${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ tbenst ];
+    changelog = "https://github.com/mlflow/mlflow/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    # Build from wheel which contains pure Python and pre-built JS bundle.
+    sourceProvenance = with lib.sourceTypes; [
+      binaryBytecode
+    ];
+    maintainers = with lib.maintainers; [
+      GaetanLepage
+      gquetel
+    ];
   };
-}
+})

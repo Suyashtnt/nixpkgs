@@ -1,29 +1,41 @@
-{ lib, skawarePackages, skalibs }:
+{
+  lib,
+  skawarePackages,
+  skalibs,
+}:
 
 skawarePackages.buildPackage {
   pname = "s6-portable-utils";
-  version = "2.3.0.3";
-  sha256 = "PkSSBV0WDCX7kBU/DvwnfX1Sv5gbvj6i6d/lHEk1Yf8=";
+  version = "2.3.1.2";
+  sha256 = "sha256-z7kBhtDA6yBOHlxvk3nplBPFRrzPOLtudhd/gjcao6o=";
 
   manpages = skawarePackages.buildManPages {
     pname = "s6-portable-utils-man-pages";
-    version = "2.3.0.2.2";
-    sha256 = "0zbxr6jqrx53z1gzfr31nm78wjfmyjvjx7216l527nxl9zn8nnv1";
+    version = "2.3.1.1.2";
+    sha256 = "sha256-WJxSSJVRY8Hz9QYwu81Qz90Tu2KHl8F3WeeZxFyK3gU=";
     description = "Port of the documentation for the s6-portable-utils suite to mdoc";
     maintainers = [ lib.maintainers.somasis ];
   };
 
-  description = "Set of tiny general Unix utilities optimized for simplicity and small size";
+  meta.description = "Set of tiny general Unix utilities optimized for simplicity and small size";
 
-  outputs = [ "bin" "dev" "doc" "out" ];
+  outputs = [
+    "bin"
+    "dev"
+    "doc"
+    "out"
+  ];
+
+  buildInputs = [ skalibs ];
 
   configureFlags = [
-    "--bindir=\${bin}/bin"
-    "--includedir=\${dev}/include"
+    "--libdir=${placeholder "out"}/lib"
+    "--dynlibdir=${placeholder "out"}/lib"
+    "--libexecdir=${placeholder "out"}/libexec"
+    "--bindir=${placeholder "bin"}/bin"
+    "--includedir=${placeholder "dev"}/include"
+    "--pkgconfdir=${placeholder "dev"}/lib/pkgconfig"
     "--with-sysdeps=${skalibs.lib}/lib/skalibs/sysdeps"
-    "--with-include=${skalibs.dev}/include"
-    "--with-lib=${skalibs.lib}/lib"
-    "--with-dynlib=${skalibs.lib}/lib"
   ];
 
   postInstall = ''
@@ -33,6 +45,5 @@ skawarePackages.buildPackage {
 
     mv doc $doc/share/doc/s6-portable-utils/html
   '';
-
 
 }

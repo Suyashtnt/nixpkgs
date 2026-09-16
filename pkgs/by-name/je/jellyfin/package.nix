@@ -9,37 +9,61 @@
   freetype,
   jellyfin-web,
   sqlite,
+  versionCheckHook,
+  jq,
 }:
 
-buildDotnetModule rec {
+buildDotnetModule (finalAttrs: {
   pname = "jellyfin";
-  version = "10.9.11"; # ensure that jellyfin-web has matching version
+  version = "12.0"; # ensure that jellyfin-web has matching version
 
   src = fetchFromGitHub {
     owner = "jellyfin";
     repo = "jellyfin";
-    rev = "v${version}";
-    hash = "sha256-gZJIsNKXwhUUVgJh8vXuGSu9DEyrVY8NuIeyZHHQKN4=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-z40crHV4vH27vDQBFcM58tQ5JW8wtIW3w981Rpp5h1E=";
   };
+
+  nativeBuildInputs = [
+    jq
+  ];
 
   propagatedBuildInputs = [ sqlite ];
 
   projectFile = "Jellyfin.Server/Jellyfin.Server.csproj";
   executables = [ "jellyfin" ];
-  nugetDeps = ./nuget-deps.nix;
+  nugetDeps = ./nuget-deps.json;
   runtimeDeps = [
     jellyfin-ffmpeg
     fontconfig
     freetype
   ];
-  dotnet-sdk = dotnetCorePackages.sdk_8_0;
-  dotnet-runtime = dotnetCorePackages.aspnetcore_8_0;
+  dotnet-sdk = dotnetCorePackages.sdk_10_0;
+  dotnet-runtime = dotnetCorePackages.aspnetcore_10_0;
   dotnetBuildFlags = [ "--no-self-contained" ];
 
   makeWrapperArgs = [
-    "--add-flags" "--ffmpeg=${jellyfin-ffmpeg}/bin/ffmpeg"
-    "--add-flags" "--webdir=${jellyfin-web}/share/jellyfin-web"
+    "--add-flags"
+    "--ffmpeg=${jellyfin-ffmpeg}/bin/ffmpeg"
+    "--add-flags"
+    "--webdir=${jellyfin-web}/share/jellyfin-web"
   ];
+
+  # Impurity with time. Injects the build date into this file
+  postFixup = ''
+    timestamp="$(TZ=GMT date -d "@$SOURCE_DATE_EPOCH" '+%a, %d %b %Y %X GMT')"
+
+    cat "$out/lib/jellyfin/jellyfin.staticwebassets.endpoints.json" \
+      | jq --arg timestamp "$timestamp" '.Endpoints[].ResponseHeaders[] |= if (.Name == "Last-Modified") then .Value = $timestamp else . end' \
+      > jellyfin.staticwebassets.endpoints.json.new
+
+    mv "jellyfin.staticwebassets.endpoints.json.new" "$out/lib/jellyfin/jellyfin.staticwebassets.endpoints.json"
+  '';
+
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
 
   passthru.tests = {
     smoke-test = nixosTests.jellyfin;
@@ -47,18 +71,18 @@ buildDotnetModule rec {
 
   passthru.updateScript = ./update.sh;
 
-  meta = with lib; {
+  meta = {
     description = "Free Software Media System";
     homepage = "https://jellyfin.org/";
     # https://github.com/jellyfin/jellyfin/issues/610#issuecomment-537625510
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [
       nyanloutre
       minijackson
       purcell
       jojosch
     ];
     mainProgram = "jellyfin";
-    platforms = dotnet-runtime.meta.platforms;
+    platforms = finalAttrs.dotnet-runtime.meta.platforms;
   };
-}
+})

@@ -351,23 +351,20 @@
   mypy-boto3-workspaces,
   mypy-boto3-workspaces-web,
   mypy-boto3-xray,
-  pythonOlder,
   setuptools,
   types-s3transfer,
   typing-extensions,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "boto3-stubs";
-  version = "1.34.160";
+  version = "1.43.94";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     pname = "boto3_stubs";
-    inherit version;
-    hash = "sha256-xrHf6zyuZz7tWW8BQJM54uC5VaUkGhbO5p8pMD2bN94=";
+    inherit (finalAttrs) version;
+    hash = "sha256-XRc+9lUml+uhp50zgQaUB7J348Ko2XcfppgsJDcxzko=";
   };
 
   build-system = [ setuptools ];
@@ -378,7 +375,7 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     accessanalyzer = [ mypy-boto3-accessanalyzer ];
     account = [ mypy-boto3-account ];
     acm = [ mypy-boto3-acm ];
@@ -1093,13 +1090,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "boto3-stubs" ];
 
-  meta = with lib; {
+  meta = {
     description = "Type annotations for boto3";
     homepage = "https://pypi.org/project/boto3-stubs/";
-    license = licenses.mit;
-    maintainers = with maintainers; [
-      fab
-      mbalatsko
-    ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

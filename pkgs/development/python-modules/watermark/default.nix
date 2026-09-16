@@ -6,46 +6,44 @@
   ipython,
   py3nvml,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "watermark";
-  version = "2.5.0";
+  version = "2.6.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "rasbt";
     repo = "watermark";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-UR4kV6UoZ/JLO19on+qEH+M05QIsT0SXvXJtTMCKuZM=";
+    tag = "v${version}";
+    hash = "sha256-WeHMzSt4HUJZ9M9/Yu1h3VB5GuD/I9x+v6VyUhsmFhU=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     ipython
     importlib-metadata
   ];
 
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     gpu = [ py3nvml ];
   };
 
   nativeCheckInputs = [
     pytestCheckHook
-  ] ++ lib.flatten (builtins.attrValues passthru.optional-dependencies);
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "watermark" ];
 
-  meta = with lib; {
+  meta = {
     description = "IPython extension for printing date and timestamps, version numbers, and hardware information";
     homepage = "https://github.com/rasbt/watermark";
-    changelog = "https://github.com/rasbt/watermark/releases/tag/v${version}";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ nphilou ];
+    changelog = "https://github.com/rasbt/watermark/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nphilou ];
   };
 }

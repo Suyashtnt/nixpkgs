@@ -1,16 +1,21 @@
-{ lib, stdenv, fetchFromGitHub, kernel, kmod, gnugrep }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kmod,
+  gnugrep,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "vmware-modules";
-  version = "workstation-17.5.1-unstable-2024-01-12-${kernel.version}";
+  version = "workstation-25h2-20251015-${kernel.version}";
 
   src = fetchFromGitHub {
-    owner = "mkubecek";
+    owner = "philipl";
     repo = "vmware-host-modules";
-    # Developer no longer provides tags for kernel compatibility fixes
-    # Commit hash for branch workstation-17.5.1 as of 2024-03-07
-    rev = "2c6d66f3f1947384038b765c897b102ecdb18298";
-    hash = "sha256-VKN6nxtgQqElVrSD5++UdngjZio4+vmetGCgTAfgtTs=";
+    rev = "5c80f597017882f76e9c7ffd48a292a4b7c860fe";
+    hash = "sha256-EFOkzwul1QCaKUBwFqH8uIsIUcvtEmxYVaE/OdoHdZI=";
   };
 
   hardeningDisable = [ "pic" ];
@@ -36,12 +41,14 @@ stdenv.mkDerivation rec {
     mkdir -p "$out/lib/modules/${kernel.modDirVersion}/misc"
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Kernel modules needed for VMware hypervisor";
     homepage = "https://github.com/mkubecek/vmware-host-modules";
-    license = licenses.gpl2Only;
+    license = lib.licenses.gpl2Only;
     platforms = [ "x86_64-linux" ];
-    broken = (kernel.kernelOlder "5.5" && kernel.isHardened);
-    maintainers = with maintainers; [ deinferno vifino ];
+    maintainers = with lib.maintainers; [
+      deinferno
+      vifino
+    ];
   };
 }

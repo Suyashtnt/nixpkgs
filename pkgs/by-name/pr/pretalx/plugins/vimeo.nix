@@ -7,14 +7,14 @@
 
 buildPythonPackage rec {
   pname = "pretalx-vimeo";
-  version = "2.3.0";
+  version = "2.8.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pretalx";
     repo = "pretalx-vimeo";
     rev = "v${version}";
-    hash = "sha256-ZlF/wWD5FaC4CfYIYvcbykPajoCOotmmaY+rQ0sGAo8=";
+    hash = "sha256-ekQCqso1CJqXi7bpKlZwY1pADmbOJVN8lDr2l4ugaXs=";
   };
 
   build-system = [ setuptools ];

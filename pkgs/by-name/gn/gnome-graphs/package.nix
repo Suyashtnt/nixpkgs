@@ -1,31 +1,33 @@
-{ lib
-, python3Packages
-, fetchFromGitLab
-, meson
-, ninja
-, vala
-, pkg-config
-, gobject-introspection
-, blueprint-compiler
-, itstool
-, wrapGAppsHook4
-, desktop-file-utils
-, shared-mime-info
-, libadwaita
-, libgee
+{
+  lib,
+  python3Packages,
+  fetchFromGitLab,
+  meson,
+  ninja,
+  vala,
+  pkg-config,
+  gobject-introspection,
+  blueprint-compiler,
+  itstool,
+  wrapGAppsHook4,
+  desktop-file-utils,
+  shared-mime-info,
+  libadwaita,
+  libgee,
+  nix-update-script,
 }:
 
-python3Packages.buildPythonApplication rec {
+python3Packages.buildPythonApplication (finalAttrs: {
   pname = "gnome-graphs";
-  version = "1.8.1";
+  version = "1.8.8";
   pyproject = false;
 
   src = fetchFromGitLab {
     domain = "gitlab.gnome.org";
     owner = "World";
     repo = "Graphs";
-    rev = "v${version}";
-    hash = "sha256-ae6lyyr3vvENyn1kKc8Va4I++7B0rdURwjEpA9klLGg=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-XsdrXdIZmAngS52KmjcNbOWwYJsnhNGELSd0p3h/XWE=";
   };
 
   nativeBuildInputs = [
@@ -64,12 +66,16 @@ python3Packages.buildPythonApplication rec {
     )
   '';
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Simple, yet powerful tool that allows you to plot and manipulate your data with ease";
     homepage = "https://apps.gnome.org/Graphs";
-    license = licenses.gpl3Plus;
+    license = lib.licenses.gpl3Plus;
     mainProgram = "graphs";
-    maintainers = with maintainers; [ aleksana ];
-    platforms = platforms.linux; # locale.bindtextdomain only available on linux
+    teams = [ lib.teams.gnome-circle ];
+    platforms = lib.platforms.linux; # locale.bindtextdomain only available on linux
   };
-}
+})

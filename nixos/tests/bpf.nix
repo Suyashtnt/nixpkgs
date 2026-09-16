@@ -1,11 +1,14 @@
-import ./make-test-python.nix ({ pkgs, ... }: {
+{ lib, ... }:
+{
   name = "bpf";
-  meta.maintainers = with pkgs.lib.maintainers; [ martinetd ];
+  meta.maintainers = with lib.maintainers; [ martinetd ];
 
-  nodes.machine = { pkgs, ... }: {
-    programs.bcc.enable = true;
-    environment.systemPackages = with pkgs; [ bpftrace ];
-  };
+  nodes.machine =
+    { pkgs, ... }:
+    {
+      programs.bcc.enable = true;
+      environment.systemPackages = with pkgs; [ bpftrace ];
+    };
 
   testScript = ''
     ## bcc
@@ -26,14 +29,13 @@ import ./make-test-python.nix ({ pkgs, ... }: {
         "    printf(\"tgid: %d\\n\", ((struct task_struct*) curtask)->tgid); exit() "
         "}'"))
     # module BTF (bpftrace >= 0.17)
-    # test is currently disabled on aarch64 as kfunc does not work there yet
-    # https://github.com/iovisor/bpftrace/issues/2496
-    print(machine.succeed("uname -m | grep aarch64 || "
-        "bpftrace -e 'kfunc:nft_trans_alloc_gfp { "
+    print(machine.succeed(
+        "bpftrace -e 'fentry:nft_delchain { "
         "    printf(\"portid: %d\\n\", args->ctx->portid); "
-        "} BEGIN { exit() }'"))
+        "} BEGIN { exit() }'"
+    ))
     # glibc includes
     print(machine.succeed("bpftrace -e '#include <errno.h>\n"
         "BEGIN { printf(\"ok %d\\n\", EINVAL); exit(); }'"))
   '';
-})
+}

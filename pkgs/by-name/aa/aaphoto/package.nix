@@ -1,20 +1,23 @@
-{ lib
-, stdenv
-, fetchurl
-, jasper
-, libpng
-, libjpeg
-, zlib
-, llvmPackages
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  jasper,
+  libpng,
+  libjpeg,
+  zlib,
+  llvmPackages,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "aaphoto";
   version = "0.45";
 
-  src = fetchurl {
-    url = "http://log69.com/downloads/aaphoto_sources_${version}.tar.gz";
-    sha256 = "sha256-06koJM7jNVFqVgqg6BmOZ74foqk6yjUIFnwULzPZ4go=";
+  src = fetchFromGitHub {
+    owner = "log69";
+    repo = "aaphoto";
+    rev = "581b3fad60382bdd36356155112559f731e31be3";
+    hash = "sha256-PcvZ6v8vcZcrSn9EJ0CqxYz9gOJXlcVIkLLzFik0Pec=";
   };
 
   nativeBuildInputs = lib.optionals stdenv.cc.isClang [
@@ -29,11 +32,11 @@ stdenv.mkDerivation rec {
   ];
 
   postInstall = ''
-    install -Dm644 NEWS README REMARKS TODO -t $out/share/doc/${pname}
+    install -Dm644 NEWS README REMARKS TODO -t $out/share/doc/aaphoto
   '';
 
-  meta = with lib; {
-    homepage = "http://log69.com/aaphoto_en.html";
+  meta = {
+    homepage = "https://github.com/log69/aaphoto";
     description = "Free and open source automatic photo adjusting software";
     longDescription = ''
       Auto Adjust Photo tries to give a solution for the automatic color
@@ -41,13 +44,13 @@ stdenv.mkDerivation rec {
       saturation and gamma levels of the image by analization.
 
       This can be a solution for those kind of users who are not able to manage
-      and correct images with complicated graphical softwares, or just simply
+      and correct images with complicated graphical software, or just simply
       don't intend to spend a lot of time with manually correcting the images
       one-by-one.
     '';
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ AndersonTorres ];
-    platforms = platforms.unix;
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
     mainProgram = "aaphoto";
   };
 }

@@ -6,39 +6,42 @@
   installShellFiles,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "poutine";
-  version = "0.13.0";
+  version = "1.1.6";
 
   src = fetchFromGitHub {
     owner = "boostsecurityio";
     repo = "poutine";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-9vbK2tc57e/YNfhSVbCMxnzOmmahr9T3x5Tt7GQjVnc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-jiIjim17x9Q6e5+XSR6xHYg/VOJILfCeLRXdEopQwKE=";
   };
 
-  vendorHash = "sha256-HYuyGSatUOch73IKc7/9imhwz0Oz6Mrccs2HKVQtaVE=";
+  vendorHash = "sha256-Ktsk01YqBHVZDOu+Xp1p3sVDwqozl35iLYbVavpiWq0=";
 
   ldflags = [
     "-s"
     "-w"
   ];
 
+  # "dagger" directory contains its own go module, which should be excluded from the build
+  excludedPackages = [ "dagger" ];
+
   nativeBuildInputs = [ installShellFiles ];
 
   postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
-    installShellCompletion --cmd ${meta.mainProgram} \
-      --bash <($out/bin/${meta.mainProgram} completion bash) \
-      --fish <($out/bin/${meta.mainProgram} completion fish) \
-      --zsh <($out/bin/${meta.mainProgram} completion zsh)
+    installShellCompletion --cmd ${finalAttrs.meta.mainProgram} \
+      --bash <($out/bin/${finalAttrs.meta.mainProgram} completion bash) \
+      --fish <($out/bin/${finalAttrs.meta.mainProgram} completion fish) \
+      --zsh <($out/bin/${finalAttrs.meta.mainProgram} completion zsh)
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Security scanner that detects misconfigurations and vulnerabilities in build pipelines of repositories";
     homepage = "https://github.com/boostsecurityio/poutine";
-    changelog = "https://github.com/boostsecurityio/poutine/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/boostsecurityio/poutine/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
     mainProgram = "poutine";
   };
-}
+})

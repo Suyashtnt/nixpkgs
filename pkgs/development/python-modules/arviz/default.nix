@@ -1,120 +1,55 @@
 {
   lib,
-  stdenv,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
 
   # build-system
-  packaging,
-  setuptools,
+  flit-core,
 
   # dependencies
-  dm-tree,
-  h5netcdf,
-  matplotlib,
-  numpy,
-  pandas,
-  scipy,
-  typing-extensions,
-  xarray,
-  xarray-einstats,
+  arviz-base,
+  arviz-plots,
+  arviz-stats,
 
-  # checks
-  bokeh,
-  cloudpickle,
-  emcee,
-  ffmpeg,
-  h5py,
-  jax,
-  jaxlib,
-  numba,
-  numpyro,
-  #, pymc3 (circular dependency)
-  pyro-ppl,
-  #, pystan (not packaged)
+  # tests
   pytestCheckHook,
-  torchvision,
-  zarr,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "arviz";
-  version = "0.19.0";
+  version = "1.3.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.10";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "arviz-devs";
     repo = "arviz";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-fwDCl1KWClIOBWIL/ETw3hJUyHdpVpLnRmZoZXL3QXI=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-YQ+0dUXl432cTtBJCNzekHtTiA+c25Q/1P2iqHj+TXk=";
   };
 
   build-system = [
-    packaging
-    setuptools
+    flit-core
   ];
 
   dependencies = [
-    dm-tree
-    h5netcdf
-    matplotlib
-    numpy
-    pandas
-    scipy
-    typing-extensions
-    xarray
-    xarray-einstats
-  ];
+    arviz-base
+    arviz-plots
+    arviz-stats
+  ]
+  ++ arviz-stats.optional-dependencies.xarray;
 
   nativeCheckInputs = [
-    bokeh
-    cloudpickle
-    emcee
-    ffmpeg
-    h5py
-    jax
-    jaxlib
-    numba
-    numpyro
-    # pymc3 (circular dependency)
-    pyro-ppl
-    # pystan (not packaged)
     pytestCheckHook
-    torchvision
-    zarr
   ];
-
-  preCheck = ''
-    export HOME=$(mktemp -d);
-  '';
-
-  pytestFlagsArray = [ "arviz/tests/base_tests/" ];
-
-  disabledTests = [
-    # Tests require network access
-    "test_plot_ppc_transposed"
-    "test_plot_separation"
-    "test_plot_trace_legend"
-    "test_cov"
-    # countourpy is not available at the moment
-    "test_plot_kde"
-    "test_plot_kde_2d"
-    "test_plot_pair"
-  ];
-
-  # Tests segfault on darwin
-  doCheck = !stdenv.isDarwin;
 
   pythonImportsCheck = [ "arviz" ];
 
   meta = {
     description = "Library for exploratory analysis of Bayesian models";
     homepage = "https://arviz-devs.github.io/arviz/";
-    changelog = "https://github.com/arviz-devs/arviz/blob/v${version}/CHANGELOG.md";
+    changelog = "https://github.com/arviz-devs/arviz/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ omnipotententity ];
   };
-}
+})

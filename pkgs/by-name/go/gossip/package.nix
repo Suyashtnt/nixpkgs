@@ -1,52 +1,53 @@
 {
   cmake,
-  darwin,
   fetchFromGitHub,
-  ffmpeg,
+  SDL2,
+  ffmpeg_6,
   fontconfig,
   git,
   lib,
   libGL,
   libxkbcommon,
   makeDesktopItem,
+  copyDesktopItems,
   openssl,
   pkg-config,
   rustPlatform,
   stdenv,
   wayland,
   wayland-scanner,
-  xorg,
+  nix-update-script,
+  libx11,
+  libxcb,
+  libxcursor,
+  libxi,
+  libxrandr,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "gossip";
-  version = "0.11.3";
+  version = "0.14.0";
 
   src = fetchFromGitHub {
     owner = "mikedilger";
     repo = "gossip";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-ZDpPoGLcI6ModRq0JEcibHerOrPOA3je1uE5yXsLeeg=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-nv/NMLAka62u0WzvHMEW9XBVXpg9T8bNJiUegS/oj48=";
   };
 
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "ecolor-0.26.2" = "sha256-Ih1JbiuUZwK6rYWRSQcP1AJA8NesJJp+EeBtG0azlw0=";
-      "egui-video-0.1.0" = "sha256-X75gtYMfD/Ogepe0uEulzxAOY1YpkBW6OPhgovv/uCQ=";
-      "ffmpeg-next-7.0.2" = "sha256-LVdaCbPHHEolcrXk9tPxUJiPNCma7qRl53TPKFijhFA=";
-      "gossip-relay-picker-0.2.0-unstable" = "sha256-FUhB6ql+H+E6UffWmpwRFzP8N6x+dOX4vdtYdKItjz4=";
-      "lightning-0.0.123-beta" = "sha256-gngH0mOC9USzwUGP4bjb1foZAvg6QHuzODv7LG49MsA=";
-      "musig2-0.1.0" = "sha256-++1x7uHHR7KEhl8LF3VywooULiTzKeDu3e+0/c/8p9Y=";
-      "nip44-0.1.0" = "sha256-u2ALoHQrPVNoX0wjJmQ+BYRzIKsi0G5xPbYjgsNZZ7A=";
-      "nostr-types-0.8.0-unstable" = "sha256-HGXPJrI6+HT/oyAV3bELA0LPu4O0DmmJVr0mDtDVfr4=";
-      "qrcode-0.12.0" = "sha256-onnoQuMf7faDa9wTGWo688xWbmujgE9RraBialyhyPw=";
-      "sdl2-0.36.0" = "sha256-dfXrD9LLBGeYyOLE3PruuGGBZ3WaPBfWlwBqP2pp+NY=";
-    };
-  };
+  cargoHash = "sha256-rE7SErOhl2fcmvLairq+mvdnbDIk1aPo3eYqwRx5kkA=";
+
+  postPatch = ''
+    substituteInPlace $cargoDepsCopy/*/sdl2-sys-0.37.0/SDL/CMakeLists.txt \
+      --replace-fail "cmake_minimum_required(VERSION 3.0.0)" "cmake_minimum_required(VERSION 3.0.0...3.5)" \
+      --replace-fail "cmake_minimum_required(VERSION 3.4)" "cmake_minimum_required(VERSION 3.4...3.5)"
+  '';
 
   # See https://github.com/mikedilger/gossip/blob/0.9/README.md.
-  RUSTFLAGS = "--cfg tokio_unstable";
+  env.RUSTFLAGS = "--cfg tokio_unstable";
+
+  # Vendored SDL2 uses `bool` / `false` as identifiers, rejected by gcc 15's C23 default.
+  env.NIX_CFLAGS_COMPILE = "-std=gnu17";
 
   # Some users might want to add "rustls-tls(-native)" for Rust TLS instead of OpenSSL.
   buildFeatures = [
@@ -54,40 +55,33 @@ rustPlatform.buildRustPackage rec {
     "lang-cjk"
   ];
 
-  nativeBuildInputs =
-    [
-      cmake
-      git
-      pkg-config
-      rustPlatform.bindgenHook
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [
-      wayland-scanner
-    ];
+  nativeBuildInputs = [
+    cmake
+    git
+    pkg-config
+    rustPlatform.bindgenHook
+    copyDesktopItems
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    wayland-scanner
+  ];
 
-  buildInputs =
-    [
-      ffmpeg
-      fontconfig
-      libGL
-      libxkbcommon
-      openssl
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      darwin.apple_sdk.frameworks.AppKit
-      darwin.apple_sdk.frameworks.Cocoa
-      darwin.apple_sdk.frameworks.CoreGraphics
-      darwin.apple_sdk.frameworks.Foundation
-      darwin.apple_sdk.frameworks.ForceFeedback
-      darwin.apple_sdk.frameworks.AVFoundation
-    ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [
-      wayland
-      xorg.libX11
-      xorg.libXcursor
-      xorg.libXi
-      xorg.libXrandr
-    ];
+  buildInputs = [
+    SDL2
+    ffmpeg_6
+    fontconfig
+    libGL
+    libxkbcommon
+    openssl
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    wayland
+    libx11
+    libxcb
+    libxcursor
+    libxi
+    libxrandr
+  ];
 
   # Tests rely on local files, so disable them. (I'm too lazy to patch it.)
   doCheck = false;
@@ -100,9 +94,13 @@ rustPlatform.buildRustPackage rec {
   '';
 
   postFixup = lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+    # We don't want the bundled libraries.
+    rm -rf $out/lib
+
     patchelf $out/bin/gossip \
       --add-rpath ${
         lib.makeLibraryPath [
+          SDL2
           libGL
           libxkbcommon
           wayland
@@ -115,7 +113,7 @@ rustPlatform.buildRustPackage rec {
       name = "Gossip";
       exec = "gossip";
       icon = "gossip";
-      comment = meta.description;
+      comment = finalAttrs.meta.description;
       desktopName = "Gossip";
       categories = [
         "Chat"
@@ -123,16 +121,19 @@ rustPlatform.buildRustPackage rec {
         "InstantMessaging"
       ];
       startupWMClass = "gossip";
+      mimeTypes = [ "x-scheme-handler/nostr" ];
     })
   ];
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Desktop client for nostr, an open social media protocol";
-    downloadPage = "https://github.com/mikedilger/gossip/releases/tag/${version}";
+    downloadPage = "https://github.com/mikedilger/gossip/releases/tag/${finalAttrs.version}";
     homepage = "https://github.com/mikedilger/gossip";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     mainProgram = "gossip";
-    maintainers = with maintainers; [ msanft ];
-    platforms = platforms.unix;
+    maintainers = with lib.maintainers; [ msanft ];
+    platforms = lib.platforms.unix;
   };
-}
+})

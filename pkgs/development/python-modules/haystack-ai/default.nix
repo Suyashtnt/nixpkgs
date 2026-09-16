@@ -3,6 +3,7 @@
   buildPythonPackage,
   fetchFromGitHub,
   hatchling,
+  writableTmpDirAsHomeHook,
   boilerpy3,
   events,
   httpx,
@@ -68,9 +69,9 @@
   seqeval,
   pdf2image,
   pytesseract,
-  faiss,
+  faiss-cpu,
   # , faiss-gpu
-  pinecone-client,
+  pinecone,
   onnxruntime,
   onnxruntime-tools,
   # , onnxruntime-gpu
@@ -91,23 +92,19 @@
 
 buildPythonPackage rec {
   pname = "haystack-ai";
-  version = "2.2.3";
+  version = "2.22.0";
   pyproject = true;
 
   src = fetchFromGitHub {
     owner = "deepset-ai";
     repo = "haystack";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-vaZ8bn36Eezf3/SnJ6ao0CvFZaHrpgbX+nM0IOqG2oo=";
+    tag = "v${version}";
+    hash = "sha256-QqQTlyVUJU90lzMUe43Qd0WXXaxUi/53apvz/GlrsY0=";
   };
 
   nativeBuildInputs = [
     hatchling
-  ];
-
-  pythonRemoveDeps = [
-    # We call it faiss, not faiss-cpu.
-    "faiss-cpu"
+    writableTmpDirAsHomeHook
   ];
 
   propagatedBuildInputs = [
@@ -136,9 +133,7 @@ buildPythonPackage rec {
     transformers
   ];
 
-  env.HOME = "$(mktemp -d)";
-
-  passthru.optional-dependencies = {
+  optional-dependencies = {
     # all = [
     #   farm-haystack
     # ];
@@ -210,11 +205,11 @@ buildPythonPackage rec {
       pdf2image
       pytesseract
     ];
-    only-faiss = [ faiss ];
+    only-faiss = [ faiss-cpu ];
     # only-faiss-gpu = [
     #   faiss-gpu
     # ];
-    only-pinecone = [ pinecone-client ];
+    only-pinecone = [ pinecone ];
     onnx = [
       onnxruntime
       onnxruntime-tools
@@ -257,16 +252,16 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "haystack" ];
 
-  meta = with lib; {
+  meta = {
     description = "LLM orchestration framework to build customizable, production-ready LLM applications";
     longDescription = ''
       LLM orchestration framework to build customizable, production-ready LLM applications. Connect components (models, vector DBs, file converters) to pipelines or agents that can interact with your data. With advanced retrieval methods, it's best suited for building RAG, question answering, semantic search or conversational agent chatbots
     '';
-    changelog = "https://github.com/deepset-ai/haystack/releases/tag/${lib.removePrefix "refs/tags/" src.rev}";
+    changelog = "https://github.com/deepset-ai/haystack/releases/tag/${src.tag}";
     homepage = "https://github.com/deepset-ai/haystack";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ happysalada ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ happysalada ];
     # https://github.com/deepset-ai/haystack/issues/5304
-    broken = versionAtLeast pydantic.version "2";
+    broken = lib.versionAtLeast pydantic.version "2";
   };
 }

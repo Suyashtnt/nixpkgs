@@ -4,7 +4,6 @@
   distro,
   fetchFromGitHub,
   pytestCheckHook,
-  pythonOlder,
   setuptools-scm,
 }:
 
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "0.91.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
   src = fetchFromGitHub {
     owner = "pycontribs";
     repo = "ruyaml";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-A37L/voBrn2aZ7xT8+bWdZJxbWRjnxbstQtSyUeN1sA=";
   };
 
@@ -35,9 +32,8 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [
-    "-W"
-    "ignore::DeprecationWarning"
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
   ];
 
   pythonImportsCheck = [ "ruyaml" ];
@@ -49,11 +45,11 @@ buildPythonPackage rec {
     "test_issue_61"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "YAML 1.2 loader/dumper package for Python";
     homepage = "https://ruyaml.readthedocs.io/";
     changelog = "https://github.com/pycontribs/ruyaml/releases/tag/v${version}";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

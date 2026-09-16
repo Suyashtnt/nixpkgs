@@ -1,28 +1,35 @@
-{ fetchCrate, lib, stdenv, openssl, pkg-config, rustPlatform, darwin }:
+{
+  fetchCrate,
+  lib,
+  openssl,
+  pkg-config,
+  rustPlatform,
+}:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "refinery-cli";
-  version = "0.8.14";
+  version = "0.9.2";
 
   src = fetchCrate {
     pname = "refinery_cli";
-    inherit version;
-    hash = "sha256-gHW+5WWzk1H2O5B2sWdl6QcOeUbNvbdZZBD10SmE1GA=";
+    inherit (finalAttrs) version;
+    hash = "sha256-KBwEefttkIy8+NN16K6qnvOJxEe9DH+oGXuFx2/ziCw=";
   };
 
-  cargoHash = "sha256-Go7+LZSze/IrNwEl+11Dm5O9RcREyPSkHPjlE9SPO70=";
+  cargoHash = "sha256-PulFXZw/ouaYP7FWWLv7R/hemN4IatXH+2wIBJjd3oc=";
 
   nativeBuildInputs = [ pkg-config ];
 
-  buildInputs = [ openssl ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [ darwin.apple_sdk.frameworks.SystemConfiguration ];
+  buildInputs = [
+    openssl
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Run migrations for the Refinery ORM for Rust via the CLI";
     mainProgram = "refinery";
     homepage = "https://github.com/rust-db/refinery";
-    changelog = "https://github.com/rust-db/refinery/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ lucperkins ];
+    changelog = "https://github.com/rust-db/refinery/blob/${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ lucperkins ];
   };
-}
+})

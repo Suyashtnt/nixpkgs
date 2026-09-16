@@ -1,21 +1,25 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.services.dockerRegistry;
 
-  blobCache = if cfg.enableRedisCache
-    then "redis"
-    else "inmemory";
+  blobCache = if cfg.enableRedisCache then "redis" else "inmemory";
 
   registryConfig = {
-    version =  "0.1";
+    version = "0.1";
     log.fields.service = "registry";
     storage = {
       cache.blobdescriptor = blobCache;
       delete.enabled = cfg.enableDelete;
-    } // (lib.optionalAttrs (cfg.storagePath != null) { filesystem.rootdirectory = cfg.storagePath; });
+    }
+    // (lib.optionalAttrs (cfg.storagePath != null) { filesystem.rootdirectory = cfg.storagePath; });
     http = {
-      addr = "${cfg.listenAddress}:${builtins.toString cfg.port}";
-      headers.X-Content-Type-Options = ["nosniff"];
+      addr = "${cfg.listenAddress}:${toString cfg.port}";
+      headers.X-Content-Type-Options = [ "nosniff" ];
     };
     health.storagedriver = {
       enabled = true;
@@ -24,26 +28,13 @@ let
     };
   };
 
-  registryConfig.redis = lib.mkIf cfg.enableRedisCache {
-    addr = "${cfg.redisUrl}";
-    password = "${cfg.redisPassword}";
-    db = 0;
-    dialtimeout = "10ms";
-    readtimeout = "10ms";
-    writetimeout = "10ms";
-    pool = {
-      maxidle = 16;
-      maxactive = 64;
-      idletimeout = "300s";
-    };
-  };
-
   configFile = cfg.configFile;
-in {
+in
+{
   options.services.dockerRegistry = {
     enable = lib.mkEnableOption "Docker Registry";
 
-    package = lib.mkPackageOption pkgs "docker-distribution" {
+    package = lib.mkPackageOption pkgs "distribution" {
       example = "gitlab-container-registry";
     };
 
@@ -96,21 +87,28 @@ in {
 
     extraConfig = lib.mkOption {
       description = ''
-        Docker extra registry configuration via environment variables.
+        Docker extra registry configuration.
       '';
-      default = {};
+      example = lib.literalExpression ''
+        {
+          log.level = "debug";
+        }
+      '';
+      default = { };
       type = lib.types.attrs;
     };
 
     configFile = lib.mkOption {
-      default = pkgs.writeText "docker-registry-config.yml" (builtins.toJSON (lib.recursiveUpdate registryConfig cfg.extraConfig));
+      default = pkgs.writeText "docker-registry-config.yml" (
+        builtins.toJSON (lib.recursiveUpdate registryConfig cfg.extraConfig)
+      );
       defaultText = lib.literalExpression ''pkgs.writeText "docker-registry-config.yml" "# my custom docker-registry-config.yml ..."'';
       description = ''
-       Path to CNCF distribution config file.
+        Path to CNCF distribution config file.
 
-       Setting this option will override any configuration applied by the extraConfig option.
+        Setting this option will override any configuration applied by the extraConfig option.
       '';
-      type =  lib.types.path;
+      type = lib.types.path;
     };
 
     enableGarbageCollect = lib.mkEnableOption "garbage collect";
@@ -127,15 +125,29 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    services.dockerRegistry.extraConfig = lib.mkIf cfg.enableRedisCache {
+      redis = {
+        addr = "${cfg.redisUrl}";
+        password = "${cfg.redisPassword}";
+        db = 0;
+        dialtimeout = "10ms";
+        readtimeout = "10ms";
+        writetimeout = "10ms";
+        pool = {
+          maxidle = 16;
+          maxactive = 64;
+          idletimeout = "300s";
+        };
+      };
+    };
+
     systemd.services.docker-registry = {
       description = "Docker Container Registry";
       wantedBy = [ "multi-user.target" ];
       after = [ "network.target" ];
-      script = ''
-        ${cfg.package}/bin/registry serve ${configFile}
-      '';
 
       serviceConfig = {
+        ExecStart = "${lib.getExe cfg.package} serve ${configFile}";
         User = "docker-registry";
         WorkingDirectory = cfg.storagePath;
         AmbientCapabilities = lib.mkIf (cfg.port < 1024) "cap_net_bind_service";
@@ -162,11 +174,12 @@ in {
       (lib.optionalAttrs (cfg.storagePath != null) {
         createHome = true;
         home = cfg.storagePath;
-      }) // {
+      })
+      // {
         group = "docker-registry";
         isSystemUser = true;
       };
-    users.groups.docker-registry = {};
+    users.groups.docker-registry = { };
 
     networking.firewall = lib.mkIf cfg.openFirewall {
       allowedTCPPorts = [ cfg.port ];

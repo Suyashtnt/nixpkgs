@@ -1,40 +1,31 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitLab,
-  poetry-core,
+  uv-build,
   dramatiq,
   pendulum,
   setuptools,
   pytest-mock,
   pytestCheckHook,
+  versionCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "periodiq";
-  version = "0.12.1";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.5";
+  version = "0.14.0";
+  pyproject = true;
 
   src = fetchFromGitLab {
     owner = "bersace";
     repo = "periodiq";
-    rev = "v${version}";
-    hash = "sha256-Ar0n+Wi1OUtRdhVxrU7Nz4je8ylaHgPZbXE0a30hzU0=";
+    tag = "v${version}";
+    hash = "sha256-XYQ0cR0gdiX7GePqpMDG/Ml0CK+SBcNbsNB99FZ/D3I=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'pendulum = "^2.0"' 'pendulum = "*"' \
-      --replace 'poetry>=0.12' 'poetry-core' \
-      --replace 'poetry.masonry.api' 'poetry.core.masonry.api'
-  '';
+  build-system = [ uv-build ];
 
-  nativeBuildInputs = [ poetry-core ];
-
-  propagatedBuildInputs = [
+  dependencies = [
     dramatiq
     pendulum
     setuptools
@@ -43,17 +34,18 @@ buildPythonPackage rec {
   nativeCheckInputs = [
     pytestCheckHook
     pytest-mock
+    versionCheckHook
   ];
 
-  pytestFlagsArray = [ "tests/unit" ];
+  enabledTestPaths = [ "tests/unit" ];
 
   pythonImportsCheck = [ "periodiq" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple Scheduler for Dramatiq Task Queue";
     mainProgram = "periodiq";
-    homepage = "https://pypi.org/project/periodiq/";
-    license = licenses.lgpl3Only;
-    maintainers = with maintainers; [ traxys ];
+    homepage = "https://gitlab.com/bersace/periodiq";
+    license = lib.licenses.lgpl3Only;
+    maintainers = with lib.maintainers; [ traxys ];
   };
 }

@@ -1,23 +1,25 @@
-{ lib
-, buildGoModule
-, fetchFromGitHub
-, installShellFiles
-, testers
-, karmor
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+  testers,
+  karmor,
 }:
 
-buildGoModule rec {
+buildGoModule (finalAttrs: {
   pname = "karmor";
-  version = "1.2.3";
+  version = "1.4.9";
 
   src = fetchFromGitHub {
     owner = "kubearmor";
     repo = "kubearmor-client";
-    rev = "v${version}";
-    hash = "sha256-XWht+gCR+BHQwLrQqVdCpgKO+VUC6mxvOlpn9hOjrnE=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-iTXUb66B6ONeP7oz+vg2Zkte9OjQYrPffh+zanLWTO0=";
   };
 
-  vendorHash = "sha256-r3Fy4nOjlvyHcvztSfOOE6PmOhhNcVdoIq+ie5jqwkw=";
+  vendorHash = "sha256-LA2qKCWR5akyVmK0qzVS4rCX8WNPGXrqq1585xTDDrE=";
 
   nativeBuildInputs = [ installShellFiles ];
 
@@ -25,7 +27,7 @@ buildGoModule rec {
     "-s"
     "-w"
     "-X=github.com/kubearmor/kubearmor-client/selfupdate.BuildDate=1970-01-01"
-    "-X=github.com/kubearmor/kubearmor-client/selfupdate.GitSummary=${version}"
+    "-X=github.com/kubearmor/kubearmor-client/selfupdate.GitSummary=${finalAttrs.version}"
   ];
 
   # integration tests require network access
@@ -33,6 +35,8 @@ buildGoModule rec {
 
   postInstall = ''
     mv $out/bin/{kubearmor-client,karmor}
+  ''
+  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     installShellCompletion --cmd karmor \
       --bash <($out/bin/karmor completion bash) \
       --fish <($out/bin/karmor completion fish) \
@@ -46,12 +50,14 @@ buildGoModule rec {
     };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Client tool to help manage KubeArmor";
     mainProgram = "karmor";
     homepage = "https://kubearmor.io";
-    changelog = "https://github.com/kubearmor/kubearmor-client/releases/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ urandom kashw2 ];
+    changelog = "https://github.com/kubearmor/kubearmor-client/releases/v${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      kashw2
+    ];
   };
-}
+})

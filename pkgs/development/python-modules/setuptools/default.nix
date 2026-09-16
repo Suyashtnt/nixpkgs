@@ -5,27 +5,32 @@
   distutils,
   fetchFromGitHub,
   python,
-  wheel,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "setuptools";
-  version = "72.1.0";
-  format = "pyproject";
+  version = "83.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pypa";
     repo = "setuptools";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-3Hm9HxJdSmyhHtDZeMF76HaR17vZwZWYYhS6Z0nA8rU=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Gn2gH2LnsgeX1MvDRBbnFnI6WjkjBFItU4SelowkjBc=";
   };
 
   patches = [
-    ./tag-date.patch
-    ./setuptools-distutils-C++.patch
+    ./reproducible-wheel.patch
   ];
 
-  nativeBuildInputs = [ wheel ];
+  # Drop dependency on coherent.license, which in turn requires coherent.build
+  postPatch = ''
+    sed -i "/coherent.licensed/d" pyproject.toml
+
+    # Substitute version for reproducible builds
+    substituteInPlace setuptools/version.py \
+      --replace-fail '@version@' '${finalAttrs.version}'
+  '';
 
   preBuild = lib.optionalString (!stdenv.hostPlatform.isWindows) ''
     export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
@@ -38,14 +43,14 @@ buildPythonPackage rec {
     inherit distutils;
   };
 
-  meta = with lib; {
+  meta = {
     description = "Utilities to facilitate the installation of Python packages";
     homepage = "https://github.com/pypa/setuptools";
     changelog = "https://setuptools.pypa.io/en/stable/history.html#v${
-      replaceStrings [ "." ] [ "-" ] version
+      lib.replaceString "." "-" finalAttrs.version
     }";
-    license = with licenses; [ mit ];
+    license = lib.licenses.mit;
     platforms = python.meta.platforms;
-    maintainers = teams.python.members;
+    teams = [ lib.teams.python ];
   };
-}
+})

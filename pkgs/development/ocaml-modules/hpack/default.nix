@@ -1,16 +1,17 @@
-{ buildDunePackage
-, lib
-, fetchurl
-, angstrom
-, faraday
+{
+  buildDunePackage,
+  lib,
+  fetchurl,
+  angstrom,
+  faraday,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "hpack";
   version = "0.13.0";
 
   src = fetchurl {
-    url = "https://github.com/anmonteiro/ocaml-h2/releases/download/${version}/h2-${version}.tbz";
+    url = "https://github.com/anmonteiro/ocaml-h2/releases/download/${finalAttrs.version}/h2-${finalAttrs.version}.tbz";
     hash = "sha256-DYm28XgXUpTnogciO+gdW4P8Mbl1Sb7DTwQyo7KoBw8=";
   };
 
@@ -30,7 +31,6 @@ buildDunePackage rec {
     homepage = "https://github.com/anmonteiro/ocaml-h2";
     maintainers = with lib.maintainers; [
       sternenseemann
-      anmonteiro
     ];
   };
-}
+})

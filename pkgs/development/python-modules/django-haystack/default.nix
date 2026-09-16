@@ -1,37 +1,30 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
-  fetchPypi,
-
-  # build dependencies
-  setuptools,
-  setuptools-scm,
-
-  # dependencies
   django,
-  packaging,
-
-  # tests
   elasticsearch,
+  fetchPypi,
   geopy,
+  packaging,
   pysolr,
+  pythonAtLeast,
   python-dateutil,
   requests,
+  setuptools-scm,
+  setuptools,
+  stdenv,
   whoosh,
 }:
 
 buildPythonPackage rec {
   pname = "django-haystack";
-  version = "3.3.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.5";
+  version = "3.4.0";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "django_haystack";
     inherit version;
-    hash = "sha256-487ta4AAYl2hTUCetNrGmJSQXirIrBj5v9tZMjygLqs=";
+    hash = "sha256-Eianyc4T4efq2KyD9uh7/vSZbxRu0klx/eeJYRWxxTA=";
   };
 
   build-system = [
@@ -40,11 +33,15 @@ buildPythonPackage rec {
   ];
 
   buildInputs = [ django ];
-  propagatedBuildInputs = [ packaging ];
+
+  dependencies = [ packaging ];
 
   optional-dependencies = {
     elasticsearch = [ elasticsearch ];
   };
+
+  # tests fail and get stuck on darwin
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
   nativeCheckInputs = [
     geopy
@@ -52,8 +49,8 @@ buildPythonPackage rec {
     python-dateutil
     requests
     whoosh
-  ] ++ optional-dependencies.elasticsearch;
-
+  ]
+  ++ optional-dependencies.elasticsearch;
 
   checkPhase = ''
     runHook preCheck
@@ -61,10 +58,11 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Pluggable search for Django";
     homepage = "http://haystacksearch.org/";
-    license = licenses.bsd3;
+    changelog = "https://github.com/django-haystack/django-haystack/releases/tag/v${version}";
+    license = lib.licenses.bsd3;
     maintainers = [ ];
   };
 }

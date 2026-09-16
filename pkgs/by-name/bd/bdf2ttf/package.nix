@@ -1,4 +1,8 @@
-{ lib, stdenv, fetchFromGitHub }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+}:
 
 stdenv.mkDerivation {
   pname = "bdf2ttf";
@@ -10,6 +14,11 @@ stdenv.mkDerivation {
     rev = "1baae7b70a432153e3d876966e47a78f0e572eac";
     hash = "sha256-235BTcTaC/30yLlgo0OO2cp3YCHWa87GFJGBx5lmz6o=";
   };
+
+  patches = [
+    # gcc-15 build fix: https://github.com/koron/bdf2ttf/pull/9
+    ./gcc-15.patch
+  ];
 
   dontConfigure = true;
 

@@ -5,7 +5,6 @@
   mock,
   pathlib-abc,
   pytestCheckHook,
-  pythonOlder,
   setuptools,
   smart-open,
   typer,
@@ -16,13 +15,10 @@ buildPythonPackage rec {
   version = "0.11.0";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchPypi {
     inherit pname version;
     hash = "sha256-uz0OawuL92709jxxkeluCvLtZcj9tfoXSI+ch55jcG0=";
   };
-
 
   pythonRelaxDeps = [ "smart-open" ];
 
@@ -48,11 +44,13 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pathy" ];
 
-  meta = with lib; {
+  meta = {
+    # Marked broken 2025-11-28 because it has failed on Hydra for at least one year.
+    broken = true;
+    # https://github.com/justindujardin/pathy/issues/113
     description = "Path interface for local and cloud bucket storage";
     mainProgram = "pathy";
     homepage = "https://github.com/justindujardin/pathy";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ melling ];
+    license = lib.licenses.asl20;
   };
 }

@@ -6,8 +6,6 @@
   fetchpatch,
   filelock,
   lxml,
-  pythonOlder,
-  pytz,
   requests,
   setuptools-scm,
 }:
@@ -17,12 +15,10 @@ buildPythonPackage rec {
   version = "0.7.0.20230622";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "JustAnotherArchivist";
     repo = "snscrape";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-9xAUMr1SWFePEvIz6DFEexk9Txex3u8wPNfMAdxEUCA=";
   };
 
@@ -42,7 +38,8 @@ buildPythonPackage rec {
     filelock
     lxml
     requests
-  ] ++ requests.optional-dependencies.socks ++ lib.optionals (pythonOlder "3.9") [ pytz ];
+  ]
+  ++ requests.optional-dependencies.socks;
 
   # There are no tests; make sure the executable works.
   checkPhase = ''
@@ -52,11 +49,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "snscrape" ];
 
-  meta = with lib; {
+  meta = {
     description = "Social networking service scraper";
     homepage = "https://github.com/JustAnotherArchivist/snscrape";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ ivan ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
     mainProgram = "snscrape";
   };
 }

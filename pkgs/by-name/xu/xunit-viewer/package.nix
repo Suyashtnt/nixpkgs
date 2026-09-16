@@ -4,7 +4,8 @@
   fetchFromGitHub,
   nix-update-script,
   callPackage,
-  testers, xunit-viewer,
+  testers,
+  xunit-viewer,
 }:
 let
   version = "10.6.1";
@@ -35,7 +36,7 @@ buildNpmPackage {
   meta = {
     description = "View your xunit results using JavaScript";
     homepage = "https://lukejpreston.github.io/xunit-viewer";
-    license = with lib.licenses; [ mit ];
+    license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ pluiedev ];
     platforms = lib.platforms.all;
   };

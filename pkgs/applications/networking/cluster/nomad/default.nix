@@ -1,52 +1,76 @@
-{ lib
-, buildGoModule
-, buildGo121Module
-, buildGo122Module
-, fetchFromGitHub
-, nixosTests
-, installShellFiles
+{
+  lib,
+  buildGo126Module,
+  fetchFromGitHub,
+  nixosTests,
+  installShellFiles,
 }:
 
 let
   generic =
-    { buildGoModule, version, sha256, vendorHash, license, ... }@attrs:
-    let attrs' = builtins.removeAttrs attrs [ "buildGoModule" "version" "sha256" "vendorHash" "license" ];
+    {
+      buildGoModule,
+      version,
+      hash,
+      vendorHash,
+      license,
+      ...
+    }@attrs:
+    let
+      attrs' = removeAttrs attrs [
+        "buildGoModule"
+        "version"
+        "hash"
+        "vendorHash"
+        "license"
+      ];
     in
-    buildGoModule (rec {
-      pname = "nomad";
-      inherit version vendorHash;
+    buildGoModule (
+      rec {
+        pname = "nomad";
+        inherit version vendorHash;
 
-      subPackages = [ "." ];
+        subPackages = [ "." ];
 
-      src = fetchFromGitHub {
-        owner = "hashicorp";
-        repo = pname;
-        rev = "v${version}";
-        inherit sha256;
-      };
+        src = fetchFromGitHub {
+          owner = "hashicorp";
+          repo = "nomad";
+          rev = "v${version}";
+          inherit hash;
+        };
 
-      nativeBuildInputs = [ installShellFiles ];
+        nativeBuildInputs = [ installShellFiles ];
 
-      # ui:
-      #  Nomad release commits include the compiled version of the UI, but the file
-      #  is only included if we build with the ui tag.
-      tags = [ "ui" ];
+        ldflags = [
+          "-X github.com/hashicorp/nomad/version.Version=${version}"
+          "-X github.com/hashicorp/nomad/version.VersionPrerelease="
+          "-X github.com/hashicorp/nomad/version.BuildDate=1970-01-01T00:00:00Z"
+        ];
 
-      postInstall = ''
-        echo "complete -C $out/bin/nomad nomad" > nomad.bash
-        installShellCompletion nomad.bash
-      '';
+        # ui:
+        #  Nomad release commits include the compiled version of the UI, but the file
+        #  is only included if we build with the ui tag.
+        tags = [ "ui" ];
 
-      meta = with lib; {
-        homepage = "https://www.nomadproject.io/";
-        description = "Distributed, Highly Available, Datacenter-Aware Scheduler";
-        mainProgram = "nomad";
-        inherit license;
-        maintainers = with maintainers; [ rushmorem pradeepchhetri techknowlogick cottand ];
-      };
-    } // attrs');
+        postInstall = ''
+          echo "complete -C $out/bin/nomad nomad" > nomad.bash
+          installShellCompletion nomad.bash
+        '';
 
-    throwUnsupportaed = version: "${version} is no longer supported upstream. You can switch to using a newer version of the nomad package, or revert to older nixpkgs if you cannot upgrade";
+        meta = {
+          homepage = "https://developer.hashicorp.com/nomad";
+          description = "Distributed, Highly Available, Datacenter-Aware Scheduler";
+          mainProgram = "nomad";
+          inherit license;
+          maintainers = with lib.maintainers; [
+            rushmorem
+            techknowlogick
+            cottand
+          ];
+        };
+      }
+      // attrs'
+    );
 in
 rec {
   # Nomad never updates major go versions within a release series and is unsupported
@@ -55,29 +79,26 @@ rec {
   # Upstream partially documents used Go versions here
   # https://github.com/hashicorp/nomad/blob/master/contributing/golang.md
 
-  nomad = nomad_1_7;
+  nomad = nomad_1_11;
 
-  nomad_1_4 = throwUnsupportaed "nomad_1_4";
-
-  nomad_1_5 = throwUnsupportaed "nomad_1_5";
-
-  nomad_1_6 = generic {
-    buildGoModule = buildGo121Module;
-    version = "1.6.10";
-    sha256 = "sha256-kiMdpJzjF0S7lrTX3sBFkWm0Gac9a+qlwCPcMKeVXXQ=";
-    vendorHash = "sha256-qnsPPV/NWTrqUa1v1CL16WfCH7B0zW9ZSnEmtqvotqI=";
-    license = lib.licenses.mpl20;
+  nomad_2_0 = generic {
+    buildGoModule = buildGo126Module;
+    version = "2.0.0";
+    hash = "sha256-5rCAcOXWQ6g2iK1d5wy/a/DZQC2xwwdpI1SscDX98C8=";
+    vendorHash = "sha256-3/H7QgVOHtaUs6BOF7ATVgrA0cfNBbm940Axrvq2bKU=";
+    license = lib.licenses.bsl11;
     passthru.tests.nomad = nixosTests.nomad;
     preCheck = ''
       export PATH="$PATH:$NIX_BUILD_TOP/go/bin"
     '';
+    __structuredAttrs = true;
   };
 
-  nomad_1_7 = generic {
-    buildGoModule = buildGo122Module;
-    version = "1.7.7";
-    sha256 = "sha256-4nuRheidR6rIoytrnDQdIP69f+sBLJ3Ias5DvqVaLFc=";
-    vendorHash = "sha256-ZuaD8iDsT+/eW0QUavf485R804Jtjl76NcQWYHA8QII=";
+  nomad_1_11 = generic {
+    buildGoModule = buildGo126Module;
+    version = "1.11.3";
+    hash = "sha256-J+w53HlMlrXX5yKjDYhf3rSGt1pmOyNcPlOqyUrkLWE=";
+    vendorHash = "sha256-67etQUjcPXz4VVpNXLVusQlEybxEqKfYQcNTNL4X8bA=";
     license = lib.licenses.bsl11;
     passthru.tests.nomad = nixosTests.nomad;
     preCheck = ''
@@ -85,11 +106,23 @@ rec {
     '';
   };
 
-  nomad_1_8 = generic {
-    buildGoModule = buildGo122Module;
-    version = "1.8.4";
-    sha256 = "sha256-BzLvALD65VqWNB9gx4BgI/mYWLNeHzp6WSXD/1Xf0Wk=";
-    vendorHash = "sha256-0mnhZeiCLAWvwAoNBJtwss85vhYCrf/5I1AhyXTFnWk=";
+  nomad_1_10 = generic {
+    buildGoModule = buildGo126Module;
+    version = "1.10.5";
+    hash = "sha256-NFH++oYWb6vQN6cOPByscI/ZBWDNy4YbcLiBMO3/jVU=";
+    vendorHash = "sha256-QcTw9kKwoHIvXZoxfDohFG+sBs8OLvYPeygygDClsn8=";
+    license = lib.licenses.bsl11;
+    passthru.tests.nomad = nixosTests.nomad;
+    preCheck = ''
+      export PATH="$PATH:$NIX_BUILD_TOP/go/bin"
+    '';
+  };
+
+  nomad_1_9 = generic {
+    buildGoModule = buildGo126Module;
+    version = "1.9.7";
+    hash = "sha256-U02H6DPr1friQ9EwqD/wQnE2Fm20OE5xNccPDJfnsqI=";
+    vendorHash = "sha256-9GnwqkexJAxrhW9yJFaDTdSaZ+p+/dcMuhlusp4cmyw=";
     license = lib.licenses.bsl11;
     passthru.tests.nomad = nixosTests.nomad;
     preCheck = ''

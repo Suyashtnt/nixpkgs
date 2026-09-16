@@ -1,10 +1,12 @@
-import ./make-test-python.nix ({pkgs, ...}: {
+{ pkgs, ... }:
+{
   name = "your_spotify";
   meta = with pkgs.lib.maintainers; {
-    maintainers = [patrickdag];
+    maintainers = [ patrickdag ];
   };
 
   nodes.machine = {
+    services.mongodb.package = pkgs.mongodb-ce;
     services.your_spotify = {
       enable = true;
       spotifySecretFile = pkgs.writeText "spotifySecretFile" "deadbeef";
@@ -30,4 +32,4 @@ import ./make-test-python.nix ({pkgs, ...}: {
     out = machine.succeed("curl --fail -X GET 'http://localhost:80/'")
     assert "<title>Your Spotify</title>" in out
   '';
-})
+}

@@ -1,18 +1,32 @@
-{ stdenv, lib, fetchurl
-, ocaml, findlib, ocamlbuild, topkg
-, js_of_ocaml-compiler
-, js_of_ocaml-toplevel
+{
+  stdenv,
+  lib,
+  fetchurl,
+  ocaml,
+  findlib,
+  ocamlbuild,
+  topkg,
+  js_of_ocaml-compiler,
+  js_of_ocaml-toplevel,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "ocaml${ocaml.version}-brr";
-  version = "0.0.7";
+  version = "0.0.9";
   src = fetchurl {
-    url = "https://erratique.ch/software/brr/releases/brr-${version}.tbz";
-    hash = "sha256-rcWuW6avI/RJZNAlxKOsPSEtDQZ1hb51oKpSk3iG7oY=";
+    url = "https://erratique.ch/software/brr/releases/brr-${finalAttrs.version}.tbz";
+    hash = "sha256-Zuh+DRpGxB8DxrLnLyf8Ok+YJDQwWiaI59HlZKdD4Jk=";
   };
-  buildInputs = [ ocaml findlib ocamlbuild topkg ];
-  propagatedBuildInputs = [ js_of_ocaml-compiler js_of_ocaml-toplevel ];
+  buildInputs = [
+    ocaml
+    findlib
+    ocamlbuild
+    topkg
+  ];
+  propagatedBuildInputs = [
+    js_of_ocaml-compiler
+    js_of_ocaml-toplevel
+  ];
   inherit (topkg) buildPhase installPhase;
 
   meta = {
@@ -22,4 +36,4 @@ stdenv.mkDerivation rec {
     maintainers = [ lib.maintainers.vbgl ];
     inherit (ocaml.meta) platforms;
   };
-}
+})

@@ -1,7 +1,6 @@
 {
   lib,
   buildPythonPackage,
-  pythonOlder,
   fetchFromGitHub,
   setuptools-scm,
   pyocd,
@@ -13,12 +12,10 @@ buildPythonPackage rec {
   version = "1.1.5";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "pyocd";
     repo = "pyocd-pemicro";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-qi803s8fkrLizcCLeDRz7CTQ56NGLQ4PPwCbxiRigwc=";
   };
 

@@ -2,7 +2,6 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
   # propagated build inputs
   click,
   fastapi,
@@ -22,7 +21,7 @@
   flake8,
   httpx,
   ipython,
-  pytest-cov,
+  pytest-cov-stub,
   requests,
   requests-toolbelt,
   nbdev,
@@ -36,12 +35,10 @@ buildPythonPackage {
   inherit version;
   format = "setuptools";
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "Unstructured-IO";
     repo = "unstructured-api-tools";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-t1fK40ayR2bxc1iMIwvn/OHuyVlR98Gq+NpIhOmaP+4=";
   };
 
@@ -57,7 +54,8 @@ buildPythonPackage {
     types-ujson
     uvicorn
     autoflake
-  ] ++ uvicorn.optional-dependencies.standard;
+  ]
+  ++ uvicorn.optional-dependencies.standard;
 
   pythonImportsCheck = [ "unstructured_api_tools" ];
 
@@ -77,19 +75,19 @@ buildPythonPackage {
     flake8
     httpx
     ipython
-    pytest-cov
+    pytest-cov-stub
     requests
     requests-toolbelt
     nbdev
     pytest-mock
   ];
 
-  meta = with lib; {
+  meta = {
     description = "";
     mainProgram = "unstructured_api_tools";
     homepage = "https://github.com/Unstructured-IO/unstructured-api-tools";
     changelog = "https://github.com/Unstructured-IO/unstructured-api-tools/blob/${version}/CHANGELOG.md";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ happysalada ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ happysalada ];
   };
 }

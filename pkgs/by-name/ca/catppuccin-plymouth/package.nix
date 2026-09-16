@@ -15,42 +15,41 @@ let
     "mocha"
   ];
 in
-lib.checkListOfEnum "${pname}: color variant" validVariants [ variant ]
+assert lib.assertOneOf "${pname}: color variant" variant validVariants;
 
-  stdenvNoCC.mkDerivation
-  (finalAttrs: {
-    inherit pname;
-    version = "0-unstable-2024-05-28";
+stdenvNoCC.mkDerivation (finalAttrs: {
+  inherit pname;
+  version = "0-unstable-2026-04-28";
 
-    src = fetchFromGitHub {
-      owner = "catppuccin";
-      repo = "plymouth";
-      rev = "e13c348a0f47772303b2da1e9396027d8cda160d";
-      hash = "sha256-6DliqhRncvdPuKzL9LJec3PJWmK/jo9BrrML7g6YcH0=";
-    };
+  src = fetchFromGitHub {
+    owner = "catppuccin";
+    repo = "plymouth";
+    rev = "198eba2071d80e4a23b8f51a5859e8f4acf8de6c";
+    hash = "sha256-2hGe8VOj1EhpwX51q8AcTfuVBByEHskBj89FX5YZqXc=";
+  };
 
-    sourceRoot = "${finalAttrs.src.name}/themes/catppuccin-${variant}";
+  sourceRoot = "${finalAttrs.src.name}/themes/catppuccin-${variant}";
 
-    installPhase = ''
-      runHook preInstall
+  installPhase = ''
+    runHook preInstall
 
-      sed -i 's:\(^ImageDir=\)/usr:\1'"$out"':' catppuccin-${variant}.plymouth
-      mkdir -p $out/share/plymouth/themes/catppuccin-${variant}
-      cp * $out/share/plymouth/themes/catppuccin-${variant}
+    sed -i 's:\(^ImageDir=\)/usr:\1'"$out"':' catppuccin-${variant}.plymouth
+    mkdir -p $out/share/plymouth/themes/catppuccin-${variant}
+    cp * $out/share/plymouth/themes/catppuccin-${variant}
 
-      runHook postInstall
-    '';
+    runHook postInstall
+  '';
 
-    passthru.updateScript = unstableGitUpdater { };
+  passthru.updateScript = unstableGitUpdater { };
 
-    meta = {
-      description = "Soothing pastel theme for Plymouth";
-      homepage = "https://github.com/catppuccin/plymouth";
-      license = lib.licenses.mit;
-      platforms = lib.platforms.linux;
-      maintainers = with lib.maintainers; [
-        johnrtitor
-        spectre256
-      ];
-    };
-  })
+  meta = {
+    description = "Soothing pastel theme for Plymouth";
+    homepage = "https://github.com/catppuccin/plymouth";
+    license = lib.licenses.mit;
+    platforms = lib.platforms.linux;
+    maintainers = with lib.maintainers; [
+      johnrtitor
+      spectre256
+    ];
+  };
+})

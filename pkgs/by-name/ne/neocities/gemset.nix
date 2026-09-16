@@ -19,6 +19,16 @@
     };
     version = "2.8.5";
   };
+  mutex_m = {
+    groups = [ "default" ];
+    platforms = [ ];
+    source = {
+      remotes = [ "https://rubygems.org" ];
+      sha256 = "0l875dw0lk7b2ywa54l0wjcggs94vb7gs8khfw9li75n2sn09jyg";
+      type = "gem";
+    };
+    version = "0.3.0";
+  };
   necromancer = {
     groups = [ "default" ];
     platforms = [ ];
@@ -30,19 +40,28 @@
     version = "0.4.0";
   };
   neocities = {
-    dependencies =
-      [ "httpclient-fixcerts" "pastel" "rake" "tty-prompt" "tty-table" ];
+    dependencies = [
+      "httpclient-fixcerts"
+      "pastel"
+      "rake"
+      "tty-prompt"
+      "tty-table"
+      "whirly"
+    ];
     groups = [ "default" ];
     platforms = [ ];
     source = {
       remotes = [ "https://rubygems.org" ];
-      sha256 = "1hfvy4gc7rzxkgl2dbrjs2fqzi5mphmr22rjfhk6n0i3bd0wazbw";
+      sha256 = "17d5z0c04yx2a6g8bdkhiwyf5xvshdx4p07j2xlip8dnkkf9q4hw";
       type = "gem";
     };
-    version = "0.0.18";
+    version = "0.0.20";
   };
   pastel = {
-    dependencies = [ "equatable" "tty-color" ];
+    dependencies = [
+      "equatable"
+      "tty-color"
+    ];
     groups = [ "default" ];
     platforms = [ ];
     source = {
@@ -63,7 +82,11 @@
     version = "12.3.3";
   };
   strings = {
-    dependencies = [ "strings-ansi" "unicode-display_width" "unicode_utils" ];
+    dependencies = [
+      "strings-ansi"
+      "unicode-display_width"
+      "unicode_utils"
+    ];
     groups = [ "default" ];
     platforms = [ ];
     source = {
@@ -104,7 +127,12 @@
     version = "0.4.0";
   };
   tty-prompt = {
-    dependencies = [ "necromancer" "pastel" "tty-cursor" "wisper" ];
+    dependencies = [
+      "necromancer"
+      "pastel"
+      "tty-cursor"
+      "wisper"
+    ];
     groups = [ "default" ];
     platforms = [ ];
     source = {
@@ -125,8 +153,13 @@
     version = "0.6.5";
   };
   tty-table = {
-    dependencies =
-      [ "equatable" "necromancer" "pastel" "strings" "tty-screen" ];
+    dependencies = [
+      "equatable"
+      "necromancer"
+      "pastel"
+      "strings"
+      "tty-screen"
+    ];
     groups = [ "default" ];
     platforms = [ ];
     source = {
@@ -155,6 +188,17 @@
       type = "gem";
     };
     version = "1.4.0";
+  };
+  whirly = {
+    dependencies = [ "unicode-display_width" ];
+    groups = [ "default" ];
+    platforms = [ ];
+    source = {
+      remotes = [ "https://rubygems.org" ];
+      sha256 = "0dggm1jkk9hlwnh5la3zsmsh4qv7n1ycmsnakl0lgdmpzgj3w9zm";
+      type = "gem";
+    };
+    version = "0.3.0";
   };
   wisper = {
     groups = [ "default" ];

@@ -1,40 +1,55 @@
-{ lib
-, python3
-, fetchPypi
-, nix-update-script
+{
+  lib,
+  python3,
+  fetchPypi,
+  nix-update-script,
+  writableTmpDirAsHomeHook,
 }:
 
-python3.pkgs.buildPythonApplication rec {
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "signal-export";
-  version = "1.8.2";
+  version = "3.9.3";
   pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-Hm0BVF2RUsxDacsAB3MJtk1t9FYmBPjeb5JzwaLkZ14=";
+    inherit (finalAttrs) version;
+    pname = "signal_export";
+    hash = "sha256-i4VV1mOlUWz4mSXcSkMUB7mHnWlBu+6hcQR5oxshzqE=";
   };
 
-  nativeBuildInputs = with python3.pkgs; [
-    setuptools-scm
+  build-system = with python3.pkgs; [
+    pdm-backend
   ];
 
   propagatedBuildInputs = with python3.pkgs; [
-    setuptools
     typer
     beautifulsoup4
     emoji
+    filetype
     markdown
-    pysqlcipher3
+    pycryptodome
+    sqlcipher3-wheels
   ];
+
+  nativeCheckInputs = [
+    python3.pkgs.pytestCheckHook
+    # tests/test_overwrite.py asserts that Path.home() exists
+    writableTmpDirAsHomeHook
+  ];
+
+  pythonImportsCheck = [ "sigexport" ];
 
   passthru.updateScript = nix-update-script { };
 
-  meta = with lib; {
+  meta = {
     mainProgram = "sigexport";
     homepage = "https://github.com/carderne/signal-export";
     description = "Export your Signal chats to markdown files with attachments";
-    platforms = platforms.unix;
-    license = licenses.mit;
-    maintainers = with maintainers; [ phaer picnoir ];
+    platforms = lib.platforms.unix;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      phaer
+      picnoir
+    ];
   };
-}
+})

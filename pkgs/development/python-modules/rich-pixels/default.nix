@@ -6,7 +6,6 @@
   pillow,
   rich,
   pytestCheckHook,
-  pythonOlder,
   syrupy,
 }:
 
@@ -15,12 +14,10 @@ buildPythonPackage rec {
   version = "3.0.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
   src = fetchFromGitHub {
     owner = "darrenburns";
     repo = "rich-pixels";
-    rev = "refs/tags/${version}";
+    tag = version;
     hash = "sha256-Sqs0DOyxJBfZmm/SVSTMSmaaeRlusiSp6VBnJjKYjgQ=";
   };
 
@@ -40,11 +37,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "rich_pixels" ];
 
-  meta = with lib; {
+  meta = {
     description = "Rich-compatible library for writing pixel images and ASCII art to the terminal";
     homepage = "https://github.com/darrenburns/rich-pixels";
-    changelog = "https://github.com/darrenburns/rich-pixels/releases/tag/${lib.removePrefix "refs/tags/" src.rev}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ figsoda ];
+    changelog = "https://github.com/darrenburns/rich-pixels/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

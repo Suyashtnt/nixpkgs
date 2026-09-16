@@ -3,31 +3,26 @@
   angr,
   buildPythonPackage,
   fetchFromGitHub,
-  progressbar,
-  pythonOlder,
   setuptools,
   tqdm,
 }:
 
 buildPythonPackage rec {
   pname = "angrop";
-  version = "9.2.10";
+  version = "9.2.12.post3";
   pyproject = true;
-
-  disabled = pythonOlder "3.6";
 
   src = fetchFromGitHub {
     owner = "angr";
     repo = "angrop";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-+epX+tCSv5Kit4lncDNtjokehCSl+tO7rbi3L+RrI+E=";
+    tag = "v${version}";
+    hash = "sha256-t4JjI6mWX/Us4dHcVXPAUGms8SEE6MVhteQMPi8p5Zo=";
   };
 
   build-system = [ setuptools ];
 
   dependencies = [
     angr
-    progressbar
     tqdm
   ];
 
@@ -37,10 +32,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "angrop" ];
 
-  meta = with lib; {
+  meta = {
     description = "ROP gadget finder and chain builder";
     homepage = "https://github.com/angr/angrop";
-    license = with licenses; [ bsd2 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

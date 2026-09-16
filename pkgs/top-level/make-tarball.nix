@@ -1,8 +1,9 @@
-{ nixpkgs
-, officialRelease
-, pkgs ? import nixpkgs.outPath {}
-, nix ? pkgs.nix
-, lib-tests ? import ../../lib/tests/release.nix { inherit pkgs; }
+{
+  nixpkgs,
+  officialRelease,
+  pkgs ? import nixpkgs.outPath { },
+  nix ? pkgs.nix,
+  lib-tests ? import ../../lib/tests/release.nix { inherit pkgs; },
 }:
 
 pkgs.releaseTools.sourceTarball {
@@ -12,11 +13,19 @@ pkgs.releaseTools.sourceTarball {
   inherit officialRelease;
   version = pkgs.lib.fileContents ../../.version;
   versionSuffix = "pre${
-    if nixpkgs ? lastModified
-    then builtins.substring 0 8 (nixpkgs.lastModifiedDate or nixpkgs.lastModified)
-    else toString (nixpkgs.revCount or 0)}.${nixpkgs.shortRev or "dirty"}";
+    if nixpkgs ? lastModified then
+      builtins.substring 0 8 (nixpkgs.lastModifiedDate or nixpkgs.lastModified)
+    else
+      toString (nixpkgs.revCount or 0)
+  }.${nixpkgs.shortRev or "dirty"}";
 
-  buildInputs = with pkgs; [ nix.out jq lib-tests brotli ];
+  buildInputs = with pkgs; [
+    nix.out
+    jq
+    lib-tests
+    brotli
+    zstd
+  ];
 
   configurePhase = ''
     eval "$preConfigure"
@@ -36,11 +45,7 @@ pkgs.releaseTools.sourceTarball {
   checkPhase = ''
     echo "generating packages.json"
 
-    (
-      echo -n '{"version":2,"packages":'
-      NIX_STATE_DIR=$TMPDIR NIX_PATH= nix-env -f $src -qa --meta --json --show-trace --arg config 'import ${./packages-config.nix}'
-      echo -n '}'
-    ) | sed "s|$src/||g" | jq -c > packages.json
+    NIX_STATE_DIR=$TMPDIR NIX_PATH= nix-instantiate --eval --raw --expr "import $src/pkgs/top-level/packages-info.nix {}" | sed "s|$src/||g" | jq -c > packages.json
 
     # Arbitrary number. The index has ~115k packages as of April 2024.
     if [ $(jq -r '.packages | length' < packages.json) -lt 100000 ]; then
@@ -59,10 +64,30 @@ pkgs.releaseTools.sourceTarball {
   #   Some context: https://github.com/NixOS/infra/issues/438
   distPhase = ''
     mkdir -p $out/tarballs
+
+    # The compression tasks are shortlived; use all available CPUs (-T0) to
+    # prioritize fast channel advancement.
     XZ_OPT="-T0" tar \
       --create \
       --xz \
       --file=$out/tarballs/$releaseName.tar.xz \
+      --absolute-names \
+      --transform="s|^$src|$releaseName|g" \
+      --transform="s|^$(pwd)|$releaseName|g" \
+      --owner=0 \
+      --group=0 \
+      --numeric-owner \
+      --format=gnu \
+      --sort=name \
+      --mtime="@$SOURCE_DATE_EPOCH" \
+      --mode=ug+w \
+      --hard-dereference \
+      $src $(pwd)/{.version-suffix,.git-revision}
+
+    tar \
+      --create \
+      --use-compress-program="zstd -19 -T0" \
+      --file=$out/tarballs/$releaseName.tar.zst \
       --absolute-names \
       --transform="s|^$src|$releaseName|g" \
       --transform="s|^$(pwd)|$releaseName|g" \

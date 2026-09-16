@@ -4,7 +4,7 @@
   lib,
   makeWrapper,
   autoPatchelfHook,
-  openjdk17,
+  openjdk21,
   pam,
   makeDesktopItem,
   icoutils,
@@ -28,21 +28,21 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "ghidra";
-  version = "10.4";
-  versiondate = "20230928";
-
+  version = "12.1.2";
+  versiondate = "20260605";
   src = fetchzip {
     url = "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${version}_build/ghidra_${version}_PUBLIC_${versiondate}.zip";
-    hash = "sha256-IiAQ9OKmr8ZgqmGftuW0ITdG06fb9Lr30n2H9GArctk=";
+    hash = "sha256-ulIBecjWAnrM8iJmqQZAZRerUCKpIBcXyv6KIB7I/ZA=";
   };
 
   nativeBuildInputs = [
     makeWrapper
     icoutils
-  ] ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
 
   buildInputs = [
-    stdenv.cc.cc.lib
+    (lib.getLib stdenv.cc.cc)
     pam
   ];
 
@@ -69,22 +69,24 @@ stdenv.mkDerivation rec {
     ln -s "${pkg_path}/support/analyzeHeadless" "$out/bin/ghidra-analyzeHeadless"
 
     wrapProgram "${pkg_path}/support/launch.sh" \
-      --prefix PATH : ${lib.makeBinPath [ openjdk17 ]}
+      --prefix PATH : ${lib.makeBinPath [ openjdk21 ]}
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Software reverse engineering (SRE) suite of tools developed by NSA's Research Directorate in support of the Cybersecurity mission";
     mainProgram = "ghidra";
     homepage = "https://github.com/NationalSecurityAgency/ghidra";
     platforms = [
       "x86_64-linux"
-      "x86_64-darwin"
+      "aarch64-linux"
+      "aarch64-darwin"
     ];
-    sourceProvenance = with sourceTypes; [ binaryBytecode ];
-    license = licenses.asl20;
-    maintainers = with maintainers; [
+    sourceProvenance = with lib.sourceTypes; [ binaryBytecode ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
       ck3d
       govanify
+      tbaldwin
       mic92
     ];
   };

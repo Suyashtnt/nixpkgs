@@ -1,5 +1,5 @@
 {
-  stdenv,
+  lib,
   mkDerivation,
   byacc,
   flex,
@@ -10,10 +10,10 @@ mkDerivation {
 
   extraPaths = [ "lib/libc/iconv" ];
 
-  BOOTSTRAPPING = !stdenv.hostPlatform.isFreeBSD;
-
   extraNativeBuildInputs = [
     byacc
     flex
   ];
+
+  meta.platforms = lib.platforms.unix;
 }

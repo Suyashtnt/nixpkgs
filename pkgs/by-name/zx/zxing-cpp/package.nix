@@ -1,31 +1,44 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, cmake
-, pkg-config
-, python3
-, gitUpdater
+{
+  lib,
+  cmake,
+  fetchFromGitHub,
+  gitUpdater,
+  python3,
+  stdenv,
+  libzint,
+  pkg-config,
+  stb,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "zxing-cpp";
-  version = "2.2.1";
+  version = "3.1.1";
 
   src = fetchFromGitHub {
     owner = "zxing-cpp";
     repo = "zxing-cpp";
-    rev = "v${finalAttrs.version}";
-    hash = "sha256-teFspdATn9M7Z1vSr/7PdJx/xAv+TVai8rIekxqpBZk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-dCqn2qYQGHY/nmwwkgd4uGoKp0YeQxWiHpS0Hhsm+UE=";
   };
+
+  strictDeps = true;
 
   nativeBuildInputs = [
     cmake
     pkg-config
   ];
 
+  buildInputs = [
+    libzint
+    stb
+  ];
+
   cmakeFlags = [
-    "-DBUILD_EXAMPLES=OFF"
-    "-DBUILD_BLACKBOX_TESTS=OFF"
+    "-DZXING_BLACKBOX_TESTS=OFF"
+    "-DZXING_DEPENDENCIES=LOCAL"
+    "-DZXING_EXAMPLES=OFF"
+    "-DZXING_USE_BUNDLED_ZINT=OFF"
+    (lib.cmakeFeature "ZXING_WRITERS" "BOTH")
   ];
 
   passthru = {
@@ -39,6 +52,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = {
     homepage = "https://github.com/zxing-cpp/zxing-cpp";
+    changelog = "https://github.com/zxing-cpp/zxing-cpp/releases/tag/${finalAttrs.src.rev}";
     description = "C++ port of zxing (a Java barcode image processing library)";
     longDescription = ''
       ZXing-C++ ("zebra crossing") is an open-source, multi-format 1D/2D barcode
@@ -50,7 +64,10 @@ stdenv.mkDerivation (finalAttrs: {
       formats.
     '';
     license = lib.licenses.asl20;
-    maintainers = with lib.maintainers; [ AndersonTorres lukegb ];
+    maintainers = with lib.maintainers; [
+      lukegb
+      qweered
+    ];
     platforms = lib.platforms.unix;
   };
 })

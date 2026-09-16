@@ -2,6 +2,7 @@
   lib,
   rustPlatform,
   fetchFromGitHub,
+  installShellFiles,
   pkg-config,
   wrapGAppsHook3,
   gtk3,
@@ -12,25 +13,21 @@
   nix-update-script,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "eww";
-  version = "0.6.0-unstable-2024-07-05";
+  version = "0.6.0-unstable-2026-07-05";
 
   src = fetchFromGitHub {
     owner = "elkowar";
     repo = "eww";
-    # FIXME: change to a release tag once a new release is available
-    # https://github.com/elkowar/eww/pull/1084
-    # using the revision to fix string truncation issue in eww config
-    rev = "4d55e9ad63d1fae887726dffcd25a32def23d34f";
-    hash = "sha256-LTSFlW/46hl1u9SzqnvbtNxswCW05bhwOY6CzVEJC5o=";
+    rev = "4ded06345553e4c2bcf8179fc7438e53c5e54d89";
+    hash = "sha256-fnI8XgBowMxs/j9FGf+pQI2U8YjN8pTRqkVmFm8PBHE=";
   };
 
-  # needed to fix build errors with rust 1.80 due to outdated time crate
-  cargoPatches = [ ./lockfile.patch ];
-  cargoHash = "sha256-55lmQl5pJwrEj5RlSG8b0PqtZVrASxTmX4Qdk090DZo=";
+  cargoHash = "sha256-Kf99eojqXvdbZ3eRS8GBgyLYNpZKJGIJtsOsvhhSVDk=";
 
   nativeBuildInputs = [
+    installShellFiles
     pkg-config
     wrapGAppsHook3
   ];
@@ -47,10 +44,14 @@ rustPlatform.buildRustPackage rec {
     "eww"
   ];
 
-  cargoTestFlags = cargoBuildFlags;
+  cargoTestFlags = finalAttrs.cargoBuildFlags;
 
-  # requires unstable rust features
-  RUSTC_BOOTSTRAP = 1;
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd eww \
+      --bash <($out/bin/eww shell-completions --shell bash) \
+      --fish <($out/bin/eww shell-completions --shell fish) \
+      --zsh <($out/bin/eww shell-completions --shell zsh)
+  '';
 
   passthru.updateScript = nix-update-script { extraArgs = [ "--version=branch" ]; };
 
@@ -66,12 +67,9 @@ rustPlatform.buildRustPackage rec {
     homepage = "https://github.com/elkowar/eww";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [
-      coffeeispower
-      figsoda
-      lom
       w-lfchen
     ];
     mainProgram = "eww";
     broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

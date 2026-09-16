@@ -5,7 +5,6 @@
   six,
   httplib2,
   pytestCheckHook,
-  pythonOlder,
   requests,
   setuptools,
   urllib3,
@@ -16,12 +15,10 @@ buildPythonPackage rec {
   version = "1.13.1";
   pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
   src = fetchFromGitHub {
     owner = "cdent";
     repo = "wsgi-intercept";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-hs5yB0+eDlh/pNPaqYIU9C+RBpyrdPOAscQGIoqzmvU=";
   };
 

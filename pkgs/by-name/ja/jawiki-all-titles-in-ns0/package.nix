@@ -7,13 +7,13 @@
 
 stdenvNoCC.mkDerivation {
   pname = "jawiki-all-titles-in-ns0";
-  version = "0-unstable-2024-09-11";
+  version = "0-unstable-2026-09-01";
 
   src = fetchFromGitHub {
     owner = "musjj";
     repo = "jawiki-archive";
-    rev = "d205f63665e351ea853edc72157f14daa22a227f";
-    hash = "sha256-Jj2vH8UMhgSzWv+RnOipnVNSdeOF6jttcLN/kVYa4D4=";
+    rev = "5c0d3d609a19361e9ebbe24702da11c8285e278d";
+    hash = "sha256-D4dqdc0xeKPcy0MmfKcK6GEngQOmLg/2H6TuWGyS0i8=";
   };
 
   installPhase = ''
@@ -33,7 +33,7 @@ stdenvNoCC.mkDerivation {
   };
 
   meta = {
-    description = "A jawiki dump list of page titles in main namespace";
+    description = "Jawiki dump list of page titles in main namespace";
     homepage = "https://dumps.wikimedia.org/backup-index.html";
     license = with lib.licenses; [
       fdl13Only

@@ -5,34 +5,34 @@
   fetchFromGitHub,
   flaky,
   google-cloud-storage,
+  legacy-cgi,
   mock,
   pillow,
   pymongo,
   pytestCheckHook,
-  pythonOlder,
+  pythonAtLeast,
   requests,
   setuptools,
   sqlalchemy,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "filedepot";
-  version = "0.11.0";
+  version = "0.12.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchFromGitHub {
     owner = "amol-";
     repo = "depot";
-    rev = "refs/tags/${version}";
-    hash = "sha256-693H/u+Wg2G9sdoUkC6DQo9WkmIlKnh8NKv3ufK/eyQ=";
+    tag = finalAttrs.version;
+    hash = "sha256-oDnGA2prxYUkC90ewryeJXTXED59vcZGHU9D0QiopFM=";
   };
 
-  nativeBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     anyascii
+    legacy-cgi
     google-cloud-storage
   ];
 
@@ -56,13 +56,15 @@ buildPythonPackage rec {
     "tests/test_wsgi_middleware.py"
   ];
 
+  disabledTests = lib.optionals (pythonAtLeast "3.13") [ "test_notexisting" ];
+
   pythonImportsCheck = [ "depot" ];
 
-  meta = with lib; {
+  meta = {
     description = "Toolkit for storing files and attachments in web applications";
     homepage = "https://github.com/amol-/depot";
-    changelog = "https://github.com/amol-/depot/releases/tag/${version}";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/amol-/depot/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

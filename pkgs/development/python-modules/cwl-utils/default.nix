@@ -4,33 +4,31 @@
   cwl-upgrader,
   cwlformat,
   fetchFromGitHub,
+  hatchling,
+  jsonschema,
   packaging,
   pytest-mock,
   pytest-xdist,
   pytestCheckHook,
-  pythonOlder,
   rdflib,
   requests,
   ruamel-yaml,
   schema-salad,
-  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cwl-utils";
-  version = "0.34";
+  version = "0.43";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "common-workflow-language";
     repo = "cwl-utils";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-HzLDUhiFegYPWAKt3YoiWiunNHcDEx9FvRXwxKd7wp0=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-B71B3cpf+ClbhIpUuhtu/deAECLkQEjpspor6jhi2is=";
   };
 
-  build-system = [ setuptools ];
+  build-system = [ hatchling ];
 
   dependencies = [
     cwl-upgrader
@@ -43,6 +41,7 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [
     cwlformat
+    jsonschema
     pytest-mock
     pytest-xdist
     pytestCheckHook
@@ -60,13 +59,14 @@ buildPythonPackage rec {
     # Don't run tests which require network access
     "test_remote_packing"
     "test_remote_packing_github_soft_links"
+    "test_cwl_inputs_to_jsonschema"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Utilities for CWL";
     homepage = "https://github.com/common-workflow-language/cwl-utils";
-    changelog = "https://github.com/common-workflow-language/cwl-utils/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/common-workflow-language/cwl-utils/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

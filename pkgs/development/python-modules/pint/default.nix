@@ -2,50 +2,46 @@
   lib,
   buildPythonPackage,
   fetchFromGitHub,
-  pythonOlder,
 
   # build-system
-  setuptools,
-  setuptools-scm,
+  hatchling,
+  hatch-vcs,
 
   # dependencies
-  appdirs,
   flexcache,
   flexparser,
+  platformdirs,
   typing-extensions,
 
   # tests
   pytestCheckHook,
-  pytest-subtests,
-  pytest-benchmark,
   numpy,
   matplotlib,
   uncertainties,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "pint";
-  version = "0.24.1";
+  version = "0.25.3";
   pyproject = true;
-
-  disabled = pythonOlder "3.9";
 
   src = fetchFromGitHub {
     owner = "hgrecco";
     repo = "pint";
-    rev = "refs/tags/${version}";
-    hash = "sha256-PQAQvjMi7pFgNhUbw20vc306aTyEbCQNHGef/pxxpXo=";
+    tag = version;
+    hash = "sha256-l2wbcS2mlamCBXr9KOWmq10WN5pNVH4Iu65UuZ0vQmU=";
   };
 
   build-system = [
-    setuptools
-    setuptools-scm
+    hatchling
+    hatch-vcs
   ];
 
   dependencies = [
-    appdirs
     flexcache
     flexparser
+    platformdirs
     typing-extensions
 
     # Both uncertainties and numpy are not necessarily needed for every
@@ -57,16 +53,13 @@ buildPythonPackage rec {
 
   nativeCheckInputs = [
     pytestCheckHook
-    pytest-subtests
-    pytest-benchmark
     matplotlib
+    writableTmpDirAsHomeHook
   ];
 
-  pytestFlagsArray = [ "--benchmark-disable" ];
-
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
+  disabledTestPaths = [
+    "pint/testsuite/benchmarks"
+  ];
 
   meta = {
     changelog = "https://github.com/hgrecco/pint/blob/${version}/CHANGES";

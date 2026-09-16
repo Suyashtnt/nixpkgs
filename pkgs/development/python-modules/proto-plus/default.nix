@@ -1,8 +1,8 @@
 {
   lib,
   buildPythonPackage,
-  fetchPypi,
-  isPy3k,
+  fetchFromGitHub,
+  setuptools,
   protobuf,
   googleapis-common-protos,
   pytestCheckHook,
@@ -11,16 +11,21 @@
 
 buildPythonPackage rec {
   pname = "proto-plus";
-  version = "1.23.0";
-  format = "setuptools";
-  disabled = !isPy3k;
+  version = "1.27.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-iQdRce8RmIs/oVf129i5zwnWX//ul+Kc5APNje+6GdI=";
+  src = fetchFromGitHub {
+    owner = "googleapis";
+    repo = "proto-plus-python";
+    tag = "v${version}";
+    hash = "sha256-B+CkOLzbpu3XXnH7MND5GCljG/bUyPPU57zXIIXoRiU=";
   };
 
-  propagatedBuildInputs = [ protobuf ];
+  build-system = [ setuptools ];
+
+  dependencies = [ protobuf ];
+
+  pythonRelaxDeps = [ "protobuf" ];
 
   nativeCheckInputs = [
     pytestCheckHook
@@ -28,12 +33,19 @@ buildPythonPackage rec {
     googleapis-common-protos
   ];
 
+  pytestFlags = [
+    # pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+    "-Wignore::DeprecationWarning"
+    # float_precision option is deprecated for json_format error with latest protobuf
+    "-Wignore:float_precision:UserWarning"
+  ];
+
   pythonImportsCheck = [ "proto" ];
 
-  meta = with lib; {
+  meta = {
     description = "Beautiful, idiomatic protocol buffers in Python";
     homepage = "https://github.com/googleapis/proto-plus-python";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ruuda ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ ruuda ];
   };
 }

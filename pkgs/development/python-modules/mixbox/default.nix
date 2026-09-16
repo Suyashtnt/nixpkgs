@@ -6,7 +6,6 @@
   ordered-set,
   pytestCheckHook,
   python-dateutil,
-  pythonOlder,
   setuptools,
 }:
 
@@ -15,12 +14,10 @@ buildPythonPackage rec {
   version = "1.0.5";
   pyproject = true;
 
-  disabled = pythonOlder "3.9";
-
   src = fetchFromGitHub {
     owner = "CybOXProject";
     repo = "mixbox";
-    rev = "refs/tags/v${version}";
+    tag = "v${version}";
     hash = "sha256-qK3cKOf0s345M1pVFro5NFhDj4lch12UegOY1ZUEOBQ=";
   };
 
@@ -36,7 +33,7 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "mixbox" ];
 
-  pytestFlagsArray = [ "test/*.py" ];
+  enabledTestPaths = [ "test/*.py" ];
 
   disabledTests = [
     # Tests are out-dated

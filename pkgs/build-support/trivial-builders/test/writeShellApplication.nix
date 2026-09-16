@@ -1,17 +1,19 @@
 # Run with:
 # nix-build -A tests.trivial-builders.writeShellApplication
-{ writeShellApplication
-, writeTextFile
-, runCommand
-, lib
-, linkFarm
-, diffutils
-, hello
+{
+  writeShellApplication,
+  writeTextFile,
+  runCommand,
+  lib,
+  linkFarm,
+  diffutils,
+  hello,
 }:
 let
-  checkShellApplication = args@{name, expected, ...}:
+  checkShellApplication =
+    args@{ name, expected, ... }:
     let
-      writeShellApplicationArgs = builtins.removeAttrs args ["expected"];
+      writeShellApplicationArgs = removeAttrs args [ "expected" ];
       script = writeShellApplication writeShellApplicationArgs;
       executable = lib.getExe script;
       expected' = writeTextFile {
@@ -33,75 +35,120 @@ in
 linkFarm "writeShellApplication-tests" {
   test-meta =
     let
-      script = writeShellApplication {
+      args = {
         name = "test-meta";
         text = "";
-        meta.description = "A test for the `writeShellApplication` `meta` argument.";
+        meta.description = "Test for the `writeShellApplication` `meta` argument";
       };
+      script = writeShellApplication args;
     in
-    assert script.meta.mainProgram == "test-meta";
-    assert script.meta.description == "A test for the `writeShellApplication` `meta` argument.";
+    assert script.meta.mainProgram == args.name;
+    assert script.meta.description == args.meta.description;
     script;
 
-  test-runtime-inputs =
-    checkShellApplication {
-      name = "test-runtime-inputs";
-      text = ''
-        hello
-      '';
-      runtimeInputs = [ hello ];
-      expected = "Hello, world!\n";
-    };
+  test-runtime-inputs = checkShellApplication {
+    name = "test-runtime-inputs";
+    text = ''
+      hello
+    '';
+    runtimeInputs = [ hello ];
+    expected = "Hello, world!\n";
+  };
 
-  test-runtime-env =
-    checkShellApplication {
-      name = "test-runtime-env";
-      runtimeEnv = {
-        MY_COOL_ENV_VAR = "my-cool-env-value";
-        MY_OTHER_COOL_ENV_VAR = "my-other-cool-env-value";
-        # Check that we can serialize a bunch of different types:
-        BOOL = true;
-        INT = 1;
-        LIST = [1 2 3];
-        MAP = {
-          a = "a";
-          b = "b";
-        };
+  test-runtime-env = checkShellApplication {
+    name = "test-runtime-env";
+    runtimeEnv = {
+      MY_COOL_ENV_VAR = "my-cool-env-value";
+      MY_OTHER_COOL_ENV_VAR = "my-other-cool-env-value";
+      # Check that we can serialize a bunch of different types:
+      BOOL = true;
+      INT = 1;
+      LIST = [
+        1
+        2
+        3
+      ];
+      MAP = {
+        a = "a";
+        b = "b";
       };
-      text = ''
-        echo "$MY_COOL_ENV_VAR"
-        echo "$MY_OTHER_COOL_ENV_VAR"
-      '';
-      expected = ''
-        my-cool-env-value
-        my-other-cool-env-value
-      '';
     };
+    text = ''
+      echo "$MY_COOL_ENV_VAR"
+      echo "$MY_OTHER_COOL_ENV_VAR"
+    '';
+    expected = ''
+      my-cool-env-value
+      my-other-cool-env-value
+    '';
+  };
 
-  test-check-phase =
-    checkShellApplication {
-      name = "test-check-phase";
-      text = "";
-      checkPhase = ''
-        echo "echo -n hello" > $target
-      '';
-      expected = "hello";
-    };
+  test-no-inherit-path-no-runtimeInputs = checkShellApplication {
+    name = "test-no-inherit-path-no-runtimeInputs";
+    inheritPath = false;
+    runtimeInputs = [ ];
+    text = ''
+      if [[ ''${#PATH} -eq 0 ]]; then
+        echo -n "PATH is empty"
+      fi
+    '';
+    expected = "PATH is empty";
+  };
 
-  test-argument-forwarding =
-    checkShellApplication {
-      name = "test-argument-forwarding";
-      text = "";
-      derivationArgs.MY_BUILD_TIME_VARIABLE = "puppy";
-      derivationArgs.postCheck = ''
-        if [[ "$MY_BUILD_TIME_VARIABLE" != puppy ]]; then
-          echo "\$MY_BUILD_TIME_VARIABLE is not set to 'puppy'!"
-          exit 1
-        fi
-      '';
-      meta.description = "A test checking that `writeShellApplication` forwards extra arguments to `stdenv.mkDerivation`.";
-      expected = "";
-    };
+  test-no-inherit-path-runtimeInputs = checkShellApplication {
+    name = "test-no-inherit-path-runtimeInputs";
+    inheritPath = false;
+    runtimeInputs = [ hello ];
+    text = ''
+      extra_colon_pattern='(^:|:$)'
+      if [[ ''${PATH} =~ $extra_colon_pattern ]]; then
+        echo "PATH should not start or end with a colon: $PATH"
+      fi
+      if [[ ''${#PATH} -gt 0 ]]; then
+        echo -n "PATH is not empty"
+      fi
+    '';
+    expected = "PATH is not empty";
+  };
+
+  test-inherit-path-no-runtimeInputs = checkShellApplication {
+    name = "test-inherit-path-no-runtimeInputs";
+    inheritPath = true;
+    runtimeInputs = [ ];
+    text = ''
+      extra_colon_pattern='(^:|:$)'
+      if [[ ''${PATH} =~ $extra_colon_pattern ]]; then
+        echo "PATH should not start or end with a colon: $PATH"
+      fi
+      if [[ ''${#PATH} -gt 0 ]]; then
+        echo -n "PATH is not empty"
+      fi
+    '';
+    expected = "PATH is not empty";
+  };
+
+  test-check-phase = checkShellApplication {
+    name = "test-check-phase";
+    text = "";
+    checkPhase = ''
+      echo "echo -n hello" > $target
+    '';
+    expected = "hello";
+  };
+
+  test-argument-forwarding = checkShellApplication {
+    name = "test-argument-forwarding";
+    text = "";
+    derivationArgs.MY_BUILD_TIME_VARIABLE = "puppy";
+    derivationArgs.postCheck = ''
+      if [[ "$MY_BUILD_TIME_VARIABLE" != puppy ]]; then
+        echo "\$MY_BUILD_TIME_VARIABLE is not set to 'puppy'!"
+        exit 1
+      fi
+    '';
+    meta.description = "Test checking that `writeShellApplication` forwards extra arguments to `stdenv.mkDerivation`";
+    expected = "";
+  };
 
   test-exclude-shell-checks = writeShellApplication {
     name = "test-exclude-shell-checks";
@@ -122,7 +169,10 @@ linkFarm "writeShellApplication-tests" {
       true
     '';
     # Don't use `pipefail`:
-    bashOptions = ["errexit" "nounset"];
+    bashOptions = [
+      "errexit"
+      "nounset"
+    ];
     expected = "";
   };
 
@@ -132,7 +182,7 @@ linkFarm "writeShellApplication-tests" {
       echo -n "$someUndefinedVariable"
     '';
     # Don't use `nounset`:
-    bashOptions = [];
+    bashOptions = [ ];
     # Don't warn about the undefined variable at build time:
     excludeShellChecks = [ "SC2154" ];
     expected = "";

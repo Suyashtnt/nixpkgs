@@ -4,18 +4,18 @@
   rustPlatform,
 }:
 
-rustPlatform.buildRustPackage rec {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "sig";
-  version = "0.1.3";
+  version = "0.3.0";
 
   src = fetchFromGitHub {
     owner = "ynqa";
     repo = "sig";
-    rev = "v${version}";
-    hash = "sha256-nt/KV4ohFNZTJTwbNoSxb5v9zQwp+7ypvfMthL1yMus=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-px2QdhhvBxfPCszGqeeYzsUrGwLP4DxXiKeNRAgZ23U=";
   };
 
-  cargoHash = "sha256-gZZ2aOsqVqGN3gCBZnBXzlFicMssNIEyRT688OuNMJc=";
+  cargoHash = "sha256-dqpapu6qnWfe0vMUXpEh2lXwEV9iqIG7B+P6XQbA9Q8=";
 
   meta = {
     description = "Interactive grep (for streaming)";
@@ -24,4 +24,4 @@ rustPlatform.buildRustPackage rec {
     maintainers = with lib.maintainers; [ qaidvoid ];
     mainProgram = "sig";
   };
-}
+})

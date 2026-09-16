@@ -1,28 +1,47 @@
-{ appimageTools
-, fetchurl
-, version
-, pname
-, meta
+{
+  appimageTools,
+  fetchurl,
+  version,
+  url,
+  hash,
+  pname,
+  meta,
+  stdenv,
+  passthru,
 }:
 let
-  src = fetchurl {
-    url = "https://releases.lmstudio.ai/linux/x86/${version}/LM_Studio-${version}.AppImage";
-    hash = "sha256-w+g7/YezpOr/mBNZbmtLMPt3xTRDIHgGTSroo6mRXxw=";
-  };
+  src = fetchurl { inherit url hash; };
 
-  appimageContents = appimageTools.extractType2 { inherit pname version src; };
+  appimageContents = appimageTools.extract { inherit pname version src; };
 in
 appimageTools.wrapType2 {
-  inherit meta pname version src;
+  inherit
+    meta
+    pname
+    version
+    src
+    passthru
+    ;
 
   extraPkgs = pkgs: [ pkgs.ocl-icd ];
 
   extraInstallCommands = ''
-    mkdir -p $out/share/applications
-    cp -r ${appimageContents}/usr/share/icons $out/share
-    install -m 444 -D ${appimageContents}/lm-studio.desktop -t $out/share/applications
-    substituteInPlace $out/share/applications/lm-studio.desktop \
-      --replace-fail 'Exec=AppRun --no-sandbox %U' 'Exec=lmstudio'
+    # upstream ships pre-rendered icons for every hicolor size
+    mkdir -p $out/share/icons
+    cp -r ${appimageContents}/usr/share/icons/hicolor $out/share/icons/
+
+    install -m 444 -D ${appimageContents}/ai.elementlabs.lmstudio.desktop \
+      -t $out/share/applications
+
+    # Rename the main executable from lmstudio to lm-studio
+    mv $out/bin/lmstudio $out/bin/lm-studio
+
+    substituteInPlace $out/share/applications/ai.elementlabs.lmstudio.desktop \
+      --replace-fail 'Exec=AppRun %U' 'Exec=lm-studio %U'
+
+    # lms cli tool
+    install -m 755 ${appimageContents}/resources/app/.webpack/lms $out/bin/
+
+    patchelf --set-interpreter "${stdenv.cc.bintools.dynamicLinker}" $out/bin/lms
   '';
 }
-

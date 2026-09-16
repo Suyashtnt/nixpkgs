@@ -1,57 +1,63 @@
 {
   lib,
   stdenv,
-  fetchFromGitHub,
   buildPythonPackage,
-  rustPlatform,
-  pkg-config,
-  pcsclite,
-  nettle,
+  fetchFromGitHub,
   httpx,
-  pytestCheckHook,
-  pythonOlder,
-  vcrpy,
-  PCSC,
   libiconv,
+  nettle,
+  pcsclite,
+  pkg-config,
+  pytestCheckHook,
+  rustPlatform,
+  tzdata,
+  vcrpy,
 }:
 
 buildPythonPackage rec {
   pname = "johnnycanencrypt";
-  version = "0.14.1";
-  disabled = pythonOlder "3.8";
+  version = "0.18.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "kushaldas";
     repo = "johnnycanencrypt";
-    rev = "v${version}";
-    hash = "sha256-13zIC+zH/BebMplUfdtiwEEVODS+jTURC1vudbmQPlA=";
+    tag = "v${version}";
+    hash = "sha256-qpta6D5aslUwuJ0+voYrHFIDetlsUB6PkScrtl/plVs=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit src;
-    name = "${pname}-${version}";
-    hash = "sha256-u3qKli76XGS0Ijg15BQzbFlfLPpBPFKh++EZLfnO9ps=";
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit pname version src;
+    hash = "sha256-EzHbV/IBbGjoKFIbXSo2dlf+DU7ZXV16bVR93Sq0lis=";
   };
 
-  format = "pyproject";
+  build-system = with rustPlatform; [
+    bindgenHook
+    cargoSetupHook
+    maturinBuildHook
+  ];
 
-  propagatedBuildInputs = [ httpx ];
+  nativeBuildInputs = [
+    pkg-config
+  ]
+  ++ (with rustPlatform; [
+    bindgenHook
+    cargoSetupHook
+    maturinBuildHook
+  ]);
 
-  nativeBuildInputs =
-    [ pkg-config ]
-    ++ (with rustPlatform; [
-      bindgenHook
-      cargoSetupHook
-      maturinBuildHook
-    ]);
+  buildInputs = [
+    nettle
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ pcsclite ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    libiconv
+  ];
 
-  buildInputs =
-    [ nettle ]
-    ++ lib.optionals stdenv.hostPlatform.isLinux [ pcsclite ]
-    ++ lib.optionals stdenv.hostPlatform.isDarwin [
-      PCSC
-      libiconv
-    ];
+  dependencies = [
+    httpx
+    tzdata
+  ];
 
   nativeCheckInputs = [
     pytestCheckHook
@@ -65,11 +71,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "johnnycanencrypt" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Python module for OpenPGP written in Rust";
     homepage = "https://github.com/kushaldas/johnnycanencrypt";
     changelog = "https://github.com/kushaldas/johnnycanencrypt/blob/v${version}/changelog.md";
-    description = "Python module for OpenPGP written in Rust";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ _0x4A6F ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ _0x4A6F ];
   };
 }

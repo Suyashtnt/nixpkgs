@@ -1,13 +1,15 @@
-{ lib, stdenv
-, fetchFromGitHub
-, autoPatchelfHook
-, libusb-compat-0_1
-, readline ? null
-, enableReadline ? true
-, hidapi ? null
-, pkg-config ? null
-, mspds ? null
-, enableMspds ? false
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  autoPatchelfHook,
+  libusb-compat-0_1,
+  readline ? null,
+  enableReadline ? true,
+  hidapi ? null,
+  pkg-config ? null,
+  mspds ? null,
+  enableMspds ? false,
 }:
 
 assert stdenv.hostPlatform.isDarwin -> hidapi != null && pkg-config != null;
@@ -15,19 +17,22 @@ assert enableReadline -> readline != null;
 assert enableMspds -> mspds != null;
 
 stdenv.mkDerivation rec {
-  version = "0.25";
+  version = "0.26";
   pname = "mspdebug";
   src = fetchFromGitHub {
     owner = "dlbeer";
     repo = "mspdebug";
     rev = "v${version}";
-    sha256 = "0prgwb5vx6fd4bj12ss1bbb6axj2kjyriyjxqrzd58s5jyyy8d3c";
+    sha256 = "sha256-4TisC0Nm3lYMWCJ3TtaHDAfLDejMQZJIruh2f7fCndU=";
   };
 
   enableParallelBuilding = true;
-  nativeBuildInputs = lib.optional stdenv.hostPlatform.isDarwin pkg-config
-  ++ lib.optional (enableMspds && stdenv.hostPlatform.isLinux) autoPatchelfHook;
-  buildInputs = [ libusb-compat-0_1 ]
+  nativeBuildInputs =
+    lib.optional stdenv.hostPlatform.isDarwin pkg-config
+    ++ lib.optional (enableMspds && stdenv.hostPlatform.isLinux) autoPatchelfHook;
+  buildInputs = [
+    libusb-compat-0_1
+  ]
   ++ lib.optional stdenv.hostPlatform.isDarwin hidapi
   ++ lib.optional enableReadline readline;
 
@@ -48,17 +53,19 @@ stdenv.mkDerivation rec {
     done
   '';
 
-  installFlags = [ "PREFIX=$(out)" "INSTALL=install" ];
-  makeFlags = [ "UNAME_S=$(unameS)" ] ++
-    lib.optional (!enableReadline) "WITHOUT_READLINE=1";
+  installFlags = [
+    "PREFIX=$(out)"
+    "INSTALL=install"
+  ];
+  makeFlags = [ "UNAME_S=$(unameS)" ] ++ lib.optional (!enableReadline) "WITHOUT_READLINE=1";
   unameS = lib.optionalString stdenv.hostPlatform.isDarwin "Darwin";
 
-  meta = with lib; {
+  meta = {
     description = "Free programmer, debugger, and gdb proxy for MSP430 MCUs";
     mainProgram = "mspdebug";
     homepage = "https://dlbeer.co.nz/mspdebug/";
-    license = licenses.gpl2;
-    platforms = platforms.all;
-    maintainers = with maintainers; [ aerialx ];
+    license = lib.licenses.gpl2;
+    platforms = lib.platforms.all;
+    maintainers = with lib.maintainers; [ aerialx ];
   };
 }

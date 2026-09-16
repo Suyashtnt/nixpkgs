@@ -2,48 +2,81 @@
   stdenv,
   buildPythonPackage,
   lib,
+  pythonAtLeast,
   fetchPypi,
   poetry-core,
+  setuptools,
+  setuptools-scm,
+  ipykernel,
   networkx,
   numpy,
+  packaging,
   pint,
   pydantic,
   pytestCheckHook,
-  pythonOlder,
+  scipy,
 }:
 
 buildPythonPackage rec {
   pname = "qcelemental";
-  version = "0.28.0";
-
+  version = "0.51.1";
   pyproject = true;
-
-  disabled = pythonOlder "3.7";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-2pb924jBcB+BKyU2mmoWnTXy1URsN8YuhgSMsPGxaKI=";
+    hash = "sha256-2S7sa14rKd8b+yDy2eIpk1TUElA6XepeTPuzWW6S4TU=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [
+    poetry-core
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [
-    networkx
+  dependencies = [
     numpy
+    packaging
     pint
     pydantic
   ];
 
-  nativeCheckInputs = [ pytestCheckHook ];
+  optional-dependencies = {
+    viz = [
+      # TODO: nglview
+      ipykernel
+    ];
+    align = [
+      networkx
+      scipy
+    ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ] ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "qcelemental" ];
 
-  meta = with lib; {
-    broken = stdenv.hostPlatform.isDarwin;
+  # These tests require network access
+  disabledTestPaths = [
+    "qcelemental/tests/test_gph_uno_bipartite.py"
+    "qcelemental/tests/test_model_general.py"
+    "qcelemental/tests/test_model_results.py"
+    "qcelemental/tests/test_molecule.py"
+    "qcelemental/tests/test_molparse_align_chiral.py"
+    "qcelemental/tests/test_molparse_from_schema.py"
+    "qcelemental/tests/test_molparse_from_string.py"
+    "qcelemental/tests/test_molparse_pubchem.py"
+    "qcelemental/tests/test_molparse_to_schema.py"
+    "qcelemental/tests/test_molparse_to_string.py"
+    "qcelemental/tests/test_molutil.py"
+    "qcelemental/tests/test_utils.py"
+    "qcelemental/tests/test_zqcschema.py"
+  ];
+
+  meta = {
     description = "Periodic table, physical constants and molecule parsing for quantum chemistry";
     homepage = "https://github.com/MolSSI/QCElemental";
     changelog = "https://github.com/MolSSI/QCElemental/blob/v${version}/docs/changelog.rst";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ sheepforce ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ sheepforce ];
   };
 }

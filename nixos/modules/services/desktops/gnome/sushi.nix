@@ -1,11 +1,16 @@
 # GNOME Sushi daemon.
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
 
   meta = {
-    maintainers = lib.teams.gnome.members;
+    teams = [ lib.teams.gnome ];
   };
 
   ###### interface
@@ -25,7 +30,6 @@
     };
 
   };
-
 
   ###### implementation
 

@@ -1,71 +1,70 @@
 {
   lib,
   buildGoModule,
+  callPackage,
   fetchFromGitHub,
-  artalk,
-  fetchurl,
   installShellFiles,
   stdenv,
-  testers,
   nixosTests,
+  versionCheckHook,
+  nix-update-script,
 }:
-buildGoModule rec {
+
+buildGoModule (finalAttrs: {
   pname = "artalk";
-  version = "2.9.0";
+  version = "2.10.0";
 
   src = fetchFromGitHub {
     owner = "ArtalkJS";
     repo = "artalk";
-    rev = "refs/tags/v${version}";
-    hash = "sha256-5tUUlkGeT4kY/81EQ29M6z+JnBT4YCa8gecbV9WMuDo=";
-  };
-  web = fetchurl {
-    url = "https://github.com/${src.owner}/${src.repo}/releases/download/v${version}/artalk_ui.tar.gz";
-    hash = "sha256-Cx3fDpnl52kwILzH9BBLfsWe5qEbIl/ecJd1wJEB/Hc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-gtWnXRDGFjpw9W1ze6fBn/WXMQStqeyQpQHTr3wu5AU=";
   };
 
-  CGO_ENABLED = 1;
-
-  vendorHash = "sha256-edqmv/Q99pgnScJqCmLwjHd7uKMNPGfCSujNTUQtpLc=";
+  vendorHash = "sha256-xSIkJKlWGbdBlez7jPaoeHuYbyO+2237sZ/yxjUcHf8=";
 
   ldflags = [
     "-s"
-    "-w"
-    "-X github.com/ArtalkJS/Artalk/internal/config.Version=${version}"
-    "-X github.com/ArtalkJS/Artalk/internal/config.CommitHash=${version}"
   ];
 
-  preBuild = ''
-    tar -xzf ${web}
-    cp -r ./artalk_ui/* ./public
+  preConfigure = ''
+    cp -r ${finalAttrs.passthru.frontend}/* ./public
   '';
+
+  env.CGO_ENABLED = 0;
 
   nativeBuildInputs = [ installShellFiles ];
 
-  postInstall =
-    ''
-      # work around case insensitive file systems
-      mv $out/bin/Artalk $out/bin/artalk.tmp
-      mv $out/bin/artalk.tmp $out/bin/artalk
-    ''
-    + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
-      installShellCompletion --cmd artalk \
-        --bash <($out/bin/artalk completion bash) \
-        --fish <($out/bin/artalk completion fish) \
-        --zsh <($out/bin/artalk completion zsh)
-    '';
+  # TestAuthSSOExchange
+  __darwinAllowLocalNetworking = true;
 
-  passthru.tests = {
-    version = testers.testVersion { package = artalk; };
-    inherit (nixosTests) artalk;
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd artalk \
+      --bash <($out/bin/artalk completion bash) \
+      --fish <($out/bin/artalk completion fish) \
+      --zsh <($out/bin/artalk completion zsh)
+  '';
+
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "version";
+  versionCheckKeepEnvironment = [ "XDG_DATA_HOME" ];
+  preVersionCheck = "XDG_DATA_HOME=$TMPDIR";
+
+  passthru = {
+    tests = {
+      inherit (nixosTests) artalk;
+    };
+    frontend = callPackage ./frontend.nix { artalk = finalAttrs.finalPackage; };
+    updateScript = nix-update-script { extraArgs = [ "--subpackage=frontend" ]; };
   };
 
   meta = {
     description = "Self-hosted comment system";
     homepage = "https://github.com/ArtalkJS/Artalk";
-    changelog = "https://github.com/ArtalkJS/Artalk/releases/tag/v${version}";
+    changelog = "https://github.com/ArtalkJS/Artalk/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ moraxyc ];
     mainProgram = "artalk";
   };
-}
+})

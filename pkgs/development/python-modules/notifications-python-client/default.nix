@@ -8,24 +8,21 @@
   pyjwt,
   pytest-mock,
   pytestCheckHook,
-  pythonOlder,
   requests,
   requests-mock,
   setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "notifications-python-client";
-  version = "10.0.0";
+  version = "12.2.0";
   pyproject = true;
-
-  disabled = pythonOlder "3.8";
 
   src = fetchFromGitHub {
     owner = "alphagov";
     repo = "notifications-python-client";
-    rev = "refs/tags/${version}";
-    hash = "sha256-qjiI+aTJLOz3XSTHKrpZrJ/wg1xP+V7ww0//xX3Kf1E=";
+    tag = finalAttrs.version;
+    hash = "sha256-tUAubS20CSTYgzVPjE8r6jK2l9Qy3YKggW1YEEm1Rlg=";
   };
 
   postPatch = ''
@@ -51,11 +48,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "notifications_python_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python client for the GOV.UK Notify API";
     homepage = "https://github.com/alphagov/notifications-python-client";
-    changelog = "https://github.com/alphagov/notifications-python-client/blob/${version}/CHANGELOG.md";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/alphagov/notifications-python-client/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})
